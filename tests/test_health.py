@@ -11,4 +11,6 @@ async def test_health_check():
     ) as client:
         response = await client.get("/api/health")
     assert response.status_code == 200
-    assert response.json() == {"message": "OK"}
+    data = response.json()
+    assert data["status"] == "success"
+    assert data["message"] == "Servidor funcionando correctamente"

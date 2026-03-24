@@ -17,3 +17,8 @@ class UnauthorizedException(AppException):
 class ConflictException(AppException):
     def __init__(self, message: str = "Resource already exists"):
         super().__init__(message=message, status_code=409)
+
+
+class ForbiddenException(AppException):
+    def __init__(self, message: str = "Insufficient permissions"):
+        super().__init__(message=message, status_code=403)

@@ -42,9 +42,14 @@ def create_app() -> FastAPI:
     async def health_check():
         return ok(message="Servidor funcionando correctamente")
 
-    # TODO: Register module routers here as they are developed
-    # from app.modules.auth.router import router as auth_router
-    # app.include_router(auth_router, prefix="/api")
+    # Module routers
+    from app.modules.auth.router import router as auth_router
+
+    app.include_router(auth_router, prefix="/api")
+
+    # TODO: Register additional module routers as they are developed
+    # from app.modules.patients.router import router as patients_router
+    # app.include_router(patients_router, prefix="/api")
 
     return app
 
