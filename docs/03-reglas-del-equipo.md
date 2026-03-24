@@ -1,0 +1,106 @@
+# Reglas del Equipo
+
+## Asignación de Módulos
+
+Cada dev es responsable de su módulo. Esto minimiza conflictos de merge.
+
+| Módulo | Ruta API | Descripción |
+|--------|----------|-------------|
+| `auth` | `/api/auth`, `/api/users` | Registro, login, gestión de usuarios |
+| `patients` | `/api/patients` | CRUD de pacientes |
+| `appointments` | `/api/appointments` | Gestión de citas médicas |
+| `inventory` | `/api/inventory` | Control de inventario de insumos |
+
+## Reglas de Código
+
+### 1. No importar entre módulos
+```python
+# MAL - crea acoplamiento
+from app.modules.auth.domain.entities.user import User  # desde el módulo patients
+
+# BIEN - si necesitas algo compartido, ponlo en shared/
+from app.shared.schemas.common import MessageResponse
+```
+
+### 2. Coordinar cambios en zonas compartidas
+Estos archivos afectan a todos. Avisar al equipo antes de modificar:
+- `app/core/*`
+- `app/shared/*`
+- `app/main.py`
+- `alembic/env.py`
+- `requirements.txt`
+
+### 3. Migraciones de BD
+- **NUNCA** editar una migración que ya se hizo push
+- Coordinar antes de crear migraciones nuevas (pueden haber conflictos en Alembic)
+- Nombrar las migraciones descriptivamente: `alembic revision --autogenerate -m "add patients table"`
+
+### 4. Branching
+```bash
+# Crear rama desde main
+git checkout main
+git pull origin main
+git checkout -b feature/patients-crud
+
+# Trabajar, commitear
+git add .
+git commit -m "feat(patients): add CRUD endpoints"
+
+# Push y PR
+git push -u origin feature/patients-crud
+# Crear PR en GitHub
+```
+
+### 5. Convención de commits
+```
+feat(modulo): descripción      ← nueva funcionalidad
+fix(modulo): descripción       ← corrección de bug
+refactor(modulo): descripción  ← cambio interno sin cambiar comportamiento
+docs: descripción              ← documentación
+```
+
+Ejemplos:
+```
+feat(auth): add login endpoint with JWT
+fix(patients): handle duplicate cedula correctly
+refactor(inventory): extract repository to separate file
+docs: add module creation guide
+```
+
+## Setup del proyecto
+
+```bash
+# 1. Clonar
+git clone https://github.com/LorenaFer/backendCAMIULA.git
+cd backendCAMIULA
+
+# 2. Crear entorno virtual
+python3 -m venv .venv
+source .venv/bin/activate
+
+# 3. Instalar dependencias
+pip install -r requirements.txt
+
+# 4. Configurar variables
+cp .env.example .env
+# Editar .env con las credenciales de tu BD local
+
+# 5. Correr migraciones (cuando haya)
+alembic upgrade head
+
+# 6. Iniciar servidor
+uvicorn app.main:app --reload
+
+# 7. Ver docs de la API
+# Abrir http://localhost:8000/docs
+```
+
+## Tests
+
+```bash
+# Correr todos los tests
+pytest
+
+# Correr tests de un módulo
+pytest tests/unit/test_patients.py -v
+```
