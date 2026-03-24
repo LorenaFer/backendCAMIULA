@@ -26,6 +26,7 @@ from app.shared.middleware.auth import (
     require_permission,
 )
 from app.shared.middleware.permission_cache import permission_cache
+from app.shared.schemas.common import PaginatedData, StandardResponse
 from app.shared.schemas.responses import ok, paginated
 
 router = APIRouter(prefix="/users", tags=["Users"])
@@ -42,7 +43,7 @@ def _to_response(user: User) -> dict:
     ).model_dump()
 
 
-@router.get("/me")
+@router.get("/me", response_model=StandardResponse[UserResponse])
 async def get_my_profile(
     user: User = Depends(require_permission("profile:read")),
 ):
@@ -50,7 +51,7 @@ async def get_my_profile(
     return ok(data=_to_response(user), message="Perfil obtenido")
 
 
-@router.put("/me")
+@router.put("/me", response_model=StandardResponse[UserResponse])
 async def update_my_profile(
     body: UpdateProfileRequest,
     user: User = Depends(require_permission("profile:update")),
@@ -69,7 +70,7 @@ async def update_my_profile(
     return ok(data=_to_response(updated), message="Perfil actualizado")
 
 
-@router.get("")
+@router.get("", response_model=StandardResponse[PaginatedData[UserResponse]])
 async def list_users(
     _: User = Depends(require_permission("users:read")),
     page: int = Query(1, ge=1),
@@ -80,7 +81,6 @@ async def list_users(
     use_case = ListUsersUseCase(user_repo=SQLAlchemyUserRepository(db))
     users, total = await use_case.execute(page, page_size)
 
-    # Cargar roles para cada usuario del listado
     repo = SQLAlchemyUserRepository(db)
     items = []
     for u in users:
@@ -96,7 +96,7 @@ async def list_users(
     )
 
 
-@router.get("/{user_id}")
+@router.get("/{user_id}", response_model=StandardResponse[UserResponse])
 async def get_user(
     user_id: str,
     _: User = Depends(require_permission("users:read")),
@@ -108,7 +108,11 @@ async def get_user(
     return ok(data=_to_response(user), message="Usuario obtenido")
 
 
-@router.post("/{user_id}/roles", status_code=201)
+@router.post(
+    "/{user_id}/roles",
+    status_code=201,
+    response_model=StandardResponse[None],
+)
 async def assign_role(
     user_id: str,
     body: AssignRoleRequest,
@@ -128,7 +132,10 @@ async def assign_role(
     return ok(message=f"Rol '{body.role_name}' asignado exitosamente")
 
 
-@router.delete("/{user_id}/roles/{role_name}")
+@router.delete(
+    "/{user_id}/roles/{role_name}",
+    response_model=StandardResponse[None],
+)
 async def remove_role(
     user_id: str,
     role_name: str,

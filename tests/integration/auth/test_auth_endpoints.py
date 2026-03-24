@@ -162,30 +162,41 @@ class TestRBAC:
 
 class TestRoleAssignment:
     async def test_admin_can_assign_role(self):
-        admin_token = await _login("admin@camiula.com", "admin123")
-
         async with _client() as c:
+            # Login
+            login_resp = await c.post(
+                "/api/auth/login",
+                json={"email": "admin@camiula.com", "password": "admin123"},
+            )
+            admin_token = login_resp.json()["data"]["access_token"]
+
+            # List users to find paciente
             resp = await c.get("/api/users", headers=_auth(admin_token))
-        users = resp.json()["data"]["items"]
-        paciente = next(
-            (u for u in users if u["email"] == "paciente@camiula.com"), None
-        )
-        assert paciente is not None
+            users = resp.json()["data"]["items"]
+            paciente = next(
+                (u for u in users if u["email"] == "paciente@camiula.com"), None
+            )
+            assert paciente is not None
 
-        async with _client() as c:
+            # Assign role
             resp = await c.post(
                 f"/api/users/{paciente['id']}/roles",
                 json={"role_name": "analista"},
                 headers=_auth(admin_token),
             )
-        assert resp.status_code in (200, 409)
+            assert resp.status_code in (200, 409)
 
     async def test_paciente_cannot_assign_roles(self):
-        token = await _login("paciente@camiula.com", "paciente123")
         async with _client() as c:
+            login_resp = await c.post(
+                "/api/auth/login",
+                json={"email": "paciente@camiula.com", "password": "paciente123"},
+            )
+            token = login_resp.json()["data"]["access_token"]
+
             resp = await c.post(
                 "/api/users/some-id/roles",
                 json={"role_name": "administrador"},
                 headers=_auth(token),
             )
-        assert resp.status_code == 403
+            assert resp.status_code == 403

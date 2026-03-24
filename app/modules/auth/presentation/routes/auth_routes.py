@@ -17,12 +17,13 @@ from app.modules.auth.presentation.schemas.auth_schema import (
     UserResponse,
 )
 from app.shared.database.session import get_db
+from app.shared.schemas.common import StandardResponse
 from app.shared.schemas.responses import created, ok
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
-@router.post("/login")
+@router.post("/login", response_model=StandardResponse[TokenResponse])
 async def login(
     body: LoginRequest,
     db: AsyncSession = Depends(get_db),
@@ -44,7 +45,11 @@ async def login(
     )
 
 
-@router.post("/register", status_code=201)
+@router.post(
+    "/register",
+    status_code=201,
+    response_model=StandardResponse[UserResponse],
+)
 async def register(
     body: RegisterRequest,
     db: AsyncSession = Depends(get_db),
