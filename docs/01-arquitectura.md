@@ -18,16 +18,18 @@ backendCAMIULA/
 ├── app/
 │   ├── core/              ← Configuración global (NO tocar sin coordinar)
 │   ├── shared/            ← Código compartido entre módulos
-│   │   ├── database/      ← Engine, session de SQLAlchemy
+│   │   ├── database/      ← Engine, session, mixins, seeder base, validadores
 │   │   ├── middleware/     ← Auth, manejo de errores
-│   │   └── schemas/       ← Schemas comunes (paginación, mensajes)
+│   │   └── schemas/       ← Schemas y helpers de respuesta estándar
 │   ├── modules/           ← AQUÍ VIVE CADA MÓDULO
 │   │   ├── auth/
 │   │   ├── patients/
 │   │   ├── appointments/
 │   │   └── inventory/
 │   └── main.py            ← Entry point, registra los routers
-├── alembic/               ← Migraciones de BD
+├── alembic/               ← Migraciones de esquema (centralizadas)
+│   ├── versions/          ← Archivos de migración generados
+│   └── env.py             ← Config + imports de modelos
 ├── tests/
 ├── docs/                  ← Documentación del equipo
 └── requirements.txt
@@ -55,8 +57,10 @@ modules/auth/                      ← Ejemplo con el módulo auth
 │
 ├── infrastructure/                ← CAPA DE INFRAESTRUCTURA (detalles técnicos)
 │   ├── models.py                  ← Modelo SQLAlchemy (tabla de BD)
-│   └── repositories/
-│       └── sqlalchemy_user_repo.py   Implementación concreta del repositorio
+│   ├── repositories/
+│   │   └── sqlalchemy_user_repo.py   Implementación concreta del repositorio
+│   └── seeders/                   ← Datos iniciales/de prueba del módulo
+│       └── user_seeder.py            Siembra usuarios admin, test, etc.
 │
 ├── presentation/                  ← CAPA DE PRESENTACIÓN (HTTP)
 │   ├── routes/                    ← Endpoints FastAPI

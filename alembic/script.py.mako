@@ -3,6 +3,15 @@
 Revision ID: ${up_revision}
 Revises: ${down_revision | comma,n}
 Create Date: ${create_date}
+
+Checklist antes de aplicar:
+- [ ] CREATE TABLE: orden id → fk_* → datos → table_status → status → auditoría
+- [ ] ALTER TABLE: modelo Python actualizado con columna en grupo correcto
+- [ ] Columnas NOT NULL tienen server_default si la tabla tiene datos
+- [ ] downgrade() revierte los cambios correctamente
+- [ ] Columnas de auditoría/status NO fueron modificadas ni eliminadas
+
+Ver: docs/06-estandar-base-de-datos.md
 """
 from typing import Sequence, Union
 

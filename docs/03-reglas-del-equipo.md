@@ -37,7 +37,30 @@ raise NotFoundException("Paciente no encontrado")
 
 Ver documentación completa: [05-estandar-respuestas-api.md](./05-estandar-respuestas-api.md)
 
-### 2. No importar entre módulos
+### 2. Estándar de base de datos
+
+**Obligatorio.** Todo modelo SQLAlchemy DEBE:
+
+- Heredar de `Base`, `SoftDeleteMixin` y `AuditMixin`
+- Seguir el orden de columnas: `id → fk_* → datos → table_status → (mixins)`
+- Usar `fk_` como prefijo en foreign keys
+- **Nunca** definir `created_at`, `status`, etc. manualmente (los mixins los proveen)
+- **Nunca** hacer `DELETE FROM` — usar soft-delete con `status = 'T'`
+
+```python
+from app.shared.database.base import Base
+from app.shared.database.mixins import AuditMixin, SoftDeleteMixin
+
+class PatientModel(Base, SoftDeleteMixin, AuditMixin):
+    __tablename__ = "patients"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    # ... datos del dominio ...
+    # status, created_at, created_by, etc. vienen de los mixins
+```
+
+Ver documentación completa: [06-estandar-base-de-datos.md](./06-estandar-base-de-datos.md)
+
+### 3. No importar entre módulos
 ```python
 # MAL - crea acoplamiento
 from app.modules.auth.domain.entities.user import User  # desde el módulo patients
@@ -46,7 +69,7 @@ from app.modules.auth.domain.entities.user import User  # desde el módulo patie
 from app.shared.schemas.common import MessageResponse
 ```
 
-### 3. Coordinar cambios en zonas compartidas
+### 4. Coordinar cambios en zonas compartidas
 Estos archivos afectan a todos. Avisar al equipo antes de modificar:
 - `app/core/*`
 - `app/shared/*`
@@ -54,12 +77,12 @@ Estos archivos afectan a todos. Avisar al equipo antes de modificar:
 - `alembic/env.py`
 - `requirements.txt`
 
-### 4. Migraciones de BD
+### 5. Migraciones de BD
 - **NUNCA** editar una migración que ya se hizo push
 - Coordinar antes de crear migraciones nuevas (pueden haber conflictos en Alembic)
 - Nombrar las migraciones descriptivamente: `alembic revision --autogenerate -m "add patients table"`
 
-### 5. Branching
+### 6. Branching
 ```bash
 # Crear rama desde main
 git checkout main
@@ -75,7 +98,7 @@ git push -u origin feature/patients-crud
 # Crear PR en GitHub
 ```
 
-### 6. Convención de commits
+### 7. Convención de commits
 ```
 feat(modulo): descripción      ← nueva funcionalidad
 fix(modulo): descripción       ← corrección de bug

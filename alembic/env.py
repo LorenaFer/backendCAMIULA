@@ -8,8 +8,14 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from app.core.config import get_settings
 from app.shared.database.base import Base
 
-# Import module models here as they are created:
+# Import de mixins para que Alembic conozca el enum RecordStatus
+from app.shared.database.mixins import RecordStatus  # noqa: F401
+
+# Importar modelos de cada módulo aquí conforme se creen:
 # from app.modules.auth.infrastructure.models import UserModel  # noqa: F401
+# from app.modules.patients.infrastructure.models import PatientModel  # noqa: F401
+# from app.modules.appointments.infrastructure.models import AppointmentModel  # noqa: F401
+# from app.modules.inventory.infrastructure.models import InventoryItemModel  # noqa: F401
 
 settings = get_settings()
 config = context.config
@@ -35,7 +41,11 @@ def run_migrations_offline() -> None:
 
 
 def do_run_migrations(connection):
-    context.configure(connection=connection, target_metadata=target_metadata)
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        render_as_batch=True,
+    )
     with context.begin_transaction():
         context.run_migrations()
 
