@@ -16,3 +16,4 @@ build/
 *.sqlite3
 alembic/versions/*.pyc
 .claude
+prs/
