@@ -1,5 +1,6 @@
-from pydantic_settings import BaseSettings
 from functools import lru_cache
+
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -8,6 +9,11 @@ class Settings(BaseSettings):
     DEBUG: bool = False
 
     DATABASE_URL: str = "postgresql+asyncpg://user:password@localhost:5432/camiula_db"
+
+    # Pool de conexiones — ajustado para equipos de escasos recursos
+    DB_POOL_SIZE: int = 5
+    DB_MAX_OVERFLOW: int = 3
+    DB_POOL_RECYCLE: int = 1800
 
     SECRET_KEY: str = "change-me-in-production"
     ALGORITHM: str = "HS256"

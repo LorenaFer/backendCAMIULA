@@ -60,7 +60,32 @@ class PatientModel(Base, SoftDeleteMixin, AuditMixin):
 
 Ver documentación completa: [06-estandar-base-de-datos.md](./06-estandar-base-de-datos.md)
 
-### 3. No importar entre módulos
+### 3. Eficiencia y complejidad algorítmica
+
+**Obligatorio.** Todo código DEBE cumplir los estándares de eficiencia. Los jurados evaluarán Big O.
+
+**Prohibido:**
+- N+1 queries (loop + query → usar `selectinload`/`joinedload`)
+- Listados sin paginación (`page_size` máximo 100)
+- `len(.all())` para contar (usar `func.count()`)
+- Filtrar en Python lo que se puede filtrar con WHERE en SQL
+- `flush()` dentro de loops (usar `add_all()`)
+- Operaciones bloqueantes (`time.sleep`, `requests.get` sync)
+
+```python
+# Siempre paginado, siempre con índice, siempre en BD
+stmt = (
+    select(PatientModel.id, PatientModel.first_name, PatientModel.cedula)
+    .where(PatientModel.status == RecordStatus.ACTIVE)
+    .order_by(PatientModel.created_at.desc())
+    .offset((page - 1) * page_size)
+    .limit(page_size)
+)
+```
+
+Ver documentación completa: [07-estandar-eficiencia.md](./07-estandar-eficiencia.md)
+
+### 4. No importar entre módulos
 ```python
 # MAL - crea acoplamiento
 from app.modules.auth.domain.entities.user import User  # desde el módulo patients
@@ -69,7 +94,7 @@ from app.modules.auth.domain.entities.user import User  # desde el módulo patie
 from app.shared.schemas.common import MessageResponse
 ```
 
-### 4. Coordinar cambios en zonas compartidas
+### 5. Coordinar cambios en zonas compartidas
 Estos archivos afectan a todos. Avisar al equipo antes de modificar:
 - `app/core/*`
 - `app/shared/*`
@@ -77,12 +102,12 @@ Estos archivos afectan a todos. Avisar al equipo antes de modificar:
 - `alembic/env.py`
 - `requirements.txt`
 
-### 5. Migraciones de BD
+### 6. Migraciones de BD
 - **NUNCA** editar una migración que ya se hizo push
 - Coordinar antes de crear migraciones nuevas (pueden haber conflictos en Alembic)
 - Nombrar las migraciones descriptivamente: `alembic revision --autogenerate -m "add patients table"`
 
-### 6. Branching
+### 7. Branching
 ```bash
 # Crear rama desde main
 git checkout main
@@ -98,7 +123,7 @@ git push -u origin feature/patients-crud
 # Crear PR en GitHub
 ```
 
-### 7. Convención de commits
+### 8. Convención de commits
 ```
 feat(modulo): descripción      ← nueva funcionalidad
 fix(modulo): descripción       ← corrección de bug
