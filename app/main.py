@@ -5,8 +5,11 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
 from app.core.exceptions import AppException
-from app.shared.middleware.error_handler import app_exception_handler
-from app.shared.schemas.common import MessageResponse
+from app.shared.middleware.error_handler import (
+    app_exception_handler,
+    generic_exception_handler,
+)
+from app.shared.schemas.responses import ok
 
 settings = get_settings()
 
@@ -32,11 +35,12 @@ def create_app() -> FastAPI:
     )
 
     app.add_exception_handler(AppException, app_exception_handler)
+    app.add_exception_handler(Exception, generic_exception_handler)
 
     # Health
-    @app.get("/api/health", response_model=MessageResponse, tags=["Health"])
+    @app.get("/api/health", tags=["Health"])
     async def health_check():
-        return MessageResponse(message="OK")
+        return ok(message="Servidor funcionando correctamente")
 
     # TODO: Register module routers here as they are developed
     # from app.modules.auth.router import router as auth_router

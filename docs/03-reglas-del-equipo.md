@@ -13,7 +13,31 @@ Cada dev es responsable de su módulo. Esto minimiza conflictos de merge.
 
 ## Reglas de Código
 
-### 1. No importar entre módulos
+### 1. Formato estándar de respuestas API
+
+**Obligatorio.** Todo endpoint DEBE usar los helpers de `app.shared.schemas.responses`:
+
+```python
+from app.shared.schemas.responses import ok, created, error, paginated
+
+# Éxito
+return ok(data=patient.model_dump(), message="Paciente obtenido")
+
+# Creación
+return created(data=new.model_dump(), message="Paciente creado")
+
+# Paginación
+return paginated(items=[...], total=45, page=1, page_size=20)
+
+# Errores → usar excepciones
+raise NotFoundException("Paciente no encontrado")
+```
+
+**Prohibido:** `JSONResponse(...)` directo, `return {"success": ...}`, `raise HTTPException(...)`.
+
+Ver documentación completa: [05-estandar-respuestas-api.md](./05-estandar-respuestas-api.md)
+
+### 2. No importar entre módulos
 ```python
 # MAL - crea acoplamiento
 from app.modules.auth.domain.entities.user import User  # desde el módulo patients
@@ -22,7 +46,7 @@ from app.modules.auth.domain.entities.user import User  # desde el módulo patie
 from app.shared.schemas.common import MessageResponse
 ```
 
-### 2. Coordinar cambios en zonas compartidas
+### 3. Coordinar cambios en zonas compartidas
 Estos archivos afectan a todos. Avisar al equipo antes de modificar:
 - `app/core/*`
 - `app/shared/*`
@@ -30,12 +54,12 @@ Estos archivos afectan a todos. Avisar al equipo antes de modificar:
 - `alembic/env.py`
 - `requirements.txt`
 
-### 3. Migraciones de BD
+### 4. Migraciones de BD
 - **NUNCA** editar una migración que ya se hizo push
 - Coordinar antes de crear migraciones nuevas (pueden haber conflictos en Alembic)
 - Nombrar las migraciones descriptivamente: `alembic revision --autogenerate -m "add patients table"`
 
-### 4. Branching
+### 5. Branching
 ```bash
 # Crear rama desde main
 git checkout main
@@ -51,7 +75,7 @@ git push -u origin feature/patients-crud
 # Crear PR en GitHub
 ```
 
-### 5. Convención de commits
+### 6. Convención de commits
 ```
 feat(modulo): descripción      ← nueva funcionalidad
 fix(modulo): descripción       ← corrección de bug
