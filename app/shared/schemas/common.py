@@ -26,6 +26,7 @@ class PaginationMeta(BaseModel):
     page: int
     page_size: int
     pages: int
+    has_next: bool
 
 
 class PaginatedData(BaseModel, Generic[T]):

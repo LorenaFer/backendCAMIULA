@@ -4,6 +4,7 @@ from typing import Optional
 
 from app.core.exceptions import ConflictException
 from app.core.security import hash_password
+from app.modules.auth.domain.entities.enums import UserStatus
 from app.modules.auth.application.dtos.auth_dto import RegisterDTO
 from app.modules.auth.domain.entities.user import User
 from app.modules.auth.domain.repositories.role_repository import RoleRepository
@@ -36,7 +37,7 @@ class RegisterUserUseCase:
             full_name=dto.full_name,
             phone=dto.phone,
             hashed_password=hash_password(dto.password),
-            user_status="ACTIVE",
+            user_status=UserStatus.ACTIVE.value,
         )
 
         user = await self._user_repo.create(user)

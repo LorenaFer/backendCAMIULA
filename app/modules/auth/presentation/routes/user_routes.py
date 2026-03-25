@@ -17,14 +17,13 @@ from app.modules.auth.infrastructure.repositories.sqlalchemy_user_repository imp
 )
 from app.modules.auth.presentation.schemas.auth_schema import (
     AssignRoleRequest,
+    MeResponse,
     UpdateProfileRequest,
     UserResponse,
 )
+from app.modules.auth.presentation.utils import build_me_response
 from app.shared.database.session import get_db
-from app.shared.middleware.auth import (
-    get_current_user,
-    require_permission,
-)
+from app.shared.middleware.auth import require_permission
 from app.shared.middleware.permission_cache import permission_cache
 from app.shared.schemas.common import PaginatedData, StandardResponse
 from app.shared.schemas.responses import ok, paginated
@@ -43,12 +42,12 @@ def _to_response(user: User) -> dict:
     ).model_dump()
 
 
-@router.get("/me", response_model=StandardResponse[UserResponse])
+@router.get("/me", response_model=StandardResponse[MeResponse])
 async def get_my_profile(
     user: User = Depends(require_permission("profile:read")),
 ):
-    """Obtener perfil del usuario autenticado."""
-    return ok(data=_to_response(user), message="Perfil obtenido")
+    """Obtener perfil del usuario autenticado (formato contrato frontend)."""
+    return ok(data=build_me_response(user), message="Perfil obtenido")
 
 
 @router.put("/me", response_model=StandardResponse[UserResponse])
@@ -78,10 +77,10 @@ async def list_users(
     db: AsyncSession = Depends(get_db),
 ):
     """Listar usuarios con paginación. Requiere users:read."""
-    use_case = ListUsersUseCase(user_repo=SQLAlchemyUserRepository(db))
+    repo = SQLAlchemyUserRepository(db)
+    use_case = ListUsersUseCase(user_repo=repo)
     users, total = await use_case.execute(page, page_size)
 
-    repo = SQLAlchemyUserRepository(db)
     items = []
     for u in users:
         u.roles = await repo.get_user_roles(u.id)

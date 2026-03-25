@@ -11,6 +11,14 @@ class LoginDTO:
 
 
 @dataclass(frozen=True)
+class LoginByIdentifierDTO:
+    """Login con identifier flexible: puede ser email, cédula o username."""
+
+    identifier: str
+    password: str
+
+
+@dataclass(frozen=True)
 class RegisterDTO:
     email: str
     full_name: str

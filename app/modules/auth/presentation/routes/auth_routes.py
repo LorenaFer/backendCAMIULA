@@ -1,7 +1,14 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.auth.application.dtos.auth_dto import LoginDTO, RegisterDTO
+from app.modules.auth.application.dtos.auth_dto import (
+    LoginByIdentifierDTO,
+    LoginDTO,
+    RegisterDTO,
+)
+from app.modules.auth.application.use_cases.login_by_identifier import (
+    LoginByIdentifierUseCase,
+)
 from app.modules.auth.application.use_cases.login_user import LoginUserUseCase
 from app.modules.auth.application.use_cases.register_user import RegisterUserUseCase
 from app.modules.auth.infrastructure.repositories.sqlalchemy_role_repository import (
@@ -11,24 +18,54 @@ from app.modules.auth.infrastructure.repositories.sqlalchemy_user_repository imp
     SQLAlchemyUserRepository,
 )
 from app.modules.auth.presentation.schemas.auth_schema import (
+    LoginByIdentifierRequest,
     LoginRequest,
+    LoginResponse,
+    MeResponse,
     RegisterRequest,
     TokenResponse,
     UserResponse,
 )
+from app.modules.auth.presentation.utils import build_me_response
 from app.shared.database.session import get_db
+from app.shared.middleware.auth import get_current_user_id
 from app.shared.schemas.common import StandardResponse
 from app.shared.schemas.responses import created, ok
+
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
-@router.post("/login", response_model=StandardResponse[TokenResponse])
+@router.post("/login", response_model=StandardResponse[LoginResponse])
 async def login(
+    body: LoginByIdentifierRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Autenticar usuario con identifier (email, cédula o username) y password."""
+    repo = SQLAlchemyUserRepository(db)
+    use_case = LoginByIdentifierUseCase(user_repo=repo)
+    result = await use_case.execute(
+        LoginByIdentifierDTO(
+            identifier=body.identifier,
+            password=body.password,
+        )
+    )
+
+    return ok(
+        data=LoginResponse(
+            user=MeResponse(**build_me_response(result.user)),
+            token=result.token.access_token,
+        ).model_dump(),
+        message="Login exitoso",
+    )
+
+
+@router.post("/login/email", response_model=StandardResponse[TokenResponse])
+async def login_by_email(
     body: LoginRequest,
     db: AsyncSession = Depends(get_db),
 ):
-    """Autenticar usuario con email y password (proveedor local)."""
+    """Autenticar usuario con email y password (retrocompatible)."""
     use_case = LoginUserUseCase(
         user_repo=SQLAlchemyUserRepository(db),
     )
@@ -78,3 +115,11 @@ async def register(
         ).model_dump(),
         message="Usuario registrado exitosamente",
     )
+
+
+@router.post("/logout", response_model=StandardResponse[None])
+async def logout(
+    _: str = Depends(get_current_user_id),
+):
+    """Cerrar sesión. El frontend elimina el token localmente."""
+    return ok(data={"ok": True}, message="Sesión cerrada")
