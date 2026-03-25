@@ -4,6 +4,8 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, Optional, Set
 from uuid import uuid4
 
+from app.modules.auth.domain.entities.enums import UserStatus
+
 
 @dataclass
 class User:
@@ -15,7 +17,7 @@ class User:
     cedula: Optional[str] = None
     username: Optional[str] = None
     hashed_password: Optional[str] = None
-    user_status: str = "PENDING"
+    user_status: str = UserStatus.PENDING.value
     roles: list[str] = field(default_factory=list)
     permissions: Set[str] = field(default_factory=set)
     doctor_id: Optional[str] = None

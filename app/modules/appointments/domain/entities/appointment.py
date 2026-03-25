@@ -1,8 +1,27 @@
 from __future__ import annotations
+
 from dataclasses import dataclass, field
 from datetime import date, time, timedelta
 from typing import Optional
 from uuid import uuid4
+
+from app.modules.appointments.domain.entities.enums import AppointmentStatus
+
+
+@dataclass
+class AppointmentJoinData:
+    """Datos resueltos de paciente/doctor para respuestas con JOIN."""
+
+    patient_id: str = ""
+    patient_nhm: int = 0
+    patient_first_name: str = ""
+    patient_last_name: str = ""
+    patient_cedula: str = ""
+    patient_university_relation: str = ""
+    doctor_id: str = ""
+    doctor_first_name: str = ""
+    doctor_last_name: str = ""
+    specialty_name: str = ""
 
 
 @dataclass
@@ -17,29 +36,21 @@ class Appointment:
     is_first_visit: bool = False
     reason: Optional[str] = None
     observations: Optional[str] = None
-    appointment_status: str = "PENDING"
+    appointment_status: AppointmentStatus = AppointmentStatus.PENDING
     id: str = field(default_factory=lambda: str(uuid4()))
     created_by: Optional[str] = None
     created_at: Optional[str] = None
-    # Datos resueltos para respuestas con JOIN
-    patient_data: Optional[dict] = None
-    doctor_data: Optional[dict] = None
+    join_data: Optional[AppointmentJoinData] = None
 
-    VALID_TRANSITIONS = {
-        "PENDING": {"CONFIRMED", "CANCELLED"},
-        "CONFIRMED": {"ATTENDED", "CANCELLED", "NO_SHOW"},
-        "ATTENDED": set(),
-        "CANCELLED": set(),
-        "NO_SHOW": set(),
-    }
-
-    def change_status(self, new_status: str) -> None:
+    def change_status(self, new_status: AppointmentStatus) -> None:
         """Cambia el estado respetando las transiciones válidas."""
-        allowed = self.VALID_TRANSITIONS.get(self.appointment_status, set())
+        if isinstance(new_status, str):
+            new_status = AppointmentStatus(new_status)
+        allowed = AppointmentStatus.transitions().get(self.appointment_status, set())
         if new_status not in allowed:
             raise ValueError(
-                f"No se puede cambiar de '{self.appointment_status}' a '{new_status}'. "
-                f"Transiciones válidas: {allowed or 'ninguna (estado terminal)'}"
+                f"No se puede cambiar de '{self.appointment_status.value}' a '{new_status.value}'. "
+                f"Transiciones válidas: {', '.join(s.value for s in allowed) or 'ninguna (estado terminal)'}"
             )
         self.appointment_status = new_status
 

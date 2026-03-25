@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.appointments.domain.entities.doctor import Doctor
+from app.modules.appointments.domain.entities.enums import DoctorStatus
 from app.modules.appointments.domain.repositories.doctor_repository import (
     DoctorRepository,
 )
@@ -44,7 +45,7 @@ class SQLAlchemyDoctorRepository(DoctorRepository):
             select(DoctorModel, SpecialtyModel.name)
             .join(SpecialtyModel, DoctorModel.fk_specialty_id == SpecialtyModel.id)
             .where(
-                DoctorModel.doctor_status == "ACTIVE",
+                DoctorModel.doctor_status == DoctorStatus.ACTIVE.value,
                 DoctorModel.status == RecordStatus.ACTIVE,
                 SpecialtyModel.status == RecordStatus.ACTIVE,
             )
@@ -84,7 +85,7 @@ class SQLAlchemyDoctorRepository(DoctorRepository):
             select(DoctorModel, SpecialtyModel.name)
             .join(SpecialtyModel, DoctorModel.fk_specialty_id == SpecialtyModel.id)
             .where(
-                DoctorModel.doctor_status == "ACTIVE",
+                DoctorModel.doctor_status == DoctorStatus.ACTIVE.value,
                 DoctorModel.status == RecordStatus.ACTIVE,
                 SpecialtyModel.status == RecordStatus.ACTIVE,
             )

@@ -7,7 +7,11 @@ from uuid import uuid4
 from sqlalchemy import extract, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.appointments.domain.entities.appointment import Appointment
+from app.modules.appointments.domain.entities.appointment import (
+    Appointment,
+    AppointmentJoinData,
+)
+from app.modules.appointments.domain.entities.enums import AppointmentStatus
 from app.modules.appointments.domain.repositories.appointment_repository import (
     AppointmentRepository,
 )
@@ -43,43 +47,27 @@ class SQLAlchemyAppointmentRepository(AppointmentRepository):
             created_at=str(model.created_at) if model.created_at else None,
         )
 
-    @staticmethod
+    @classmethod
     def _to_entity_with_joins(
+        cls,
         apt: AppointmentModel,
         patient: PatientModel,
         doctor: DoctorModel,
         specialty_name: str,
     ) -> Appointment:
-        entity = Appointment(
-            id=apt.id,
-            patient_id=apt.fk_patient_id,
-            doctor_id=apt.fk_doctor_id,
-            specialty_id=apt.fk_specialty_id,
-            appointment_date=apt.appointment_date,
-            start_time=apt.start_time,
-            end_time=apt.end_time,
-            duration_minutes=apt.duration_minutes,
-            is_first_visit=apt.is_first_visit,
-            reason=apt.reason,
-            observations=apt.observations,
-            appointment_status=apt.appointment_status,
-            created_by=apt.created_by,
-            created_at=str(apt.created_at) if apt.created_at else None,
+        entity = cls._to_entity(apt)
+        entity.join_data = AppointmentJoinData(
+            patient_id=patient.id,
+            patient_nhm=patient.nhm,
+            patient_first_name=patient.first_name,
+            patient_last_name=patient.last_name,
+            patient_cedula=patient.cedula,
+            patient_university_relation=patient.university_relation,
+            doctor_id=doctor.id,
+            doctor_first_name=doctor.first_name,
+            doctor_last_name=doctor.last_name,
+            specialty_name=specialty_name,
         )
-        entity.patient_data = {
-            "id": patient.id,
-            "nhm": patient.nhm,
-            "nombre": patient.first_name,
-            "apellido": patient.last_name,
-            "cedula": patient.cedula,
-            "relacion_univ": patient.university_relation,
-        }
-        entity.doctor_data = {
-            "id": doctor.id,
-            "nombre": doctor.first_name,
-            "apellido": doctor.last_name,
-            "especialidad": specialty_name,
-        }
         return entity
 
     async def create(self, appointment: Appointment) -> Appointment:
@@ -208,7 +196,7 @@ class SQLAlchemyAppointmentRepository(AppointmentRepository):
                     extract("month", AppointmentModel.appointment_date) == month,
                 )
         if excluir_canceladas:
-            excluded = {"CANCELLED", "NO_SHOW"}
+            excluded = {s.value for s in AppointmentStatus.excluded()}
             base = base.where(
                 AppointmentModel.appointment_status.notin_(excluded)
             )
@@ -247,20 +235,18 @@ class SQLAlchemyAppointmentRepository(AppointmentRepository):
         items = []
         for row in result.all():
             entity = self._to_entity(row[0])
-            entity.patient_data = {
-                "id": row.p_id,
-                "nhm": row.nhm,
-                "nombre": row.p_first_name,
-                "apellido": row.p_last_name,
-                "cedula": row.cedula,
-                "relacion_univ": row.university_relation,
-            }
-            entity.doctor_data = {
-                "id": row.d_id,
-                "nombre": row.d_first_name,
-                "apellido": row.d_last_name,
-                "especialidad": row.specialty_name,
-            }
+            entity.join_data = AppointmentJoinData(
+                patient_id=row.p_id,
+                patient_nhm=row.nhm,
+                patient_first_name=row.p_first_name,
+                patient_last_name=row.p_last_name,
+                patient_cedula=row.cedula,
+                patient_university_relation=row.university_relation,
+                doctor_id=row.d_id,
+                doctor_first_name=row.d_first_name,
+                doctor_last_name=row.d_last_name,
+                specialty_name=row.specialty_name,
+            )
             items.append(entity)
         return items, total
 
@@ -286,7 +272,7 @@ class SQLAlchemyAppointmentRepository(AppointmentRepository):
         exclude_id: Optional[str] = None,
     ) -> bool:
         """O(log n) con índice compuesto (appointment_date, fk_doctor_id)."""
-        active_statuses = {"PENDING", "CONFIRMED"}
+        active_statuses = {s.value for s in AppointmentStatus.schedulable()}
         stmt = (
             select(func.count())
             .select_from(AppointmentModel)

@@ -3,6 +3,8 @@ from dataclasses import dataclass, field
 from typing import List, Optional
 from uuid import uuid4
 
+from app.modules.appointments.domain.entities.enums import DoctorStatus
+
 
 @dataclass
 class Doctor:
@@ -11,7 +13,7 @@ class Doctor:
     user_id: str
     specialty_id: str
     id: str = field(default_factory=lambda: str(uuid4()))
-    doctor_status: str = "ACTIVE"
+    doctor_status: str = DoctorStatus.ACTIVE.value
     specialty_name: Optional[str] = None
     work_days: List[int] = field(default_factory=list)
 

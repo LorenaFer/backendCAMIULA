@@ -15,6 +15,10 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.modules.appointments.domain.entities.enums import (
+    AppointmentStatus,
+    DoctorStatus,
+)
 from app.shared.database.base import Base
 from app.shared.database.mixins import AuditMixin, SoftDeleteMixin
 
@@ -51,7 +55,7 @@ class DoctorModel(Base, SoftDeleteMixin, AuditMixin):
 
     # --- Grupo 4: Lógica de negocio ---
     doctor_status: Mapped[str] = mapped_column(
-        String(30), nullable=False, default="ACTIVE", index=True
+        String(30), nullable=False, default=DoctorStatus.ACTIVE.value, index=True
     )
 
     # --- Grupos 5-8: Mixins ---
@@ -135,7 +139,7 @@ class AppointmentModel(Base, SoftDeleteMixin, AuditMixin):
 
     # --- Grupo 4: Lógica de negocio ---
     appointment_status: Mapped[str] = mapped_column(
-        String(30), nullable=False, default="PENDING", index=True
+        String(30), nullable=False, default=AppointmentStatus.PENDING.value, index=True
     )
 
     # --- Grupos 5-8: Mixins ---

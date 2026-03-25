@@ -4,6 +4,7 @@ from sqlalchemy import ForeignKey, Index, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.modules.auth.domain.entities.enums import UserStatus
 from app.shared.database.base import Base
 from app.shared.database.mixins import AuditMixin, SoftDeleteMixin
 
@@ -38,7 +39,7 @@ class UserModel(Base, SoftDeleteMixin, AuditMixin):
 
     # --- Grupo 4: Lógica de negocio ---
     user_status: Mapped[Optional[str]] = mapped_column(
-        String(30), nullable=True, default="PENDING"
+        String(30), nullable=True, default=UserStatus.PENDING.value
     )
 
     # --- Grupos 5-8: SoftDeleteMixin + AuditMixin ---

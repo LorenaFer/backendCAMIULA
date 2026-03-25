@@ -4,6 +4,8 @@ from datetime import date, datetime
 from typing import Any, Dict, Optional
 from uuid import uuid4
 
+from app.modules.patients.domain.entities.enums import PatientStatus
+
 
 @dataclass
 class Patient:
@@ -30,7 +32,7 @@ class Patient:
     medical_data: Optional[Dict[str, Any]] = None
     emergency_contact: Optional[Dict[str, Any]] = None
     is_new: bool = True
-    patient_status: str = "ACTIVE"
+    patient_status: str = PatientStatus.ACTIVE.value
     created_at: Optional[datetime] = None
 
     VALID_RELATIONS = {"empleado", "estudiante", "profesor", "obrero", "tercero"}

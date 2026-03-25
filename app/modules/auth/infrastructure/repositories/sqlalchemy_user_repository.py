@@ -6,6 +6,7 @@ from uuid import uuid4
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.auth.domain.entities.enums import UserStatus
 from app.modules.auth.domain.entities.user import User
 from app.modules.auth.domain.repositories.user_repository import UserRepository
 from app.modules.auth.infrastructure.models import (
@@ -36,7 +37,7 @@ class SQLAlchemyUserRepository(UserRepository):
             cedula=model.cedula,
             username=model.username,
             hashed_password=model.hashed_password,
-            user_status=model.user_status or "PENDING",
+            user_status=model.user_status or UserStatus.PENDING.value,
         )
 
     # -- CRUD --

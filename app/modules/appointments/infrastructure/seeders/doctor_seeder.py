@@ -3,6 +3,7 @@ from uuid import uuid4
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.appointments.domain.entities.enums import DoctorStatus
 from app.modules.appointments.infrastructure.models import DoctorModel, SpecialtyModel
 from app.modules.auth.infrastructure.models import UserModel
 from app.shared.database.seeder import BaseSeeder
@@ -44,7 +45,7 @@ class DoctorSeeder(BaseSeeder):
                 fk_specialty_id=specialty.id,
                 first_name="Carlos",
                 last_name="Mendoza",
-                doctor_status="ACTIVE",
+                doctor_status=DoctorStatus.ACTIVE.value,
             )
         )
 

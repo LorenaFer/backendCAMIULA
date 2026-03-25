@@ -6,6 +6,7 @@ from uuid import uuid4
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.patients.domain.entities.enums import PatientStatus
 from app.modules.patients.domain.entities.patient import Patient
 from app.modules.patients.domain.repositories.patient_repository import PatientRepository
 from app.modules.patients.infrastructure.models import PatientModel
@@ -43,7 +44,7 @@ class SQLAlchemyPatientRepository(PatientRepository):
             medical_data=model.medical_data,
             emergency_contact=model.emergency_contact,
             is_new=model.is_new,
-            patient_status=model.patient_status or "ACTIVE",
+            patient_status=model.patient_status or PatientStatus.ACTIVE.value,
             created_at=model.created_at,
         )
 

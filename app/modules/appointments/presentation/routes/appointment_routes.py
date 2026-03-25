@@ -8,6 +8,7 @@ from app.modules.appointments.application.dtos.appointment_dto import (
     ChangeAppointmentStatusDTO,
     CreateAppointmentDTO,
 )
+from app.modules.appointments.domain.entities.enums import AppointmentStatus
 from app.modules.appointments.application.use_cases.change_appointment_status import (
     ChangeAppointmentStatusUseCase,
 )
@@ -46,6 +47,7 @@ router = APIRouter(prefix="/appointments", tags=["Appointments"])
 
 
 def _to_response(apt) -> dict:
+    jd = apt.join_data
     resp = AppointmentResponse(
         id=apt.id,
         paciente_id=apt.patient_id,
@@ -56,13 +58,25 @@ def _to_response(apt) -> dict:
         hora_fin=apt.end_time.strftime("%H:%M"),
         duracion_min=apt.duration_minutes,
         es_primera_vez=apt.is_first_visit,
-        estado=apt.appointment_status.lower(),
+        estado=AppointmentStatus(apt.appointment_status).display_name,
         motivo_consulta=apt.reason,
         observaciones=apt.observations,
         created_at=apt.created_at,
         created_by=apt.created_by,
-        paciente=PatientInAppointment(**apt.patient_data) if apt.patient_data else None,
-        doctor=DoctorInAppointment(**apt.doctor_data) if apt.doctor_data else None,
+        paciente=PatientInAppointment(
+            id=jd.patient_id,
+            nhm=jd.patient_nhm,
+            nombre=jd.patient_first_name,
+            apellido=jd.patient_last_name,
+            cedula=jd.patient_cedula,
+            relacion_univ=jd.patient_university_relation,
+        ) if jd else None,
+        doctor=DoctorInAppointment(
+            id=jd.doctor_id,
+            nombre=jd.doctor_first_name,
+            apellido=jd.doctor_last_name,
+            especialidad=jd.specialty_name,
+        ) if jd else None,
     )
     return resp.model_dump()
 
@@ -180,14 +194,7 @@ async def change_status(
     """Cambiar el estado de una cita."""
     repo = SQLAlchemyAppointmentRepository(db)
     use_case = ChangeAppointmentStatusUseCase(appointment_repo=repo)
-    status_map = {
-        "pendiente": "PENDING",
-        "confirmada": "CONFIRMED",
-        "atendida": "ATTENDED",
-        "cancelada": "CANCELLED",
-        "no_asistio": "NO_SHOW",
-    }
-    new_status = status_map.get(body.estado.lower(), body.estado.upper())
+    new_status = AppointmentStatus.from_display(body.estado).value
     await use_case.execute(
         ChangeAppointmentStatusDTO(
             appointment_id=appointment_id,

@@ -5,6 +5,7 @@ from typing import Optional
 
 from app.core.exceptions import UnauthorizedException
 from app.core.security import create_access_token, verify_password
+from app.modules.auth.domain.entities.enums import UserStatus
 from app.modules.auth.application.dtos.auth_dto import (
     LoginByIdentifierDTO,
     TokenResponseDTO,
@@ -47,7 +48,7 @@ class LoginByIdentifierUseCase:
         if not verify_password(dto.password, user.hashed_password):
             raise UnauthorizedException("Credenciales inválidas")
 
-        if user.user_status == "SUSPENDED":
+        if user.user_status == UserStatus.SUSPENDED.value:
             raise UnauthorizedException("Usuario suspendido")
 
         token = create_access_token(data={"sub": user.id, "email": user.email})

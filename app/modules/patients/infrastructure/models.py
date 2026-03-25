@@ -4,6 +4,7 @@ from sqlalchemy import Boolean, Date, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.modules.patients.domain.entities.enums import PatientStatus
 from app.shared.database.base import Base
 from app.shared.database.mixins import AuditMixin, SoftDeleteMixin
 
@@ -58,7 +59,7 @@ class PatientModel(Base, SoftDeleteMixin, AuditMixin):
 
     # --- Grupo 4: Lógica de negocio ---
     patient_status: Mapped[Optional[str]] = mapped_column(
-        String(30), nullable=True, default="ACTIVE", index=True
+        String(30), nullable=True, default=PatientStatus.ACTIVE.value, index=True
     )
 
     # --- Grupos 5-8: SoftDeleteMixin + AuditMixin ---

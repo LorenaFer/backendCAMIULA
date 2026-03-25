@@ -9,6 +9,10 @@ from app.modules.appointments.domain.entities.availability import (
     DoctorException,
 )
 from app.modules.appointments.domain.entities.doctor import Doctor
+from app.modules.appointments.domain.entities.enums import (
+    AppointmentStatus,
+    DoctorStatus,
+)
 from app.modules.appointments.domain.entities.medical_record import MedicalRecord
 from app.modules.appointments.domain.entities.specialty import Specialty
 
@@ -30,7 +34,7 @@ class TestDoctorEntity:
         )
         assert d.full_name == "Carlos Mendoza"
         assert d.display_name == "Dr. Carlos Mendoza"
-        assert d.doctor_status == "ACTIVE"
+        assert d.doctor_status == DoctorStatus.ACTIVE.value
 
 
 class TestAvailabilityEntity:
@@ -116,23 +120,23 @@ class TestAppointmentEntity:
 
     def test_valid_transition_pending_to_confirmed(self):
         apt = self._make_appointment()
-        apt.change_status("CONFIRMED")
-        assert apt.appointment_status == "CONFIRMED"
+        apt.change_status(AppointmentStatus.CONFIRMED)
+        assert apt.appointment_status == AppointmentStatus.CONFIRMED
 
     def test_valid_transition_confirmed_to_attended(self):
-        apt = self._make_appointment(appointment_status="CONFIRMED")
-        apt.change_status("ATTENDED")
-        assert apt.appointment_status == "ATTENDED"
+        apt = self._make_appointment(appointment_status=AppointmentStatus.CONFIRMED)
+        apt.change_status(AppointmentStatus.ATTENDED)
+        assert apt.appointment_status == AppointmentStatus.ATTENDED
 
     def test_invalid_transition_pending_to_attended(self):
         apt = self._make_appointment()
         with pytest.raises(ValueError, match="No se puede cambiar"):
-            apt.change_status("ATTENDED")
+            apt.change_status(AppointmentStatus.ATTENDED)
 
     def test_terminal_state_cannot_change(self):
-        apt = self._make_appointment(appointment_status="CANCELLED")
+        apt = self._make_appointment(appointment_status=AppointmentStatus.CANCELLED)
         with pytest.raises(ValueError):
-            apt.change_status("CONFIRMED")
+            apt.change_status(AppointmentStatus.CONFIRMED)
 
     def test_validate_date_too_soon(self):
         apt = self._make_appointment(appointment_date=date.today())

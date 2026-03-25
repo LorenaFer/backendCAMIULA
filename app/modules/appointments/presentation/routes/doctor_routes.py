@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.appointments.application.use_cases.list_active_doctors import (
     ListActiveDoctorsUseCase,
 )
+from app.modules.appointments.domain.entities.enums import DoctorStatus
 from app.modules.appointments.application.use_cases.list_doctor_options import (
     ListDoctorOptionsUseCase,
 )
@@ -46,7 +47,7 @@ async def list_doctors(
             nombre=d.first_name,
             apellido=d.last_name,
             especialidad_id=d.specialty_id,
-            activo=d.doctor_status == "ACTIVE",
+            activo=d.doctor_status == DoctorStatus.ACTIVE.value,
             especialidad=SpecialtyResponse(
                 id=d.specialty_id,
                 nombre=d.specialty_name or "",
