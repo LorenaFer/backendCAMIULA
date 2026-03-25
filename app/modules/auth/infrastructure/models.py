@@ -26,6 +26,12 @@ class UserModel(Base, SoftDeleteMixin, AuditMixin):
     )
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
     phone: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    cedula: Mapped[Optional[str]] = mapped_column(
+        String(20), unique=True, index=True, nullable=True
+    )
+    username: Mapped[Optional[str]] = mapped_column(
+        String(50), unique=True, index=True, nullable=True
+    )
     hashed_password: Mapped[Optional[str]] = mapped_column(
         String(255), nullable=True
     )

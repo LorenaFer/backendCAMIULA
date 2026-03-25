@@ -17,6 +17,7 @@ from app.modules.auth.infrastructure.repositories.sqlalchemy_user_repository imp
 )
 from app.modules.auth.presentation.schemas.auth_schema import (
     AssignRoleRequest,
+    MeResponse,
     UpdateProfileRequest,
     UserResponse,
 )
@@ -43,12 +44,28 @@ def _to_response(user: User) -> dict:
     ).model_dump()
 
 
-@router.get("/me", response_model=StandardResponse[UserResponse])
+def _to_me_response(user: User) -> dict:
+    """Construye MeResponse adaptado al contrato frontend."""
+    parts = user.full_name.strip().split()
+    initials = "".join(p[0].upper() for p in parts[:2]) if parts else "??"
+    role = user.roles[0] if user.roles else "paciente"
+    if role == "administrador":
+        role = "admin"
+    return MeResponse(
+        id=user.id,
+        name=user.full_name,
+        role=role,
+        initials=initials,
+        doctor_id=user.doctor_id,
+    ).model_dump()
+
+
+@router.get("/me", response_model=StandardResponse[MeResponse])
 async def get_my_profile(
     user: User = Depends(require_permission("profile:read")),
 ):
-    """Obtener perfil del usuario autenticado."""
-    return ok(data=_to_response(user), message="Perfil obtenido")
+    """Obtener perfil del usuario autenticado (formato contrato frontend)."""
+    return ok(data=_to_me_response(user), message="Perfil obtenido")
 
 
 @router.put("/me", response_model=StandardResponse[UserResponse])

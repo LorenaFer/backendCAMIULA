@@ -33,6 +33,8 @@ class SQLAlchemyUserRepository(UserRepository):
             full_name=model.full_name,
             external_auth=model.external_auth,
             phone=model.phone,
+            cedula=model.cedula,
+            username=model.username,
             hashed_password=model.hashed_password,
             user_status=model.user_status or "PENDING",
         )
@@ -46,6 +48,8 @@ class SQLAlchemyUserRepository(UserRepository):
             email=user.email,
             full_name=user.full_name,
             phone=user.phone,
+            cedula=user.cedula,
+            username=user.username,
             hashed_password=user.hashed_password,
             user_status=user.user_status,
         )
@@ -65,6 +69,24 @@ class SQLAlchemyUserRepository(UserRepository):
     async def get_by_email(self, email: str) -> Optional[User]:
         stmt = select(UserModel).where(
             UserModel.email == email,
+            UserModel.status == RecordStatus.ACTIVE,
+        )
+        result = await self._session.execute(stmt)
+        model = result.scalar_one_or_none()
+        return self._to_entity(model) if model else None
+
+    async def get_by_cedula(self, cedula: str) -> Optional[User]:
+        stmt = select(UserModel).where(
+            UserModel.cedula == cedula,
+            UserModel.status == RecordStatus.ACTIVE,
+        )
+        result = await self._session.execute(stmt)
+        model = result.scalar_one_or_none()
+        return self._to_entity(model) if model else None
+
+    async def get_by_username(self, username: str) -> Optional[User]:
+        stmt = select(UserModel).where(
+            UserModel.username == username,
             UserModel.status == RecordStatus.ACTIVE,
         )
         result = await self._session.execute(stmt)

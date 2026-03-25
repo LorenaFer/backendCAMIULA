@@ -8,6 +8,13 @@ class LoginRequest(BaseModel):
     password: str = Field(min_length=8)
 
 
+class LoginByIdentifierRequest(BaseModel):
+    """Login flexible: identifier puede ser email, cédula o username."""
+
+    identifier: str = Field(min_length=1, max_length=255)
+    password: str = Field(min_length=1)
+
+
 class RegisterRequest(BaseModel):
     email: EmailStr
     full_name: str = Field(min_length=2, max_length=255)
@@ -19,6 +26,23 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     expires_in: int
+
+
+class LoginResponse(BaseModel):
+    """Response adaptado al contrato frontend: incluye user + token."""
+
+    user: "MeResponse"
+    token: str
+
+
+class MeResponse(BaseModel):
+    """Response para /users/me adaptado al contrato frontend."""
+
+    id: str
+    name: str
+    role: str
+    initials: str
+    doctor_id: Optional[str] = None
 
 
 class UserResponse(BaseModel):

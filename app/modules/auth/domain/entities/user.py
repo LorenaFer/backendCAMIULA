@@ -12,10 +12,13 @@ class User:
     id: str = field(default_factory=lambda: str(uuid4()))
     external_auth: Optional[Dict[str, Any]] = None
     phone: Optional[str] = None
+    cedula: Optional[str] = None
+    username: Optional[str] = None
     hashed_password: Optional[str] = None
     user_status: str = "PENDING"
     roles: list[str] = field(default_factory=list)
     permissions: Set[str] = field(default_factory=set)
+    doctor_id: Optional[str] = None
 
     def get_external_sub(self, provider: str) -> Optional[str]:
         """Obtiene el sub de un proveedor externo específico."""

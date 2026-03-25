@@ -1,9 +1,17 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.auth.application.dtos.auth_dto import LoginDTO, RegisterDTO
+from app.modules.auth.application.dtos.auth_dto import (
+    LoginByIdentifierDTO,
+    LoginDTO,
+    RegisterDTO,
+)
+from app.modules.auth.application.use_cases.login_by_identifier import (
+    LoginByIdentifierUseCase,
+)
 from app.modules.auth.application.use_cases.login_user import LoginUserUseCase
 from app.modules.auth.application.use_cases.register_user import RegisterUserUseCase
+from app.modules.auth.domain.entities.user import User
 from app.modules.auth.infrastructure.repositories.sqlalchemy_role_repository import (
     SQLAlchemyRoleRepository,
 )
@@ -11,24 +19,85 @@ from app.modules.auth.infrastructure.repositories.sqlalchemy_user_repository imp
     SQLAlchemyUserRepository,
 )
 from app.modules.auth.presentation.schemas.auth_schema import (
+    LoginByIdentifierRequest,
     LoginRequest,
+    LoginResponse,
+    MeResponse,
     RegisterRequest,
     TokenResponse,
     UserResponse,
 )
 from app.shared.database.session import get_db
+from app.shared.middleware.auth import get_current_user, get_current_user_id
 from app.shared.schemas.common import StandardResponse
 from app.shared.schemas.responses import created, ok
+
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
-@router.post("/login", response_model=StandardResponse[TokenResponse])
+def _build_me_response(user: User) -> dict:
+    """Construye MeResponse a partir de User entity."""
+    parts = user.full_name.strip().split()
+    initials = "".join(p[0].upper() for p in parts[:2]) if parts else "??"
+    # Rol principal: primer rol de la lista, o "paciente" por defecto
+    role = user.roles[0] if user.roles else "paciente"
+    # Mapear "administrador" a "admin" para el frontend
+    if role == "administrador":
+        role = "admin"
+    return MeResponse(
+        id=user.id,
+        name=user.full_name,
+        role=role,
+        initials=initials,
+        doctor_id=user.doctor_id,
+    ).model_dump()
+
+
+@router.post("/login", response_model=StandardResponse[LoginResponse])
 async def login(
+    body: LoginByIdentifierRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Autenticar usuario con identifier (email, cédula o username) y password."""
+    repo = SQLAlchemyUserRepository(db)
+    use_case = LoginByIdentifierUseCase(user_repo=repo)
+    result = await use_case.execute(
+        LoginByIdentifierDTO(
+            identifier=body.identifier,
+            password=body.password,
+        )
+    )
+
+    # Resolver usuario para construir la respuesta con datos del user
+    from app.core.security import decode_access_token
+
+    payload = decode_access_token(result.access_token)
+    user_id = payload.get("sub") if payload else None
+    user = await repo.get_by_id(user_id) if user_id else None
+
+    me_data = None
+    if user:
+        user.roles = await repo.get_user_roles(user.id)
+        me_data = _build_me_response(user)
+
+    return ok(
+        data=LoginResponse(
+            user=MeResponse(**me_data) if me_data else MeResponse(
+                id="", name="", role="paciente", initials="??",
+            ),
+            token=result.access_token,
+        ).model_dump(),
+        message="Login exitoso",
+    )
+
+
+@router.post("/login/email", response_model=StandardResponse[TokenResponse])
+async def login_by_email(
     body: LoginRequest,
     db: AsyncSession = Depends(get_db),
 ):
-    """Autenticar usuario con email y password (proveedor local)."""
+    """Autenticar usuario con email y password (retrocompatible)."""
     use_case = LoginUserUseCase(
         user_repo=SQLAlchemyUserRepository(db),
     )
@@ -78,3 +147,11 @@ async def register(
         ).model_dump(),
         message="Usuario registrado exitosamente",
     )
+
+
+@router.post("/logout", response_model=StandardResponse[None])
+async def logout(
+    _: str = Depends(get_current_user_id),
+):
+    """Cerrar sesión. El frontend elimina el token localmente."""
+    return ok(data={"ok": True}, message="Sesión cerrada")

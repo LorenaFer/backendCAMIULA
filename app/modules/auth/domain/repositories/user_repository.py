@@ -21,6 +21,16 @@ class UserRepository(ABC):
         ...
 
     @abstractmethod
+    async def get_by_cedula(self, cedula: str) -> Optional[User]:
+        """Busca usuario por cédula. O(log n) con índice."""
+        ...
+
+    @abstractmethod
+    async def get_by_username(self, username: str) -> Optional[User]:
+        """Busca usuario por username. O(log n) con índice."""
+        ...
+
+    @abstractmethod
     async def get_by_external_sub(
         self, provider: str, sub: str
     ) -> Optional[User]:
