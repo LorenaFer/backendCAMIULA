@@ -87,7 +87,7 @@ def paginated(
 ) -> JSONResponse:
     """Respuesta paginada estándar.
 
-    Calcula automáticamente el número total de páginas.
+    Calcula automáticamente el número total de páginas y has_next.
     """
     pages = -(-total // page_size) if page_size > 0 else 0
     return ok(
@@ -98,6 +98,7 @@ def paginated(
                 "page": page,
                 "page_size": page_size,
                 "pages": pages,
+                "has_next": page < pages,
             },
         },
         message=message,
