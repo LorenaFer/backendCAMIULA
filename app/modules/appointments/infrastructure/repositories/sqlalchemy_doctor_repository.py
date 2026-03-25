@@ -49,6 +49,7 @@ class SQLAlchemyDoctorRepository(DoctorRepository):
                 SpecialtyModel.status == RecordStatus.ACTIVE,
             )
             .order_by(DoctorModel.last_name, DoctorModel.first_name)
+            .limit(200)
         )
         result = await self._session.execute(stmt)
         return [

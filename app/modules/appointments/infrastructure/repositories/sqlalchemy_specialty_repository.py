@@ -26,6 +26,7 @@ class SQLAlchemySpecialtyRepository(SpecialtyRepository):
             select(SpecialtyModel)
             .where(SpecialtyModel.status == RecordStatus.ACTIVE)
             .order_by(SpecialtyModel.name)
+            .limit(100)
         )
         result = await self._session.execute(stmt)
         return [self._to_entity(m) for m in result.scalars()]

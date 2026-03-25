@@ -143,9 +143,25 @@ class SQLAlchemyAppointmentRepository(AppointmentRepository):
         mes: Optional[str] = None,
         excluir_canceladas: bool = False,
     ) -> Tuple[List[Appointment], int]:
-        """Lista citas con filtros y paginación. O(log n + k)."""
+        """Lista citas con filtros y paginación. O(log n + k).
+
+        Selecciona solo columnas necesarias de Patient y Doctor para evitar
+        cargar JSONB blobs (medical_data, emergency_contact) en listados.
+        """
         base = (
-            select(AppointmentModel, PatientModel, DoctorModel, SpecialtyModel.name)
+            select(
+                AppointmentModel,
+                PatientModel.id.label("p_id"),
+                PatientModel.nhm,
+                PatientModel.first_name.label("p_first_name"),
+                PatientModel.last_name.label("p_last_name"),
+                PatientModel.cedula,
+                PatientModel.university_relation,
+                DoctorModel.id.label("d_id"),
+                DoctorModel.first_name.label("d_first_name"),
+                DoctorModel.last_name.label("d_last_name"),
+                SpecialtyModel.name.label("specialty_name"),
+            )
             .join(PatientModel, AppointmentModel.fk_patient_id == PatientModel.id)
             .join(DoctorModel, AppointmentModel.fk_doctor_id == DoctorModel.id)
             .join(
@@ -157,11 +173,9 @@ class SQLAlchemyAppointmentRepository(AppointmentRepository):
         count_base = (
             select(func.count())
             .select_from(AppointmentModel)
-            .join(PatientModel, AppointmentModel.fk_patient_id == PatientModel.id)
             .where(AppointmentModel.status == RecordStatus.ACTIVE)
         )
 
-        # Aplicar filtros
         if fecha:
             base = base.where(AppointmentModel.appointment_date == fecha)
             count_base = count_base.where(AppointmentModel.appointment_date == fecha)
@@ -203,19 +217,17 @@ class SQLAlchemyAppointmentRepository(AppointmentRepository):
             )
         if q:
             search = f"%{q}%"
-            base = base.where(
-                or_(
-                    PatientModel.first_name.ilike(search),
-                    PatientModel.last_name.ilike(search),
-                    PatientModel.cedula.ilike(search),
-                )
+            q_filter = or_(
+                PatientModel.first_name.ilike(search),
+                PatientModel.last_name.ilike(search),
+                PatientModel.cedula.ilike(search),
             )
-            count_base = count_base.where(
-                or_(
-                    PatientModel.first_name.ilike(search),
-                    PatientModel.last_name.ilike(search),
-                    PatientModel.cedula.ilike(search),
-                )
+            base = base.where(q_filter)
+            # Solo agregar JOIN con patients al count cuando hay búsqueda de texto
+            count_base = (
+                count_base
+                .join(PatientModel, AppointmentModel.fk_patient_id == PatientModel.id)
+                .where(q_filter)
             )
 
         # Count
@@ -232,10 +244,24 @@ class SQLAlchemyAppointmentRepository(AppointmentRepository):
         )
         result = await self._session.execute(stmt)
 
-        items = [
-            self._to_entity_with_joins(row[0], row[1], row[2], row[3])
-            for row in result.all()
-        ]
+        items = []
+        for row in result.all():
+            entity = self._to_entity(row[0])
+            entity.patient_data = {
+                "id": row.p_id,
+                "nhm": row.nhm,
+                "nombre": row.p_first_name,
+                "apellido": row.p_last_name,
+                "cedula": row.cedula,
+                "relacion_univ": row.university_relation,
+            }
+            entity.doctor_data = {
+                "id": row.d_id,
+                "nombre": row.d_first_name,
+                "apellido": row.d_last_name,
+                "especialidad": row.specialty_name,
+            }
+            items.append(entity)
         return items, total
 
     async def update_status(

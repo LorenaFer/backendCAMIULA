@@ -1,7 +1,7 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
-from datetime import date, datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import date, datetime
+from typing import Any, Dict, Optional
 from uuid import uuid4
 
 

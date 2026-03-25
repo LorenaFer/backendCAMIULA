@@ -1,4 +1,4 @@
-from datetime import date, time
+from datetime import date
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
@@ -37,16 +37,12 @@ from app.modules.appointments.presentation.schemas.appointment_schema import (
     DoctorInAppointment,
     PatientInAppointment,
 )
+from app.modules.appointments.presentation.utils import parse_time
 from app.shared.database.session import get_db
 from app.shared.middleware.auth import require_permission
 from app.shared.schemas.responses import created, ok, paginated
 
 router = APIRouter(prefix="/appointments", tags=["Appointments"])
-
-
-def _parse_time(s: str) -> time:
-    parts = s.split(":")
-    return time(int(parts[0]), int(parts[1]))
 
 
 def _to_response(apt) -> dict:
@@ -56,8 +52,8 @@ def _to_response(apt) -> dict:
         doctor_id=apt.doctor_id,
         especialidad_id=apt.specialty_id,
         fecha=apt.appointment_date,
-        hora_inicio=apt.start_time.strftime("%H:%M") if hasattr(apt.start_time, 'strftime') else str(apt.start_time)[:5],
-        hora_fin=apt.end_time.strftime("%H:%M") if hasattr(apt.end_time, 'strftime') else str(apt.end_time)[:5],
+        hora_inicio=apt.start_time.strftime("%H:%M"),
+        hora_fin=apt.end_time.strftime("%H:%M"),
         duracion_min=apt.duration_minutes,
         es_primera_vez=apt.is_first_visit,
         estado=apt.appointment_status.lower(),
@@ -90,8 +86,8 @@ async def create_appointment(
             doctor_id=body.doctor_id,
             specialty_id=body.especialidad_id,
             appointment_date=body.fecha,
-            start_time=_parse_time(body.hora_inicio),
-            end_time=_parse_time(body.hora_fin),
+            start_time=parse_time(body.hora_inicio),
+            end_time=parse_time(body.hora_fin),
             duration_minutes=body.duracion_min,
             is_first_visit=body.es_primera_vez,
             reason=body.motivo_consulta,
@@ -153,7 +149,7 @@ async def check_slot(
     occupied = await use_case.execute(
         doctor_id=doctor_id,
         appointment_date=fecha,
-        start_time=_parse_time(hora_inicio),
+        start_time=parse_time(hora_inicio),
     )
     return ok(
         data=CheckSlotResponse(ocupado=occupied).model_dump(),

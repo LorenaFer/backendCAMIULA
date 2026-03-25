@@ -58,7 +58,7 @@ class PatientModel(Base, SoftDeleteMixin, AuditMixin):
 
     # --- Grupo 4: Lógica de negocio ---
     patient_status: Mapped[Optional[str]] = mapped_column(
-        String(30), nullable=True, default="ACTIVE"
+        String(30), nullable=True, default="ACTIVE", index=True
     )
 
     # --- Grupos 5-8: SoftDeleteMixin + AuditMixin ---

@@ -105,7 +105,8 @@ async def search_patient(
         use_case_ced = SearchPatientByCedulaUseCase(patient_repo=repo)
         patient = await use_case_ced.execute(cedula)
     else:
-        return ok(data=None, message="Debe especificar nhm o cedula")
+        from app.core.exceptions import AppException
+        raise AppException("Debe especificar nhm o cedula", status_code=422)
 
     if patient is None:
         return ok(data=None, message="Paciente no encontrado")

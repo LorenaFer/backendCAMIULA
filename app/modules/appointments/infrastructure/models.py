@@ -51,7 +51,7 @@ class DoctorModel(Base, SoftDeleteMixin, AuditMixin):
 
     # --- Grupo 4: Lógica de negocio ---
     doctor_status: Mapped[str] = mapped_column(
-        String(30), nullable=False, default="ACTIVE"
+        String(30), nullable=False, default="ACTIVE", index=True
     )
 
     # --- Grupos 5-8: Mixins ---

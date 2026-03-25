@@ -1,4 +1,4 @@
-from datetime import date, time
+from datetime import date
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -31,16 +31,12 @@ from app.modules.appointments.presentation.schemas.availability_schema import (
     ExceptionCheckResponse,
     UpdateAvailabilityBlockRequest,
 )
+from app.modules.appointments.presentation.utils import parse_time
 from app.shared.database.session import get_db
-from app.shared.middleware.auth import get_current_user, require_permission
+from app.shared.middleware.auth import require_permission
 from app.shared.schemas.responses import created, ok
 
 router = APIRouter(prefix="/doctors", tags=["Doctor Availability"])
-
-
-def _parse_time(s: str) -> time:
-    parts = s.split(":")
-    return time(int(parts[0]), int(parts[1]))
 
 
 def _block_response(b) -> dict:
@@ -82,8 +78,8 @@ async def create_availability(
         CreateAvailabilityBlockDTO(
             doctor_id=doctor_id,
             day_of_week=body.day_of_week,
-            start_time=_parse_time(body.hora_inicio),
-            end_time=_parse_time(body.hora_fin),
+            start_time=parse_time(body.hora_inicio),
+            end_time=parse_time(body.hora_fin),
             slot_duration=body.duracion_slot,
         )
     )
@@ -104,8 +100,8 @@ async def update_availability(
     await use_case.execute(
         UpdateAvailabilityBlockDTO(
             block_id=block_id,
-            start_time=_parse_time(body.hora_inicio) if body.hora_inicio else None,
-            end_time=_parse_time(body.hora_fin) if body.hora_fin else None,
+            start_time=parse_time(body.hora_inicio) if body.hora_inicio else None,
+            end_time=parse_time(body.hora_fin) if body.hora_fin else None,
         )
     )
     return ok(message="Bloque actualizado")
