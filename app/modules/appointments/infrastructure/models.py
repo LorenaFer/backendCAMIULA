@@ -167,6 +167,8 @@ class MedicalRecordModel(Base, SoftDeleteMixin, AuditMixin):
     )
 
     # --- Grupo 3: Dominio ---
+    schema_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    schema_version: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
     evaluation: Mapped[Dict[str, Any]] = mapped_column(JSONB, nullable=False)
     is_prepared: Mapped[bool] = mapped_column(
         Boolean, default=False, server_default="false", nullable=False
