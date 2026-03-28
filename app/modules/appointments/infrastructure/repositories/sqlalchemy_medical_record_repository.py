@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Optional
+from typing import List, Optional
 from uuid import uuid4
 
 from sqlalchemy import select
@@ -11,7 +11,10 @@ from app.modules.appointments.domain.entities.medical_record import MedicalRecor
 from app.modules.appointments.domain.repositories.medical_record_repository import (
     MedicalRecordRepository,
 )
-from app.modules.appointments.infrastructure.models import MedicalRecordModel
+from app.modules.appointments.infrastructure.models import (
+    AppointmentModel,
+    MedicalRecordModel,
+)
 from app.shared.database.mixins import RecordStatus
 
 
@@ -26,6 +29,8 @@ class SQLAlchemyMedicalRecordRepository(MedicalRecordRepository):
             appointment_id=model.fk_appointment_id,
             patient_id=model.fk_patient_id,
             doctor_id=model.fk_doctor_id,
+            schema_id=model.schema_id,
+            schema_version=model.schema_version,
             evaluation=model.evaluation,
             is_prepared=model.is_prepared,
             prepared_at=model.prepared_at,
@@ -70,11 +75,18 @@ class SQLAlchemyMedicalRecordRepository(MedicalRecordRepository):
                 fk_appointment_id=record.appointment_id,
                 fk_patient_id=record.patient_id,
                 fk_doctor_id=record.doctor_id,
+                schema_id=record.schema_id,
+                schema_version=record.schema_version,
                 evaluation=record.evaluation,
             )
             self._session.add(model)
         else:
             model.evaluation = record.evaluation
+            if record.schema_id is not None:
+                model.schema_id = record.schema_id
+            if record.schema_version is not None:
+                model.schema_version = record.schema_version
+            model.updated_at = datetime.now(timezone.utc)
 
         await self._session.flush()
         return self._to_entity(model)
@@ -90,3 +102,30 @@ class SQLAlchemyMedicalRecordRepository(MedicalRecordRepository):
             model.prepared_at = datetime.now(timezone.utc)
             model.prepared_by = prepared_by
             await self._session.flush()
+
+    async def get_patient_history(
+        self,
+        patient_id: str,
+        limit: int = 5,
+        exclude_appointment_id: Optional[str] = None,
+    ) -> List[MedicalRecord]:
+        """Historial previo del paciente. O(log n) con índice en fk_patient_id."""
+        stmt = (
+            select(MedicalRecordModel)
+            .join(
+                AppointmentModel,
+                MedicalRecordModel.fk_appointment_id == AppointmentModel.id,
+            )
+            .where(
+                MedicalRecordModel.fk_patient_id == patient_id,
+                MedicalRecordModel.status == RecordStatus.ACTIVE,
+            )
+            .order_by(AppointmentModel.appointment_date.desc())
+            .limit(limit)
+        )
+        if exclude_appointment_id:
+            stmt = stmt.where(
+                MedicalRecordModel.fk_appointment_id != exclude_appointment_id
+            )
+        result = await self._session.execute(stmt)
+        return [self._to_entity(m) for m in result.scalars()]
