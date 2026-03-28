@@ -14,6 +14,8 @@ class UpsertMedicalRecordUseCase:
             appointment_id=dto.appointment_id,
             patient_id=dto.patient_id,
             doctor_id=dto.doctor_id,
+            schema_id=dto.schema_id,
+            schema_version=dto.schema_version,
             evaluation=dto.evaluation,
         )
         return await self._repo.upsert(record)
