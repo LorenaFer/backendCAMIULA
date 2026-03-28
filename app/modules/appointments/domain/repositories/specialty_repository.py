@@ -12,3 +12,19 @@ class SpecialtyRepository(ABC):
     @abstractmethod
     async def get_by_id(self, specialty_id: str) -> Optional[Specialty]:
         ...
+
+    @abstractmethod
+    async def get_by_name(self, name: str) -> Optional[Specialty]:
+        ...
+
+    @abstractmethod
+    async def create(self, specialty: Specialty, created_by: Optional[str] = None) -> Specialty:
+        ...
+
+    @abstractmethod
+    async def update(self, specialty: Specialty, updated_by: Optional[str] = None) -> Specialty:
+        ...
+
+    @abstractmethod
+    async def toggle(self, specialty_id: str, updated_by: Optional[str] = None) -> Specialty:
+        ...

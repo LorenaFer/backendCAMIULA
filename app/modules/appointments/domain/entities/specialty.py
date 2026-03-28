@@ -7,3 +7,4 @@ from uuid import uuid4
 class Specialty:
     name: str
     id: str = field(default_factory=lambda: str(uuid4()))
+    is_active: bool = True
