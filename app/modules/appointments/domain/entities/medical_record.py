@@ -12,6 +12,8 @@ class MedicalRecord:
     doctor_id: str
     evaluation: Dict[str, Any]
     id: str = field(default_factory=lambda: str(uuid4()))
+    schema_id: Optional[str] = None
+    schema_version: Optional[str] = None
     is_prepared: bool = False
     prepared_at: Optional[datetime] = None
     prepared_by: Optional[str] = None
