@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from datetime import date, time
-from typing import List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from uuid import uuid4
 
-from sqlalchemy import extract, func, or_, select
+from sqlalchemy import case, extract, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.appointments.domain.entities.appointment import (
@@ -289,3 +289,125 @@ class SQLAlchemyAppointmentRepository(AppointmentRepository):
             stmt = stmt.where(AppointmentModel.id != exclude_id)
         result = await self._session.execute(stmt)
         return result.scalar_one() > 0
+
+    async def get_stats(
+        self,
+        fecha: Optional[date] = None,
+        doctor_id: Optional[str] = None,
+        specialty_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Estadísticas de citas para el dashboard. O(n) con filtros."""
+        # Base filter
+        filters = [AppointmentModel.status == RecordStatus.ACTIVE]
+        if fecha:
+            filters.append(AppointmentModel.appointment_date == fecha)
+        if doctor_id:
+            filters.append(AppointmentModel.fk_doctor_id == doctor_id)
+        if specialty_id:
+            filters.append(AppointmentModel.fk_specialty_id == specialty_id)
+
+        # Total count
+        total_stmt = (
+            select(func.count())
+            .select_from(AppointmentModel)
+            .where(*filters)
+        )
+        total = (await self._session.execute(total_stmt)).scalar_one()
+
+        # By status
+        status_stmt = (
+            select(AppointmentModel.appointment_status, func.count().label("cnt"))
+            .where(*filters)
+            .group_by(AppointmentModel.appointment_status)
+        )
+        status_rows = (await self._session.execute(status_stmt)).all()
+        by_status = {
+            AppointmentStatus.from_display(r[0]).display_name: r[1]
+            for r in status_rows
+        }
+
+        # By specialty
+        specialty_stmt = (
+            select(SpecialtyModel.name, func.count().label("cnt"))
+            .select_from(AppointmentModel)
+            .join(SpecialtyModel, AppointmentModel.fk_specialty_id == SpecialtyModel.id)
+            .where(*filters)
+            .group_by(SpecialtyModel.name)
+            .order_by(func.count().desc())
+        )
+        specialty_rows = (await self._session.execute(specialty_stmt)).all()
+        by_specialty = [{"name": r[0], "count": r[1]} for r in specialty_rows]
+
+        # By doctor
+        doctor_stmt = (
+            select(
+                DoctorModel.first_name,
+                DoctorModel.last_name,
+                SpecialtyModel.name.label("specialty_name"),
+                func.count().label("total_cnt"),
+                func.sum(
+                    case(
+                        (AppointmentModel.appointment_status == AppointmentStatus.ATTENDED.value, 1),
+                        else_=0,
+                    )
+                ).label("attended_cnt"),
+            )
+            .select_from(AppointmentModel)
+            .join(DoctorModel, AppointmentModel.fk_doctor_id == DoctorModel.id)
+            .join(SpecialtyModel, AppointmentModel.fk_specialty_id == SpecialtyModel.id)
+            .where(*filters)
+            .group_by(DoctorModel.first_name, DoctorModel.last_name, SpecialtyModel.name)
+            .order_by(func.count().desc())
+        )
+        doctor_rows = (await self._session.execute(doctor_stmt)).all()
+        by_doctor = [
+            {
+                "name": f"Dr. {r[0]} {r[1]}",
+                "specialty": r[2],
+                "count": r[3],
+                "atendidas": r[4] or 0,
+            }
+            for r in doctor_rows
+        ]
+
+        # First time / returning
+        first_time_stmt = (
+            select(func.count())
+            .select_from(AppointmentModel)
+            .where(*filters, AppointmentModel.is_first_visit.is_(True))
+        )
+        first_time = (await self._session.execute(first_time_stmt)).scalar_one()
+
+        # By patient type (university relation via JOIN with patients)
+        patient_type_stmt = (
+            select(PatientModel.university_relation, func.count().label("cnt"))
+            .select_from(AppointmentModel)
+            .join(PatientModel, AppointmentModel.fk_patient_id == PatientModel.id)
+            .where(*filters)
+            .group_by(PatientModel.university_relation)
+        )
+        patient_type_rows = (await self._session.execute(patient_type_stmt)).all()
+        by_patient_type = {r[0]: r[1] for r in patient_type_rows}
+
+        # Peak hours
+        peak_stmt = (
+            select(AppointmentModel.start_time, func.count().label("cnt"))
+            .where(*filters)
+            .group_by(AppointmentModel.start_time)
+            .order_by(func.count().desc())
+            .limit(5)
+        )
+        peak_rows = (await self._session.execute(peak_stmt)).all()
+        peak_hours = [{"hour": r[0].strftime("%H:%M"), "count": r[1]} for r in peak_rows]
+
+        return {
+            "total": total,
+            "byStatus": by_status,
+            "bySpecialty": by_specialty,
+            "byDoctor": by_doctor,
+            "firstTimeCount": first_time,
+            "returningCount": total - first_time,
+            "byPatientType": by_patient_type,
+            "dailyTrend": [],  # Requiere lógica de rango de fechas — vacío por defecto
+            "peakHours": peak_hours,
+        }
