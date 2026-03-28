@@ -1,6 +1,6 @@
 """Implementación SQLAlchemy del repositorio de medicamentos."""
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Optional
 from uuid import uuid4
 
@@ -13,6 +13,27 @@ from app.modules.inventory.domain.repositories.medication_repository import (
 )
 from app.modules.inventory.infrastructure.models import BatchModel, MedicationModel
 from app.shared.database.mixins import RecordStatus
+
+
+def _stock_subquery():
+    """Subquery reutilizable: stock disponible por medicamento (lotes vigentes)."""
+    today = date.today()
+    return (
+        select(
+            BatchModel.fk_medication_id.label("med_id"),
+            func.coalesce(func.sum(BatchModel.quantity_available), 0).label(
+                "current_stock"
+            ),
+        )
+        .where(
+            BatchModel.status == RecordStatus.ACTIVE,
+            BatchModel.batch_status == "available",
+            BatchModel.expiration_date >= today,
+            BatchModel.quantity_available > 0,
+        )
+        .group_by(BatchModel.fk_medication_id)
+        .subquery()
+    )
 
 
 class SQLAlchemyMedicationRepository(MedicationRepository):
@@ -55,8 +76,15 @@ class SQLAlchemyMedicationRepository(MedicationRepository):
         page: int,
         page_size: int,
     ) -> tuple[list[Medication], int]:
-        base = select(MedicationModel).where(
-            MedicationModel.status == RecordStatus.ACTIVE
+        stock_sq = _stock_subquery()
+
+        base = (
+            select(
+                MedicationModel,
+                func.coalesce(stock_sq.c.current_stock, 0).label("current_stock"),
+            )
+            .outerjoin(stock_sq, stock_sq.c.med_id == MedicationModel.id)
+            .where(MedicationModel.status == RecordStatus.ACTIVE)
         )
 
         if search:
@@ -75,18 +103,28 @@ class SQLAlchemyMedicationRepository(MedicationRepository):
         result = await self._session.execute(
             base.order_by(MedicationModel.generic_name).offset(offset).limit(page_size)
         )
-        models = result.scalars().all()
-        return [self._to_entity(m) for m in models], total
+        return [
+            self._to_entity(row.MedicationModel, int(row.current_stock))
+            for row in result.all()
+        ], total
 
     async def find_by_id(self, id: str) -> Optional[Medication]:
+        stock_sq = _stock_subquery()
         result = await self._session.execute(
-            select(MedicationModel).where(
+            select(
+                MedicationModel,
+                func.coalesce(stock_sq.c.current_stock, 0).label("current_stock"),
+            )
+            .outerjoin(stock_sq, stock_sq.c.med_id == MedicationModel.id)
+            .where(
                 MedicationModel.id == id,
                 MedicationModel.status == RecordStatus.ACTIVE,
             )
         )
-        model = result.scalar_one_or_none()
-        return self._to_entity(model) if model else None
+        row = result.one_or_none()
+        if not row:
+            return None
+        return self._to_entity(row.MedicationModel, int(row.current_stock))
 
     async def find_by_code(self, code: str) -> Optional[Medication]:
         result = await self._session.execute(
@@ -99,21 +137,24 @@ class SQLAlchemyMedicationRepository(MedicationRepository):
         return self._to_entity(model) if model else None
 
     async def find_options(self) -> list[Medication]:
+        """Lista simplificada para selects — stock calculado en un solo JOIN."""
+        stock_sq = _stock_subquery()
         result = await self._session.execute(
-            select(MedicationModel)
+            select(
+                MedicationModel,
+                func.coalesce(stock_sq.c.current_stock, 0).label("current_stock"),
+            )
+            .outerjoin(stock_sq, stock_sq.c.med_id == MedicationModel.id)
             .where(
                 MedicationModel.status == RecordStatus.ACTIVE,
                 MedicationModel.medication_status == "active",
             )
             .order_by(MedicationModel.generic_name)
         )
-        models = result.scalars().all()
-
-        medications = []
-        for m in models:
-            stock = await self.get_current_stock(m.id)
-            medications.append(self._to_entity(m, stock))
-        return medications
+        return [
+            self._to_entity(row.MedicationModel, int(row.current_stock))
+            for row in result.all()
+        ]
 
     async def get_current_stock(self, medication_id: str) -> int:
         result = await self._session.execute(

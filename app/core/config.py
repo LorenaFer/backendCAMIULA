@@ -19,6 +19,18 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
+    # Auth provider: "local" (dev/testing) o "auth0" (producción)
+    AUTH_PROVIDER: str = "local"
+
+    # Auth0 settings (solo cuando AUTH_PROVIDER=auth0)
+    AUTH0_DOMAIN: str = ""
+    AUTH0_API_AUDIENCE: str = ""
+    AUTH0_CLIENT_ID: str = ""
+    AUTH0_CLIENT_SECRET: str = ""
+
+    # Caché de permisos — TTL en segundos
+    PERMISSION_CACHE_TTL_SECONDS: int = 300
+
     model_config = {"env_file": ".env", "extra": "ignore"}
 
 

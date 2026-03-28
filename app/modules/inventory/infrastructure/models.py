@@ -4,6 +4,9 @@ Modelos SQLAlchemy del módulo de Inventario.
 Todas las tablas siguen el estándar de columnas del proyecto:
     id → fk_* → dominio → {tabla}_status → status → audit
 
+FK intra-módulo usan ForeignKey() para integridad referencial.
+FK cross-módulo (patients, appointments, users) son lógicas — sin constraint.
+
 Referencia: docs/06-estandar-base-de-datos.md
 """
 
@@ -14,7 +17,7 @@ from datetime import date, datetime
 from typing import Optional
 from uuid import uuid4
 
-from sqlalchemy import Boolean, Date, DateTime, Integer, Numeric, String
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.shared.database.base import Base
@@ -189,7 +192,7 @@ class PurchaseOrderModel(Base, SoftDeleteMixin, AuditMixin):
 
     # 2. Relaciones
     fk_supplier_id: Mapped[str] = mapped_column(
-        String(36), nullable=False, index=True
+        String(36), ForeignKey("suppliers.id"), nullable=False, index=True
     )
 
     # 3. Dominio
@@ -225,10 +228,10 @@ class PurchaseOrderItemModel(Base, SoftDeleteMixin, AuditMixin):
 
     # 2. Relaciones
     fk_purchase_order_id: Mapped[str] = mapped_column(
-        String(36), nullable=False, index=True
+        String(36), ForeignKey("purchase_orders.id"), nullable=False, index=True
     )
     fk_medication_id: Mapped[str] = mapped_column(
-        String(36), nullable=False, index=True
+        String(36), ForeignKey("medications.id"), nullable=False, index=True
     )
 
     # 3. Dominio
@@ -267,11 +270,13 @@ class BatchModel(Base, SoftDeleteMixin, AuditMixin):
 
     # 2. Relaciones
     fk_medication_id: Mapped[str] = mapped_column(
-        String(36), nullable=False, index=True
+        String(36), ForeignKey("medications.id"), nullable=False, index=True
     )
-    fk_supplier_id: Mapped[Optional[str]] = mapped_column(String(36), index=True)
+    fk_supplier_id: Mapped[Optional[str]] = mapped_column(
+        String(36), ForeignKey("suppliers.id"), index=True
+    )
     fk_purchase_order_id: Mapped[Optional[str]] = mapped_column(
-        String(36), index=True
+        String(36), ForeignKey("purchase_orders.id"), index=True
     )
 
     # 3. Dominio
@@ -310,7 +315,7 @@ class PrescriptionModel(Base, SoftDeleteMixin, AuditMixin):
         default=lambda: str(uuid4()),
     )
 
-    # 2. Relaciones (FK lógicas entre módulos — sin ForeignKey() de BD)
+    # 2. Relaciones (FK lógicas cross-módulo — sin ForeignKey() de BD)
     fk_appointment_id: Mapped[str] = mapped_column(
         String(36), nullable=False, index=True
     )
@@ -353,10 +358,10 @@ class PrescriptionItemModel(Base, SoftDeleteMixin, AuditMixin):
 
     # 2. Relaciones
     fk_prescription_id: Mapped[str] = mapped_column(
-        String(36), nullable=False, index=True
+        String(36), ForeignKey("prescriptions.id"), nullable=False, index=True
     )
     fk_medication_id: Mapped[str] = mapped_column(
-        String(36), nullable=False, index=True
+        String(36), ForeignKey("medications.id"), nullable=False, index=True
     )
 
     # 3. Dominio
@@ -396,11 +401,13 @@ class DispatchModel(Base, SoftDeleteMixin, AuditMixin):
 
     # 2. Relaciones
     fk_prescription_id: Mapped[str] = mapped_column(
-        String(36), nullable=False, index=True
+        String(36), ForeignKey("prescriptions.id"), nullable=False, index=True
     )
+    # FK lógica cross-módulo — sin ForeignKey() de BD
     fk_patient_id: Mapped[str] = mapped_column(
         String(36), nullable=False, index=True
     )
+    # FK lógica cross-módulo — sin ForeignKey() de BD
     fk_pharmacist_id: Mapped[str] = mapped_column(
         String(36), nullable=False, index=True
     )
@@ -436,17 +443,19 @@ class DispatchItemModel(Base, SoftDeleteMixin, AuditMixin):
 
     # 2. Relaciones
     fk_dispatch_id: Mapped[str] = mapped_column(
-        String(36), nullable=False, index=True
+        String(36), ForeignKey("dispatches.id"), nullable=False, index=True
     )
     fk_batch_id: Mapped[str] = mapped_column(
-        String(36), nullable=False, index=True
+        String(36), ForeignKey("batches.id"), nullable=False, index=True
     )
     fk_medication_id: Mapped[str] = mapped_column(
-        String(36), nullable=False, index=True
+        String(36), ForeignKey("medications.id"), nullable=False, index=True
     )
 
     # 3. Dominio
     quantity_dispatched: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    # 4. Grupo N/A — estado derivado del dispatch padre (dispatch_status)
 
     # 5-8. status + audit → proporcionados por los mixins
 
@@ -470,7 +479,7 @@ class DispatchLimitModel(Base, SoftDeleteMixin, AuditMixin):
 
     # 2. Relaciones
     fk_medication_id: Mapped[str] = mapped_column(
-        String(36), nullable=False, index=True
+        String(36), ForeignKey("medications.id"), nullable=False, index=True
     )
 
     # 3. Dominio
@@ -498,12 +507,13 @@ class DispatchExceptionModel(Base, SoftDeleteMixin, AuditMixin):
         default=lambda: str(uuid4()),
     )
 
-    # 2. Relaciones (FK lógicas entre módulos)
+    # 2. Relaciones
+    # FK lógica cross-módulo — sin ForeignKey() de BD
     fk_patient_id: Mapped[str] = mapped_column(
         String(36), nullable=False, index=True
     )
     fk_medication_id: Mapped[str] = mapped_column(
-        String(36), nullable=False, index=True
+        String(36), ForeignKey("medications.id"), nullable=False, index=True
     )
 
     # 3. Dominio

@@ -49,6 +49,12 @@ class StockReportDTO:
     expired_count: int
 
 
+@dataclass
+class LowStockReportDTO:
+    generated_at: str
+    items: List[StockItemDTO]
+
+
 # ── Resumen ejecutivo (KPIs del dashboard) ────────────────────────────────────
 
 @dataclass

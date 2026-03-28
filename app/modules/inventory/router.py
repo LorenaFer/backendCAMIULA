@@ -3,7 +3,7 @@
 Agrega todos los sub-routers bajo el prefijo /inventory.
 Registrar en app/main.py:
 
-    from app.modules.inventory.router import inventory_router
+    from app.modules.inventory.router import router as inventory_router
     app.include_router(inventory_router, prefix="/api")
 """
 
@@ -34,13 +34,13 @@ from app.modules.inventory.presentation.routes.suppliers_router import (
     router as suppliers_router,
 )
 
-inventory_router = APIRouter(prefix="/inventory")
+router = APIRouter(prefix="/inventory")
 
-inventory_router.include_router(medications_router)
-inventory_router.include_router(suppliers_router)
-inventory_router.include_router(purchase_orders_router)
-inventory_router.include_router(batches_router)
-inventory_router.include_router(prescriptions_router)
-inventory_router.include_router(dispatches_router)
-inventory_router.include_router(limits_router)
-inventory_router.include_router(reports_router)
+router.include_router(medications_router)
+router.include_router(suppliers_router)
+router.include_router(purchase_orders_router)
+router.include_router(batches_router)
+router.include_router(prescriptions_router)
+router.include_router(dispatches_router)
+router.include_router(limits_router)
+router.include_router(reports_router)

@@ -13,8 +13,7 @@ Endpoints:
     GET /reports/movements           — Kardex paginado (entradas + salidas)
 """
 
-import re
-from datetime import datetime, timezone
+from datetime import date, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
@@ -27,8 +26,14 @@ from app.modules.inventory.presentation.schemas.report_schemas import (
     ConsumptionReportResponse,
     EnrichedBatchResponse,
     ExpirationReportResponse,
+    ExpiringSoonReportResponse,
     InventorySummaryResponse,
+    LowStockReportResponse,
     MedicationOptionResponse,
+    MovementItemResponse,
+    MovementsReportResponse,
+    PaginationMeta,
+    StockItemResponse,
     StockReportResponse,
 )
 from app.shared.database.session import get_db
@@ -89,7 +94,7 @@ async def get_stock_report(
     return ok(
         data=StockReportResponse(
             generated_at=report.generated_at,
-            items=[i.__dict__ for i in report.items],
+            items=[StockItemResponse(**i.__dict__) for i in report.items],
             total_medications=report.total_medications,
             critical_count=report.critical_count,
             expired_count=report.expired_count,
@@ -140,21 +145,14 @@ async def get_low_stock(
     user_id: str = Depends(get_current_user_id),
 ):
     repo = SQLAlchemyReportRepository(session)
-    report = await repo.get_stock_report()
-
-    priority = {"expired": 0, "critical": 1, "low": 2}
-    alert_items = [
-        i for i in report.items if i.stock_alert in ("low", "critical", "expired")
-    ]
-    alert_items.sort(key=lambda x: priority.get(x.stock_alert, 99))
-
+    report = await repo.get_low_stock_report()
     return ok(
-        data={
-            "generated_at": report.generated_at,
-            "items": [i.__dict__ for i in alert_items],
-            "total": len(alert_items),
-        },
-        message=f"{len(alert_items)} medicamentos con stock bajo o crítico",
+        data=LowStockReportResponse(
+            generated_at=report.generated_at,
+            items=[StockItemResponse(**i.__dict__) for i in report.items],
+            total=len(report.items),
+        ),
+        message=f"{len(report.items)} medicamentos con stock bajo o crítico",
     )
 
 
@@ -210,39 +208,32 @@ async def get_expiring_soon(
     repo = SQLAlchemyReportRepository(session)
     report_90 = await repo.get_expiration_report(threshold_days=90)
 
-    from datetime import date, timedelta
-
     today = date.today()
     cutoff_30 = today + timedelta(days=30)
     cutoff_60 = today + timedelta(days=60)
 
-    def _to_schema(b) -> dict:
-        return _enrich_batch_to_schema(b).model_dump()
+    batches_30: list[EnrichedBatchResponse] = []
+    batches_60: list[EnrichedBatchResponse] = []
+    batches_90: list[EnrichedBatchResponse] = []
 
-    batches_30 = [
-        _to_schema(b)
-        for b in report_90.batches
-        if b.expiration_date <= cutoff_30.isoformat()
-    ]
-    batches_60 = [
-        _to_schema(b)
-        for b in report_90.batches
-        if cutoff_30.isoformat() < b.expiration_date <= cutoff_60.isoformat()
-    ]
-    batches_90 = [
-        _to_schema(b)
-        for b in report_90.batches
-        if b.expiration_date > cutoff_60.isoformat()
-    ]
+    for b in report_90.batches:
+        exp = date.fromisoformat(b.expiration_date) if isinstance(b.expiration_date, str) else b.expiration_date
+        schema = _enrich_batch_to_schema(b)
+        if exp <= cutoff_30:
+            batches_30.append(schema)
+        elif exp <= cutoff_60:
+            batches_60.append(schema)
+        else:
+            batches_90.append(schema)
 
     return ok(
-        data={
-            "generated_at": report_90.generated_at,
-            "vencen_en_30": batches_30,
-            "vencen_en_60": batches_60,
-            "vencen_en_90": batches_90,
-            "total": len(report_90.batches),
-        },
+        data=ExpiringSoonReportResponse(
+            generated_at=report_90.generated_at,
+            vencen_en_30=batches_30,
+            vencen_en_60=batches_60,
+            vencen_en_90=batches_90,
+            total=len(report_90.batches),
+        ),
         message="Lotes próximos a vencer agrupados por horizonte",
     )
 
@@ -316,16 +307,16 @@ async def get_movements(
     )
     pages = -(-report.total // page_size) if page_size > 0 else 0
     return ok(
-        data={
-            "medication_id": report.medication_id,
-            "generic_name": report.generic_name,
-            "items": [i.__dict__ for i in report.items],
-            "pagination": {
-                "total": report.total,
-                "page": page,
-                "page_size": page_size,
-                "pages": pages,
-            },
-        },
+        data=MovementsReportResponse(
+            medication_id=report.medication_id,
+            generic_name=report.generic_name,
+            items=[MovementItemResponse(**i.__dict__) for i in report.items],
+            pagination=PaginationMeta(
+                total=report.total,
+                page=page,
+                page_size=page_size,
+                pages=pages,
+            ),
+        ),
         message=f"Movimientos de {report.generic_name}",
     )

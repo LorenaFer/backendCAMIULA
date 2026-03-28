@@ -111,7 +111,33 @@ class MovementItemResponse(BaseModel):
     notes: Optional[str] = None
 
 
+class PaginationMeta(BaseModel):
+    total: int
+    page: int
+    page_size: int
+    pages: int
+
+
 class MovementsReportResponse(BaseModel):
     medication_id: str
     generic_name: str
     items: List[MovementItemResponse]
+    pagination: PaginationMeta
+
+
+# ── Low-stock ─────────────────────────────────────────────────────────────────
+
+class LowStockReportResponse(BaseModel):
+    generated_at: str
+    items: List[StockItemResponse]
+    total: int
+
+
+# ── Expiring-soon (horizontes 30/60/90) ──────────────────────────────────────
+
+class ExpiringSoonReportResponse(BaseModel):
+    generated_at: str
+    vencen_en_30: List[EnrichedBatchResponse]
+    vencen_en_60: List[EnrichedBatchResponse]
+    vencen_en_90: List[EnrichedBatchResponse]
+    total: int

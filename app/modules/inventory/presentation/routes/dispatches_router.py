@@ -5,6 +5,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.exceptions import NotFoundException
 from app.modules.inventory.application.use_cases.dispatches.cancel_dispatch import (
     cancel_dispatch,
 )
@@ -145,7 +146,6 @@ async def get_dispatch(
     repo = SQLAlchemyDispatchRepository(session)
     dispatch = await repo.find_by_id(id)
     if not dispatch:
-        from app.core.exceptions import NotFoundException
         raise NotFoundException("Despacho no encontrado")
     return ok(
         data=DispatchResponse(**dispatch.__dict__),

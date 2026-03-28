@@ -12,7 +12,13 @@ from app.shared.database.base import Base
 from app.shared.database.mixins import RecordStatus  # noqa: F401
 
 # Importar modelos de cada módulo aquí conforme se creen:
-# from app.modules.auth.infrastructure.models import UserModel  # noqa: F401
+from app.modules.auth.infrastructure.models import (  # noqa: F401
+    PermissionModel,
+    RoleModel,
+    RolePermissionModel,
+    UserModel,
+    UserRoleModel,
+)
 # from app.modules.patients.infrastructure.models import PatientModel  # noqa: F401
 # from app.modules.appointments.infrastructure.models import AppointmentModel  # noqa: F401
 from app.modules.inventory.infrastructure.models import (  # noqa: F401

@@ -1,11 +1,20 @@
 """init_inventory_ula_single_tenant
 
 Revision ID: 202603262351
-Revises:
+Revises: 5926bb76aef3
 Create Date: 2026-03-26
 
 Crea las 11 tablas del módulo de Inventario CAMIULA (sistema single-tenant ULA).
 No existe ninguna columna de tenant_id: el sistema es exclusivo para la ULA.
+
+Checklist antes de aplicar:
+- [ ] CREATE TABLE: orden id → fk_* → datos → table_status → status → auditoría
+- [ ] ALTER TABLE: modelo Python actualizado con columna en grupo correcto
+- [ ] Columnas NOT NULL tienen server_default si la tabla tiene datos
+- [ ] downgrade() revierte los cambios correctamente
+- [ ] Columnas de auditoría/status NO fueron modificadas ni eliminadas
+
+Ver: docs/06-estandar-base-de-datos.md
 """
 
 from __future__ import annotations
@@ -15,23 +24,12 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "202603262351"
-down_revision = None
+down_revision = "5926bb76aef3"
 branch_labels = None
 depends_on = None
 
 
 def upgrade() -> None:
-    # ─────────────────────────────────────────────
-    # ENUM compartido: record_status (A / I / T)
-    # Creado una sola vez; todas las tablas lo referencian por nombre.
-    # ─────────────────────────────────────────────
-    op.execute(
-        "DO $$ BEGIN "
-        "CREATE TYPE record_status AS ENUM ('A', 'I', 'T'); "
-        "EXCEPTION WHEN duplicate_object THEN NULL; "
-        "END $$;"
-    )
-
     # ─────────────────────────────────────────────
     # PILAR 1 — suppliers
     # ─────────────────────────────────────────────
@@ -100,7 +98,7 @@ def upgrade() -> None:
         "purchase_orders",
         sa.Column("id", sa.String(36), primary_key=True),
         # relations
-        sa.Column("fk_supplier_id", sa.String(36), nullable=False),
+        sa.Column("fk_supplier_id", sa.String(36), sa.ForeignKey("suppliers.id"), nullable=False),
         # domain
         sa.Column("order_number", sa.String(50), nullable=False),
         sa.Column("order_date", sa.Date(), nullable=False),
@@ -130,8 +128,8 @@ def upgrade() -> None:
         "purchase_order_items",
         sa.Column("id", sa.String(36), primary_key=True),
         # relations
-        sa.Column("fk_purchase_order_id", sa.String(36), nullable=False),
-        sa.Column("fk_medication_id", sa.String(36), nullable=False),
+        sa.Column("fk_purchase_order_id", sa.String(36), sa.ForeignKey("purchase_orders.id"), nullable=False),
+        sa.Column("fk_medication_id", sa.String(36), sa.ForeignKey("medications.id"), nullable=False),
         # domain
         sa.Column("quantity_ordered", sa.Integer(), nullable=False),
         sa.Column("quantity_received", sa.Integer(), nullable=False, server_default="0"),
@@ -159,9 +157,9 @@ def upgrade() -> None:
         "batches",
         sa.Column("id", sa.String(36), primary_key=True),
         # relations
-        sa.Column("fk_medication_id", sa.String(36), nullable=False),
-        sa.Column("fk_supplier_id", sa.String(36)),
-        sa.Column("fk_purchase_order_id", sa.String(36)),
+        sa.Column("fk_medication_id", sa.String(36), sa.ForeignKey("medications.id"), nullable=False),
+        sa.Column("fk_supplier_id", sa.String(36), sa.ForeignKey("suppliers.id")),
+        sa.Column("fk_purchase_order_id", sa.String(36), sa.ForeignKey("purchase_orders.id")),
         # domain
         sa.Column("lot_number", sa.String(100), nullable=False),
         sa.Column("expiration_date", sa.Date(), nullable=False),
@@ -238,8 +236,8 @@ def upgrade() -> None:
         "prescription_items",
         sa.Column("id", sa.String(36), primary_key=True),
         # relations
-        sa.Column("fk_prescription_id", sa.String(36), nullable=False),
-        sa.Column("fk_medication_id", sa.String(36), nullable=False),
+        sa.Column("fk_prescription_id", sa.String(36), sa.ForeignKey("prescriptions.id"), nullable=False),
+        sa.Column("fk_medication_id", sa.String(36), sa.ForeignKey("medications.id"), nullable=False),
         # domain
         sa.Column("quantity_prescribed", sa.Integer(), nullable=False),
         sa.Column("dosage_instructions", sa.String(300)),
@@ -268,7 +266,8 @@ def upgrade() -> None:
         "dispatches",
         sa.Column("id", sa.String(36), primary_key=True),
         # relations
-        sa.Column("fk_prescription_id", sa.String(36), nullable=False),
+        sa.Column("fk_prescription_id", sa.String(36), sa.ForeignKey("prescriptions.id"), nullable=False),
+        # relations (FK lógicas entre módulos — sin FK de BD)
         sa.Column("fk_patient_id", sa.String(36), nullable=False),
         sa.Column("fk_pharmacist_id", sa.String(36), nullable=False),
         # domain
@@ -307,9 +306,9 @@ def upgrade() -> None:
         "dispatch_items",
         sa.Column("id", sa.String(36), primary_key=True),
         # relations
-        sa.Column("fk_dispatch_id", sa.String(36), nullable=False),
-        sa.Column("fk_batch_id", sa.String(36), nullable=False),
-        sa.Column("fk_medication_id", sa.String(36), nullable=False),
+        sa.Column("fk_dispatch_id", sa.String(36), sa.ForeignKey("dispatches.id"), nullable=False),
+        sa.Column("fk_batch_id", sa.String(36), sa.ForeignKey("batches.id"), nullable=False),
+        sa.Column("fk_medication_id", sa.String(36), sa.ForeignKey("medications.id"), nullable=False),
         # domain
         sa.Column("quantity_dispatched", sa.Integer(), nullable=False),
         # technical control
@@ -334,7 +333,7 @@ def upgrade() -> None:
         "dispatch_limits",
         sa.Column("id", sa.String(36), primary_key=True),
         # relations
-        sa.Column("fk_medication_id", sa.String(36), nullable=False),
+        sa.Column("fk_medication_id", sa.String(36), sa.ForeignKey("medications.id"), nullable=False),
         # domain
         sa.Column("monthly_max_quantity", sa.Integer(), nullable=False),
         sa.Column("applies_to", sa.String(20), nullable=False, server_default="all"),
@@ -367,9 +366,10 @@ def upgrade() -> None:
     op.create_table(
         "dispatch_exceptions",
         sa.Column("id", sa.String(36), primary_key=True),
-        # relations (FK lógicas entre módulos)
+        # relations (FK lógicas entre módulos — sin FK de BD)
         sa.Column("fk_patient_id", sa.String(36), nullable=False),
-        sa.Column("fk_medication_id", sa.String(36), nullable=False),
+        # relations
+        sa.Column("fk_medication_id", sa.String(36), sa.ForeignKey("medications.id"), nullable=False),
         # domain
         sa.Column("authorized_quantity", sa.Integer(), nullable=False),
         sa.Column("valid_from", sa.Date(), nullable=False),
@@ -403,5 +403,3 @@ def downgrade() -> None:
     op.drop_table("purchase_orders")
     op.drop_table("medications")
     op.drop_table("suppliers")
-
-    sa.Enum(name="record_status").drop(op.get_bind(), checkfirst=True)

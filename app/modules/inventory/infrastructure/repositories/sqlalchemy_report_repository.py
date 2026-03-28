@@ -7,21 +7,23 @@ No se retornan entidades de dominio; se retornan DTOs directamente.
 from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 
-from sqlalchemy import func, literal, or_, select, text, union_all
+from sqlalchemy import case, func, literal, or_, select, text, union_all
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.inventory.application.dtos.report_dto import (
+    STOCK_THRESHOLD_CRITICAL,
+    STOCK_THRESHOLD_LOW,
     ConsumptionItemDTO,
     ConsumptionReportDTO,
     EnrichedBatchDTO,
     ExpirationReportDTO,
     InventorySummaryDTO,
+    LowStockReportDTO,
     MedicationOptionDTO,
     MovementItemDTO,
     MovementsReportDTO,
     StockItemDTO,
     StockReportDTO,
-    compute_stock_alert,
 )
 from app.modules.inventory.infrastructure.models import (
     BatchModel,
@@ -32,6 +34,19 @@ from app.modules.inventory.infrastructure.models import (
     PurchaseOrderModel,
 )
 from app.shared.database.mixins import RecordStatus
+
+
+# SQL CASE WHEN expression that mirrors compute_stock_alert() from the DTOs.
+# Kept as a module-level helper so both get_stock_report and get_inventory_summary
+# can reuse it without duplicating the expression tree.
+def _stock_alert_case(total_available_col):
+    """Return a SQLAlchemy CASE expression for the stock alert level."""
+    return case(
+        (total_available_col == 0, literal("expired")),
+        (total_available_col <= STOCK_THRESHOLD_CRITICAL, literal("critical")),
+        (total_available_col <= STOCK_THRESHOLD_LOW, literal("low")),
+        else_=literal("ok"),
+    )
 
 
 class SQLAlchemyReportRepository:
@@ -47,6 +62,9 @@ class SQLAlchemyReportRepository:
         """
         Calcula stock vigente por medicamento en un solo query con GROUP BY.
         Solo cuenta lotes cuya expiration_date >= hoy y batch_status = 'available'.
+
+        stock_alert, critical_count y expired_count se computan directamente
+        en SQL mediante CASE WHEN — sin post-procesamiento en Python.
         """
         today = date.today()
 
@@ -69,6 +87,13 @@ class SQLAlchemyReportRepository:
             .subquery()
         )
 
+        total_available_col = func.coalesce(
+            usable_batches_sq.c.total_available, 0
+        )
+        stock_alert_expr = _stock_alert_case(total_available_col).label(
+            "stock_alert"
+        )
+
         rows = (
             await self._session.execute(
                 select(
@@ -77,13 +102,12 @@ class SQLAlchemyReportRepository:
                     MedicationModel.generic_name,
                     MedicationModel.pharmaceutical_form,
                     MedicationModel.unit_measure,
-                    func.coalesce(usable_batches_sq.c.total_available, 0).label(
-                        "total_available"
-                    ),
+                    total_available_col.label("total_available"),
                     func.coalesce(usable_batches_sq.c.batch_count, 0).label(
                         "batch_count"
                     ),
                     usable_batches_sq.c.nearest_expiration,
+                    stock_alert_expr,
                 )
                 .outerjoin(
                     usable_batches_sq,
@@ -93,16 +117,19 @@ class SQLAlchemyReportRepository:
                     MedicationModel.status == RecordStatus.ACTIVE,
                     MedicationModel.medication_status == "active",
                 )
-                .order_by(
-                    func.coalesce(usable_batches_sq.c.total_available, 0).asc()
-                )
+                .order_by(total_available_col.asc())
             )
         ).all()
 
+        critical_count = 0
+        expired_count = 0
         items: list[StockItemDTO] = []
         for row in rows:
-            total_available = int(row.total_available)
-            stock_alert = compute_stock_alert(total_available)
+            alert = row.stock_alert
+            if alert == "critical":
+                critical_count += 1
+            elif alert == "expired":
+                expired_count += 1
 
             days: Optional[int] = None
             nearest_exp: Optional[str] = None
@@ -117,17 +144,15 @@ class SQLAlchemyReportRepository:
                     generic_name=row.generic_name,
                     pharmaceutical_form=row.pharmaceutical_form,
                     unit_measure=row.unit_measure,
-                    total_available=total_available,
+                    total_available=int(row.total_available),
                     batch_count=int(row.batch_count),
                     nearest_expiration=nearest_exp,
                     days_to_expiration=days,
-                    stock_alert=stock_alert,
+                    stock_alert=alert,
                 )
             )
 
         generated_at = datetime.now(timezone.utc).isoformat()
-        critical_count = sum(1 for i in items if i.stock_alert == "critical")
-        expired_count = sum(1 for i in items if i.stock_alert == "expired")
 
         return StockReportDTO(
             generated_at=generated_at,
@@ -138,22 +163,170 @@ class SQLAlchemyReportRepository:
         )
 
     # ──────────────────────────────────────────────────────────
+    # Stock bajo / crítico (filtrado en SQL)
+    # ──────────────────────────────────────────────────────────
+
+    async def get_low_stock_report(self) -> LowStockReportDTO:
+        """
+        Retorna solo medicamentos con stock_alert in ('low', 'critical', 'expired').
+        Filtra directamente en SQL con HAVING — sin materializar el reporte completo.
+        Ordenado por criticidad: expired → critical → low.
+        """
+        today = date.today()
+
+        usable_batches_sq = (
+            select(
+                BatchModel.fk_medication_id,
+                func.coalesce(func.sum(BatchModel.quantity_available), 0).label(
+                    "total_available"
+                ),
+                func.count(BatchModel.id).label("batch_count"),
+                func.min(BatchModel.expiration_date).label("nearest_expiration"),
+            )
+            .where(
+                BatchModel.status == RecordStatus.ACTIVE,
+                BatchModel.batch_status == "available",
+                BatchModel.expiration_date >= today,
+                BatchModel.quantity_available > 0,
+            )
+            .group_by(BatchModel.fk_medication_id)
+            .subquery()
+        )
+
+        total_available_col = func.coalesce(
+            usable_batches_sq.c.total_available, 0
+        )
+        stock_alert_expr = _stock_alert_case(total_available_col)
+
+        # Filtrar: solo stock <= STOCK_THRESHOLD_LOW (incluye critical y expired)
+        rows = (
+            await self._session.execute(
+                select(
+                    MedicationModel.id,
+                    MedicationModel.code,
+                    MedicationModel.generic_name,
+                    MedicationModel.pharmaceutical_form,
+                    MedicationModel.unit_measure,
+                    total_available_col.label("total_available"),
+                    func.coalesce(usable_batches_sq.c.batch_count, 0).label(
+                        "batch_count"
+                    ),
+                    usable_batches_sq.c.nearest_expiration,
+                    stock_alert_expr.label("stock_alert"),
+                )
+                .outerjoin(
+                    usable_batches_sq,
+                    usable_batches_sq.c.fk_medication_id == MedicationModel.id,
+                )
+                .where(
+                    MedicationModel.status == RecordStatus.ACTIVE,
+                    MedicationModel.medication_status == "active",
+                    total_available_col <= STOCK_THRESHOLD_LOW,
+                )
+                .order_by(total_available_col.asc())
+            )
+        ).all()
+
+        items: list[StockItemDTO] = []
+        for row in rows:
+            days: Optional[int] = None
+            nearest_exp: Optional[str] = None
+            if row.nearest_expiration:
+                nearest_exp = row.nearest_expiration.isoformat()
+                days = (row.nearest_expiration - today).days
+
+            items.append(
+                StockItemDTO(
+                    medication_id=row.id,
+                    code=row.code,
+                    generic_name=row.generic_name,
+                    pharmaceutical_form=row.pharmaceutical_form,
+                    unit_measure=row.unit_measure,
+                    total_available=int(row.total_available),
+                    batch_count=int(row.batch_count),
+                    nearest_expiration=nearest_exp,
+                    days_to_expiration=days,
+                    stock_alert=row.stock_alert,
+                )
+            )
+
+        return LowStockReportDTO(
+            generated_at=datetime.now(timezone.utc).isoformat(),
+            items=items,
+        )
+
+    # ──────────────────────────────────────────────────────────
     # Resumen ejecutivo
     # ──────────────────────────────────────────────────────────
 
     async def get_inventory_summary(self) -> InventorySummaryDTO:
-        """KPIs del dashboard: counts por nivel de alerta."""
-        report = await self.get_stock_report()
-        low_count = sum(1 for i in report.items if i.stock_alert == "low")
-        total_units = sum(i.total_available for i in report.items)
+        """
+        KPIs del dashboard: counts por nivel de alerta.
+
+        Usa un solo query SQL con CASE WHEN + COUNT/SUM para calcular todos
+        los KPIs directamente en la base de datos, sin materializar la lista
+        completa de items que requiere get_stock_report().
+        """
+        today = date.today()
+
+        usable_batches_sq = (
+            select(
+                BatchModel.fk_medication_id,
+                func.coalesce(func.sum(BatchModel.quantity_available), 0).label(
+                    "total_available"
+                ),
+            )
+            .where(
+                BatchModel.status == RecordStatus.ACTIVE,
+                BatchModel.batch_status == "available",
+                BatchModel.expiration_date >= today,
+                BatchModel.quantity_available > 0,
+            )
+            .group_by(BatchModel.fk_medication_id)
+            .subquery()
+        )
+
+        total_available_col = func.coalesce(
+            usable_batches_sq.c.total_available, 0
+        )
+        stock_alert_expr = _stock_alert_case(total_available_col)
+
+        row = (
+            await self._session.execute(
+                select(
+                    func.count().label("total_active_skus"),
+                    func.count().filter(
+                        stock_alert_expr == "critical"
+                    ).label("critical_count"),
+                    func.count().filter(
+                        stock_alert_expr == "low"
+                    ).label("low_count"),
+                    func.count().filter(
+                        stock_alert_expr == "expired"
+                    ).label("expired_count"),
+                    func.coalesce(func.sum(total_available_col), 0).label(
+                        "total_available_units"
+                    ),
+                )
+                .select_from(MedicationModel)
+                .outerjoin(
+                    usable_batches_sq,
+                    usable_batches_sq.c.fk_medication_id == MedicationModel.id,
+                )
+                .where(
+                    MedicationModel.status == RecordStatus.ACTIVE,
+                    MedicationModel.medication_status == "active",
+                )
+            )
+        ).one()
 
         return InventorySummaryDTO(
-            generated_at=report.generated_at,
-            total_active_skus=report.total_medications,
-            critical_count=report.critical_count,
-            low_count=low_count,
-            expired_count=report.expired_count,
-            total_available_units=total_units,
+            generated_at=datetime.now(timezone.utc).isoformat(),
+            total_active_skus=int(row.total_active_skus),
+            critical_count=int(row.critical_count),
+            low_count=int(row.low_count),
+            expired_count=int(row.expired_count),
+            total_available_units=int(row.total_available_units),
         )
 
     # ──────────────────────────────────────────────────────────
@@ -335,7 +508,7 @@ class SQLAlchemyReportRepository:
         page_size: int,
     ) -> MovementsReportDTO:
         """
-        Kombina entradas (lotes recibidos) y salidas (despachos) de un medicamento
+        Combina entradas (lotes recibidos) y salidas (despachos) de un medicamento
         en orden cronológico inverso (más reciente primero).
 
         Entradas: tabla batches — evento de ingreso al inventario.
@@ -407,15 +580,11 @@ class SQLAlchemyReportRepository:
 
         # Apply date filters
         if date_from:
-            from datetime import date as date_type
-
-            df = date_type.fromisoformat(date_from)
+            df = date.fromisoformat(date_from)
             entries_q = entries_q.where(BatchModel.received_at >= df)
             exits_q = exits_q.where(DispatchModel.dispatch_date >= df)
         if date_to:
-            from datetime import date as date_type
-
-            dt = date_type.fromisoformat(date_to)
+            dt = date.fromisoformat(date_to)
             entries_q = entries_q.where(BatchModel.received_at <= dt)
             exits_q = exits_q.where(DispatchModel.dispatch_date <= dt)
 

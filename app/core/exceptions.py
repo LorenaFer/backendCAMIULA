@@ -24,9 +24,9 @@ class ConflictException(AppException):
 
 
 class ForbiddenException(AppException):
-    """Operación válida pero bloqueada por regla de negocio (límite, estado, etc.)."""
+    """Operación válida pero bloqueada por regla de negocio o permisos."""
 
-    def __init__(self, message: str, code: str = "FORBIDDEN"):
+    def __init__(self, message: str = "Insufficient permissions", code: str = "FORBIDDEN"):
         super().__init__(message=message, status_code=403, code=code)
 
 

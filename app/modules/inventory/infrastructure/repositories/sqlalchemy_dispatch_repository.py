@@ -11,7 +11,11 @@ from app.modules.inventory.domain.entities.dispatch import Dispatch, DispatchIte
 from app.modules.inventory.domain.repositories.dispatch_repository import (
     DispatchRepository,
 )
-from app.modules.inventory.infrastructure.models import DispatchItemModel, DispatchModel
+from app.modules.inventory.infrastructure.models import (
+    DispatchItemModel,
+    DispatchModel,
+    PrescriptionModel,
+)
 from app.shared.database.mixins import RecordStatus
 
 
@@ -60,6 +64,25 @@ class SQLAlchemyDispatchRepository(DispatchRepository):
         )
         return result.scalars().all()
 
+    async def _load_items_batch(
+        self, dispatch_ids: list[str]
+    ) -> dict[str, list[DispatchItemModel]]:
+        """Load items for multiple dispatches in a single query, grouped by dispatch id."""
+        if not dispatch_ids:
+            return {}
+        result = await self._session.execute(
+            select(DispatchItemModel).where(
+                DispatchItemModel.fk_dispatch_id.in_(dispatch_ids),
+                DispatchItemModel.status == RecordStatus.ACTIVE,
+            )
+        )
+        items_by_dispatch: dict[str, list[DispatchItemModel]] = {
+            did: [] for did in dispatch_ids
+        }
+        for item in result.scalars().all():
+            items_by_dispatch[item.fk_dispatch_id].append(item)
+        return items_by_dispatch
+
     # ──────────────────────────────────────────────────────────
     # Consultas
     # ──────────────────────────────────────────────────────────
@@ -84,11 +107,12 @@ class SQLAlchemyDispatchRepository(DispatchRepository):
                 DispatchModel.status == RecordStatus.ACTIVE,
             )
         )
-        dispatches = []
-        for m in result.scalars().all():
-            items = await self._load_items(m.id)
-            dispatches.append(self._to_entity(m, items))
-        return dispatches
+        models = result.scalars().all()
+        items_by_dispatch = await self._load_items_batch([m.id for m in models])
+        return [
+            self._to_entity(m, items_by_dispatch.get(m.id, []))
+            for m in models
+        ]
 
     async def find_by_patient(
         self,
@@ -104,6 +128,11 @@ class SQLAlchemyDispatchRepository(DispatchRepository):
             DispatchModel.fk_patient_id == fk_patient_id,
             DispatchModel.status == RecordStatus.ACTIVE,
         )
+        if prescription_number:
+            q = q.join(
+                PrescriptionModel,
+                DispatchModel.fk_prescription_id == PrescriptionModel.id,
+            ).where(PrescriptionModel.prescription_number == prescription_number)
         if status:
             q = q.where(DispatchModel.dispatch_status == status)
         if date_from:
@@ -118,11 +147,12 @@ class SQLAlchemyDispatchRepository(DispatchRepository):
         result = await self._session.execute(
             q.order_by(DispatchModel.dispatch_date.desc()).offset(offset).limit(page_size)
         )
-        dispatches = []
-        for m in result.scalars().all():
-            items = await self._load_items(m.id)
-            dispatches.append(self._to_entity(m, items))
-        return dispatches, total
+        models = result.scalars().all()
+        items_by_dispatch = await self._load_items_batch([m.id for m in models])
+        return [
+            self._to_entity(m, items_by_dispatch.get(m.id, []))
+            for m in models
+        ], total
 
     async def get_monthly_consumption(
         self,
@@ -132,35 +162,30 @@ class SQLAlchemyDispatchRepository(DispatchRepository):
         year: int,
     ) -> int:
         """
-        CTE optimizada: suma de quantity_dispatched para un paciente/medicamento
+        Suma de quantity_dispatched para un paciente/medicamento
         en un mes específico. Incluye solo despachos con status != 'cancelled'.
         """
-        from sqlalchemy import text
-
-        result = await self._session.execute(
-            text("""
-                WITH dispatches_in_month AS (
-                    SELECT d.id
-                    FROM dispatches d
-                    WHERE d.fk_patient_id = :patient_id
-                      AND EXTRACT(MONTH FROM d.dispatch_date) = :month
-                      AND EXTRACT(YEAR  FROM d.dispatch_date) = :year
-                      AND d.dispatch_status != 'cancelled'
-                      AND d.status = 'A'
-                )
-                SELECT COALESCE(SUM(di.quantity_dispatched), 0)
-                FROM dispatch_items di
-                WHERE di.fk_dispatch_id IN (SELECT id FROM dispatches_in_month)
-                  AND di.fk_medication_id = :medication_id
-                  AND di.status = 'A'
-            """),
-            {
-                "patient_id": fk_patient_id,
-                "month": int(month),
-                "year": year,
-                "medication_id": fk_medication_id,
-            },
+        dispatches_in_month = (
+            select(DispatchModel.id)
+            .where(
+                DispatchModel.fk_patient_id == fk_patient_id,
+                func.extract("month", DispatchModel.dispatch_date) == int(month),
+                func.extract("year", DispatchModel.dispatch_date) == year,
+                DispatchModel.dispatch_status != "cancelled",
+                DispatchModel.status == RecordStatus.ACTIVE,
+            )
+            .subquery()
         )
+
+        q = select(
+            func.coalesce(func.sum(DispatchItemModel.quantity_dispatched), 0)
+        ).where(
+            DispatchItemModel.fk_dispatch_id.in_(select(dispatches_in_month.c.id)),
+            DispatchItemModel.fk_medication_id == fk_medication_id,
+            DispatchItemModel.status == RecordStatus.ACTIVE,
+        )
+
+        result = await self._session.execute(q)
         return result.scalar_one()
 
     # ──────────────────────────────────────────────────────────
