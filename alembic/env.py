@@ -21,7 +21,19 @@ from app.modules.auth.infrastructure.models import (  # noqa: F401
 )
 # from app.modules.patients.infrastructure.models import PatientModel  # noqa: F401
 # from app.modules.appointments.infrastructure.models import AppointmentModel  # noqa: F401
-# from app.modules.inventory.infrastructure.models import InventoryItemModel  # noqa: F401
+from app.modules.inventory.infrastructure.models import (  # noqa: F401
+    BatchModel,
+    DispatchExceptionModel,
+    DispatchItemModel,
+    DispatchLimitModel,
+    DispatchModel,
+    MedicationModel,
+    PrescriptionItemModel,
+    PrescriptionModel,
+    PurchaseOrderItemModel,
+    PurchaseOrderModel,
+    SupplierModel,
+)
 
 settings = get_settings()
 config = context.config

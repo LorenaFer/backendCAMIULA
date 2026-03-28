@@ -7,8 +7,19 @@ from app.shared.schemas.responses import error
 
 
 async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:
-    """Convierte AppException al envelope estándar de error."""
-    return error(message=exc.message, status_code=exc.status_code)
+    """Convierte AppException al envelope estándar de error.
+
+    Cuando la excepción tiene un campo `code` (ej. LIMIT_EXCEEDED),
+    se incluye en el cuerpo para que el frontend discrimine errores de negocio.
+    """
+    body: dict = {
+        "status": "error",
+        "message": exc.message,
+        "data": None,
+    }
+    if exc.code:
+        body["code"] = exc.code
+    return JSONResponse(status_code=exc.status_code, content=body)
 
 
 async def validation_exception_handler(
