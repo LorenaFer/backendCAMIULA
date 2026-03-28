@@ -1,3 +1,5 @@
+from typing import Optional
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -6,6 +8,9 @@ from app.modules.appointments.application.dtos.medical_record_dto import (
 )
 from app.modules.appointments.application.use_cases.get_medical_record import (
     GetMedicalRecordUseCase,
+)
+from app.modules.appointments.application.use_cases.get_patient_medical_history import (
+    GetPatientMedicalHistoryUseCase,
 )
 from app.modules.appointments.application.use_cases.mark_record_prepared import (
     MarkRecordPreparedUseCase,
@@ -19,6 +24,7 @@ from app.modules.appointments.infrastructure.repositories.sqlalchemy_medical_rec
 from app.modules.appointments.presentation.schemas.medical_record_schema import (
     MarkPreparedRequest,
     MedicalRecordResponse,
+    PatientHistoryEntry,
     UpsertMedicalRecordRequest,
 )
 from app.shared.database.session import get_db
@@ -34,6 +40,8 @@ def _to_response(r) -> dict:
         cita_id=r.appointment_id,
         paciente_id=r.patient_id,
         doctor_id=r.doctor_id,
+        schema_id=r.schema_id,
+        schema_version=r.schema_version,
         evaluacion=r.evaluation,
         preparado=r.is_prepared,
         preparado_at=r.prepared_at,
@@ -71,10 +79,43 @@ async def upsert_medical_record(
             appointment_id=body.cita_id,
             patient_id=body.paciente_id,
             doctor_id=body.doctor_id,
+            schema_id=body.schema_id,
+            schema_version=body.schema_version,
             evaluation=body.evaluacion,
         )
     )
     return ok(data=_to_response(record), message="Historia médica guardada")
+
+
+@router.get("/patient/{patient_id}")
+async def get_patient_history(
+    patient_id: str,
+    limit: int = Query(5, ge=1, le=50),
+    exclude: Optional[str] = Query(None),
+    _=Depends(require_permission("appointments:read")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Historial médico previo del paciente."""
+    repo = SQLAlchemyMedicalRecordRepository(db)
+    use_case = GetPatientMedicalHistoryUseCase(medical_record_repo=repo)
+    records = await use_case.execute(
+        patient_id=patient_id,
+        limit=limit,
+        exclude_appointment_id=exclude,
+    )
+    data = [
+        PatientHistoryEntry(
+            id=r.id,
+            cita_id=r.appointment_id,
+            doctor_id=r.doctor_id,
+            schema_id=r.schema_id,
+            evaluacion=r.evaluation,
+            preparado=r.is_prepared,
+            created_at=r.created_at,
+        ).model_dump()
+        for r in records
+    ]
+    return ok(data=data, message="Historial médico del paciente")
 
 
 @router.patch("/{record_id}/prepared")
