@@ -1,7 +1,7 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from datetime import date, time
-from typing import List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from app.modules.appointments.domain.entities.appointment import Appointment
 
 
@@ -43,4 +43,14 @@ class AppointmentRepository(ABC):
         self, doctor_id: str, appointment_date: date, start_time: time, end_time: time,
         exclude_id: Optional[str] = None
     ) -> bool:
+        ...
+
+    @abstractmethod
+    async def get_stats(
+        self,
+        fecha: Optional[date] = None,
+        doctor_id: Optional[str] = None,
+        specialty_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Estadísticas agregadas de citas para el dashboard."""
         ...
