@@ -28,6 +28,7 @@ from app.modules.appointments.infrastructure.models import (  # noqa: F401
     MedicalRecordModel,
     SpecialtyModel,
 )
+from app.modules.form_schemas.infrastructure.models import FormSchemaModel  # noqa: F401
 # from app.modules.inventory.infrastructure.models import InventoryItemModel  # noqa: F401
 
 settings = get_settings()
