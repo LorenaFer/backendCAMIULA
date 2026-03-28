@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from app.core.exceptions import UnauthorizedException
 from app.core.security import create_access_token, verify_password
+from app.modules.auth.domain.entities.enums import UserStatus
 from app.modules.auth.application.dtos.auth_dto import LoginDTO, TokenResponseDTO
 from app.modules.auth.domain.repositories.user_repository import UserRepository
 
@@ -28,7 +29,7 @@ class LoginUserUseCase:
         if not verify_password(dto.password, user.hashed_password):
             raise UnauthorizedException("Credenciales inválidas")
 
-        if user.user_status == "SUSPENDED":
+        if user.user_status == UserStatus.SUSPENDED.value:
             raise UnauthorizedException("Usuario suspendido")
 
         token = create_access_token(data={"sub": user.id, "email": user.email})

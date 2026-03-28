@@ -4,6 +4,7 @@ from sqlalchemy import ForeignKey, Index, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.modules.auth.domain.entities.enums import UserStatus
 from app.shared.database.base import Base
 from app.shared.database.mixins import AuditMixin, SoftDeleteMixin
 
@@ -26,13 +27,19 @@ class UserModel(Base, SoftDeleteMixin, AuditMixin):
     )
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
     phone: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    cedula: Mapped[Optional[str]] = mapped_column(
+        String(20), unique=True, index=True, nullable=True
+    )
+    username: Mapped[Optional[str]] = mapped_column(
+        String(50), unique=True, index=True, nullable=True
+    )
     hashed_password: Mapped[Optional[str]] = mapped_column(
         String(255), nullable=True
     )
 
     # --- Grupo 4: Lógica de negocio ---
     user_status: Mapped[Optional[str]] = mapped_column(
-        String(30), nullable=True, default="PENDING"
+        String(30), nullable=True, default=UserStatus.PENDING.value
     )
 
     # --- Grupos 5-8: SoftDeleteMixin + AuditMixin ---

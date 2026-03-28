@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Optional, Set
 
 from app.core.exceptions import UnauthorizedException
+from app.modules.auth.domain.entities.enums import UserStatus
 from app.modules.auth.domain.entities.user import User
 from app.modules.auth.domain.repositories.auth_provider import AuthProvider
 from app.modules.auth.domain.repositories.user_repository import UserRepository
@@ -47,7 +48,7 @@ class ValidateTokenUseCase:
         if user is None:
             raise UnauthorizedException("Usuario no encontrado")
 
-        if user.user_status == "SUSPENDED":
+        if user.user_status == UserStatus.SUSPENDED.value:
             raise UnauthorizedException("Usuario suspendido")
 
         # Cargar permisos — O(1) cache hit, O(log n) cache miss

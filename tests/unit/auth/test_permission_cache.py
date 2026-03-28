@@ -38,3 +38,43 @@ class TestPermissionCache:
     def test_invalidate_nonexistent_no_error(self):
         cache = PermissionCache(ttl_seconds=60)
         cache.invalidate("nobody")  # Should not raise
+
+    def test_set_and_get_roles(self):
+        cache = PermissionCache(ttl_seconds=60)
+        cache.set_roles("user1", ["admin", "doctor"])
+        assert cache.get_roles("user1") == ["admin", "doctor"]
+
+    def test_get_roles_nonexistent_returns_none(self):
+        cache = PermissionCache(ttl_seconds=60)
+        assert cache.get_roles("nobody") is None
+
+    def test_set_all_stores_both(self):
+        cache = PermissionCache(ttl_seconds=60)
+        cache.set_all("user1", {"perm:a", "perm:b"}, ["doctor"])
+        assert cache.get("user1") == {"perm:a", "perm:b"}
+        assert cache.get_roles("user1") == ["doctor"]
+
+    def test_set_preserves_roles(self):
+        cache = PermissionCache(ttl_seconds=60)
+        cache.set_all("user1", {"a"}, ["doctor"])
+        cache.set("user1", {"a", "b"})
+        assert cache.get_roles("user1") == ["doctor"]
+
+    def test_set_roles_preserves_permissions(self):
+        cache = PermissionCache(ttl_seconds=60)
+        cache.set_all("user1", {"a"}, ["doctor"])
+        cache.set_roles("user1", ["admin"])
+        assert cache.get("user1") == {"a"}
+
+    def test_invalidate_clears_both(self):
+        cache = PermissionCache(ttl_seconds=60)
+        cache.set_all("user1", {"a"}, ["doctor"])
+        cache.invalidate("user1")
+        assert cache.get("user1") is None
+        assert cache.get_roles("user1") is None
+
+    def test_roles_ttl_expiration(self):
+        cache = PermissionCache(ttl_seconds=0)
+        cache.set_roles("user1", ["admin"])
+        time.sleep(0.01)
+        assert cache.get_roles("user1") is None

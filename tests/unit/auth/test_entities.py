@@ -1,5 +1,6 @@
 """Tests unitarios para entidades de dominio."""
 
+from app.modules.auth.domain.entities.enums import UserStatus
 from app.modules.auth.domain.entities.permission import Permission
 from app.modules.auth.domain.entities.role import Role
 from app.modules.auth.domain.entities.user import User
@@ -11,7 +12,7 @@ class TestUserEntity:
         assert user.email == "test@test.com"
         assert user.full_name == "Test"
         assert len(user.id) == 36  # UUID
-        assert user.user_status == "PENDING"
+        assert user.user_status == UserStatus.PENDING.value
         assert user.roles == []
         assert user.permissions == set()
 

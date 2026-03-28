@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.exceptions import ForbiddenException, UnauthorizedException
+from app.modules.auth.domain.entities.enums import UserStatus
 from app.core.security import decode_access_token
 from app.modules.auth.domain.entities.user import User
 from app.modules.auth.domain.repositories.auth_provider import AuthProvider
@@ -93,19 +94,23 @@ async def get_current_user(
     if user is None:
         raise UnauthorizedException("Usuario no encontrado")
 
-    if user.user_status == "SUSPENDED":
+    if user.user_status == UserStatus.SUSPENDED.value:
         raise UnauthorizedException("Usuario suspendido")
 
-    # Permisos — O(1) cache hit
+    # Permisos + roles — O(1) cache hit, O(log n) cache miss
     cached_perms = permission_cache.get(user.id)
-    if cached_perms is not None:
+    cached_roles = permission_cache.get_roles(user.id)
+
+    if cached_perms is not None and cached_roles is not None:
         user.permissions = cached_perms
+        user.roles = cached_roles
     else:
         perms = await repo.get_user_permissions(user.id)
-        permission_cache.set(user.id, perms)
+        roles = await repo.get_user_roles(user.id)
+        permission_cache.set_all(user.id, perms, roles)
         user.permissions = perms
+        user.roles = roles
 
-    user.roles = await repo.get_user_roles(user.id)
     return user
 
 

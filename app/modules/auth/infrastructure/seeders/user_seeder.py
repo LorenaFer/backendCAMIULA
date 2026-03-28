@@ -4,6 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import hash_password
+from app.modules.auth.domain.entities.enums import UserStatus
 from app.modules.auth.infrastructure.models import (
     RoleModel,
     UserModel,
@@ -60,7 +61,7 @@ class UserSeeder(BaseSeeder):
                 email=user_data["email"],
                 full_name=user_data["full_name"],
                 hashed_password=hash_password(user_data["password"]),
-                user_status="ACTIVE",
+                user_status=UserStatus.ACTIVE.value,
             )
             session.add(user)
             await session.flush()

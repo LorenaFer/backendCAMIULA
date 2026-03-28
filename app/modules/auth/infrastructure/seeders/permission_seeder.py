@@ -33,6 +33,13 @@ PERMISSIONS = [
     ("profile:read", "auth", "Ver perfil propio"),
     ("profile:update", "auth", "Actualizar perfil propio"),
     ("dashboard:view", "auth", "Ver dashboard"),
+    # Medical records (appointments module)
+    ("medical_records:read", "appointments", "Ver expedientes médicos"),
+    ("medical_records:write", "appointments", "Editar evaluaciones médicas"),
+    ("medical_records:prepare", "appointments", "Preparar expediente (enfermería)"),
+    # Availability (appointments module)
+    ("availability:read", "appointments", "Ver disponibilidad de doctores"),
+    ("availability:manage", "appointments", "Gestionar bloques de disponibilidad"),
 ]
 
 

@@ -19,8 +19,16 @@ from app.modules.auth.infrastructure.models import (  # noqa: F401
     UserModel,
     UserRoleModel,
 )
-# from app.modules.patients.infrastructure.models import PatientModel  # noqa: F401
-# from app.modules.appointments.infrastructure.models import AppointmentModel  # noqa: F401
+from app.modules.patients.infrastructure.models import PatientModel  # noqa: F401
+from app.modules.appointments.infrastructure.models import (  # noqa: F401
+    AppointmentModel,
+    DoctorAvailabilityModel,
+    DoctorExceptionModel,
+    DoctorModel,
+    MedicalRecordModel,
+    SpecialtyModel,
+)
+from app.modules.form_schemas.infrastructure.models import FormSchemaModel  # noqa: F401
 # from app.modules.inventory.infrastructure.models import InventoryItemModel  # noqa: F401
 
 settings = get_settings()
