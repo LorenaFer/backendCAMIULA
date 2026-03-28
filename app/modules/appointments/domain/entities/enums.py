@@ -6,6 +6,19 @@ dispersos en entities, repositories, routes y models.
 
 import enum
 
+# Mapeo español → enum para la capa de presentación.
+# Definido fuera de la clase para evitar que Python 3.9 lo trate como
+# miembro del str enum (en Python 3.9, atributos de clase con nombre
+# _name son tratados como miembros de str, enum.Enum si no tienen
+# underscore al final).
+_APPOINTMENT_DISPLAY_MAP = {
+    "pendiente": "PENDING",
+    "confirmada": "CONFIRMED",
+    "atendida": "ATTENDED",
+    "cancelada": "CANCELLED",
+    "no_asistio": "NO_SHOW",
+}
+
 
 class AppointmentStatus(str, enum.Enum):
     PENDING = "PENDING"
@@ -13,9 +26,6 @@ class AppointmentStatus(str, enum.Enum):
     ATTENDED = "ATTENDED"
     CANCELLED = "CANCELLED"
     NO_SHOW = "NO_SHOW"
-
-    # Transiciones válidas de la máquina de estados
-    _transitions = None
 
     @classmethod
     def transitions(cls) -> dict:
@@ -37,25 +47,16 @@ class AppointmentStatus(str, enum.Enum):
         """Estados excluidos en filtros por defecto."""
         return {cls.CANCELLED, cls.NO_SHOW}
 
-    # Mapeo español → enum para la capa de presentación
-    _DISPLAY_MAP = {
-        "pendiente": "PENDING",
-        "confirmada": "CONFIRMED",
-        "atendida": "ATTENDED",
-        "cancelada": "CANCELLED",
-        "no_asistio": "NO_SHOW",
-    }
-
     @classmethod
     def from_display(cls, value: str) -> "AppointmentStatus":
         """Convierte nombre en español o inglés al enum."""
-        mapped = cls._DISPLAY_MAP.get(value.lower(), value.upper())
+        mapped = _APPOINTMENT_DISPLAY_MAP.get(value.lower(), value.upper())
         return cls(mapped)
 
     @property
     def display_name(self) -> str:
         """Nombre en español para respuestas al frontend."""
-        reverse = {v: k for k, v in self._DISPLAY_MAP.items()}
+        reverse = {v: k for k, v in _APPOINTMENT_DISPLAY_MAP.items()}
         return reverse.get(self.value, self.value.lower())
 
 
