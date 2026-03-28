@@ -9,6 +9,14 @@ class SpecialtyResponse(BaseModel):
     activo: bool = True
 
 
+class SpecialtyCreateRequest(BaseModel):
+    nombre: str
+
+
+class SpecialtyUpdateRequest(BaseModel):
+    nombre: str
+
+
 class DoctorResponse(BaseModel):
     id: str
     nombre: str
