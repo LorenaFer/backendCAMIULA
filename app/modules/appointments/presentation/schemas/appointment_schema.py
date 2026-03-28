@@ -4,6 +4,18 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
 
+class AppointmentStatsResponse(BaseModel):
+    total: int
+    byStatus: Dict[str, int]
+    bySpecialty: List[Dict[str, Any]]
+    byDoctor: List[Dict[str, Any]]
+    firstTimeCount: int
+    returningCount: int
+    byPatientType: Dict[str, int]
+    dailyTrend: List[int]
+    peakHours: List[Dict[str, Any]]
+
+
 class CreateAppointmentRequest(BaseModel):
     paciente_id: str
     doctor_id: str

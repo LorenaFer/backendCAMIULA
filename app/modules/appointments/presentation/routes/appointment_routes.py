@@ -21,6 +21,9 @@ from app.modules.appointments.application.use_cases.create_appointment import (
 from app.modules.appointments.application.use_cases.get_appointment_detail import (
     GetAppointmentDetailUseCase,
 )
+from app.modules.appointments.application.use_cases.get_appointment_stats import (
+    GetAppointmentStatsUseCase,
+)
 from app.modules.appointments.application.use_cases.list_appointments import (
     ListAppointmentsUseCase,
 )
@@ -32,6 +35,7 @@ from app.modules.appointments.infrastructure.repositories.sqlalchemy_availabilit
 )
 from app.modules.appointments.presentation.schemas.appointment_schema import (
     AppointmentResponse,
+    AppointmentStatsResponse,
     ChangeStatusRequest,
     CheckSlotResponse,
     CreateAppointmentRequest,
@@ -169,6 +173,25 @@ async def check_slot(
         data=CheckSlotResponse(ocupado=occupied).model_dump(),
         message="Verificación de slot",
     )
+
+
+@router.get("/stats")
+async def get_stats(
+    fecha: Optional[date] = Query(None),
+    doctor_id: Optional[str] = Query(None),
+    especialidad_id: Optional[str] = Query(None),
+    _=Depends(require_permission("appointments:read")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Estadísticas de citas para el dashboard."""
+    repo = SQLAlchemyAppointmentRepository(db)
+    use_case = GetAppointmentStatsUseCase(appointment_repo=repo)
+    stats = await use_case.execute(
+        fecha=fecha,
+        doctor_id=doctor_id,
+        specialty_id=especialidad_id,
+    )
+    return ok(data=stats, message="Estadísticas de citas")
 
 
 @router.get("/{appointment_id}")
