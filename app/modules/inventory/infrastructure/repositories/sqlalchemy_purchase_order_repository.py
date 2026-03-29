@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 from typing import Optional
 
-from sqlalchemy import select, update as sql_update
+from sqlalchemy import func, select, update as sql_update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.inventory.domain.entities.purchase_order import (
@@ -94,6 +94,28 @@ class SQLAlchemyPurchaseOrderRepository(PurchaseOrderRepository):
         model = result.scalar_one_or_none()
         return self._item_to_entity(model) if model else None
 
+    async def all_items_received(self, order_id: str) -> bool:
+        """Verifica si todos los ítems activos de la orden tienen
+        quantity_received >= quantity_ordered.
+
+        Un solo query con COUNT + FILTER — O(log n) con índice en fk_purchase_order_id.
+        """
+        result = await self._session.execute(
+            select(
+                func.count().label("total"),
+                func.count().filter(
+                    PurchaseOrderItemModel.quantity_received
+                    >= PurchaseOrderItemModel.quantity_ordered
+                ).label("completed"),
+            )
+            .where(
+                PurchaseOrderItemModel.fk_purchase_order_id == order_id,
+                PurchaseOrderItemModel.status == RecordStatus.ACTIVE,
+            )
+        )
+        row = result.one()
+        return row.total > 0 and row.total == row.completed
+
     # ──────────────────────────────────────────────────────────
     # Escritura
     # ──────────────────────────────────────────────────────────
@@ -110,6 +132,7 @@ class SQLAlchemyPurchaseOrderRepository(PurchaseOrderRepository):
                 updated_by=updated_by,
             )
         )
+        await self._session.flush()
 
     async def increment_item_received(
         self,
@@ -137,3 +160,4 @@ class SQLAlchemyPurchaseOrderRepository(PurchaseOrderRepository):
             .where(PurchaseOrderItemModel.id == item_id)
             .values(**values)
         )
+        await self._session.flush()

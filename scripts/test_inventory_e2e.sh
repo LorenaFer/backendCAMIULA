@@ -96,7 +96,7 @@ if [ -z "${TOKEN:-}" ]; then
   echo -e "${YELLOW}TOKEN no definido. Intentando login con credenciales por defecto...${NC}"
   LOGIN_RESP=$(curl -s -w "\n%{http_code}" -X POST \
     -H "Content-Type: application/json" \
-    -d '{"email":"admin@camiula.ula.ve","password":"admin123"}' \
+    -d '{"email":"admin@camiula.com","password":"admin123"}' \
     "$BASE/auth/login")
   LOGIN_STATUS=$(echo "$LOGIN_RESP" | tail -1)
   LOGIN_BODY=$(echo "$LOGIN_RESP" | sed '$d')
@@ -135,7 +135,8 @@ BODY=$(echo "$RESULT" | cut -d'|' -f2-)
 assert_status "GET /medications — listar medicamentos" 200 "$STATUS" "$BODY"
 
 # 1.2 Crear un medicamento nuevo
-NEW_MED='{"code":"MED-TEST-E2E","generic_name":"Paracetamol Test","pharmaceutical_form":"Tabletas","unit_measure":"Tabletas","controlled_substance":false,"requires_refrigeration":false}'
+E2E_CODE="MED-E2E-$(date +%s)"
+NEW_MED="{\"code\":\"$E2E_CODE\",\"generic_name\":\"Paracetamol Test\",\"pharmaceutical_form\":\"Tabletas\",\"unit_measure\":\"Tabletas\",\"controlled_substance\":false,\"requires_refrigeration\":false}"
 RESULT=$(POST "/inventory/medications" "$NEW_MED")
 STATUS=$(echo "$RESULT" | cut -d'|' -f1)
 BODY=$(echo "$RESULT" | cut -d'|' -f2-)
@@ -316,10 +317,208 @@ assert_status "GET /reports/consumption?period=invalid — validación 422" 422 
 echo ""
 
 # ═══════════════════════════════════════════════════════════════
-# 5. AUTH — Endpoints sin token deben fallar
+# 5. PURCHASE ORDERS — Recepción y control de lotes (PR #5)
 # ═══════════════════════════════════════════════════════════════
 
-echo "── Auth — Sin token ──────────────────────────────────"
+echo "── Purchase Orders — Recepción ────────────────────────"
+
+# 5.0 Crear orden de compra + ítems via script Python
+echo -e "${YELLOW}  Creando orden de compra de prueba en BD...${NC}"
+
+PO_SEED=$(python3 -c "
+import asyncio, uuid, logging
+logging.disable(logging.CRITICAL)
+from datetime import date
+
+async def seed():
+    from app.shared.database.session import async_session_factory as async_session
+    from app.modules.inventory.infrastructure.models import (
+        PurchaseOrderModel, PurchaseOrderItemModel,
+    )
+    order_id = str(uuid.uuid4())
+    item1_id = str(uuid.uuid4())
+    item2_id = str(uuid.uuid4())
+    async with async_session() as session:
+        order = PurchaseOrderModel(
+            id=order_id,
+            fk_supplier_id='a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+            order_number=f'OC-E2E-{order_id[:8]}',
+            order_date=date.today(),
+            order_status='sent',
+            created_by='system',
+        )
+        session.add(order)
+        await session.flush()
+        items = [
+            PurchaseOrderItemModel(
+                id=item1_id,
+                fk_purchase_order_id=order_id,
+                fk_medication_id='d4e5f6a7-b8c9-0123-defa-234567890123',
+                quantity_ordered=50,
+                quantity_received=0,
+                item_status='pending',
+                created_by='system',
+            ),
+            PurchaseOrderItemModel(
+                id=item2_id,
+                fk_purchase_order_id=order_id,
+                fk_medication_id='e5f6a7b8-c9d0-1234-efab-345678901234',
+                quantity_ordered=30,
+                quantity_received=0,
+                item_status='pending',
+                created_by='system',
+            ),
+        ]
+        session.add_all(items)
+        await session.commit()
+    print(f'{order_id}|{item1_id}|{item2_id}')
+asyncio.run(seed())
+" 2>/dev/null || echo "")
+
+PO_ID=$(echo "$PO_SEED" | cut -d'|' -f1)
+PO_ITEM1_ID=$(echo "$PO_SEED" | cut -d'|' -f2)
+PO_ITEM2_ID=$(echo "$PO_SEED" | cut -d'|' -f3)
+
+if [ -z "$PO_ID" ]; then
+  TOTAL=$((TOTAL + 1)); FAIL=$((FAIL + 1))
+  echo -e "${RED}✗ FAIL${NC} No se pudo crear la orden de prueba (requiere BD activa)"
+else
+  echo -e "${GREEN}  Orden $PO_ID creada con 2 ítems.${NC}"
+
+  # 5.1 Recepción parcial (solo ítem 1 — Ibuprofeno)
+  RESULT=$(POST "/inventory/purchase-orders/$PO_ID/receive" "{
+    \"items\": [{
+      \"purchase_order_item_id\": \"$PO_ITEM1_ID\",
+      \"quantity_received\": 50,
+      \"lot_number\": \"LOT-E2E-IBU-001\",
+      \"expiration_date\": \"2027-06-30\",
+      \"unit_cost\": 1.25
+    }]
+  }")
+  STATUS=$(echo "$RESULT" | cut -d'|' -f1)
+  BODY=$(echo "$RESULT" | cut -d'|' -f2-)
+  assert_status "POST /purchase-orders/:id/receive — recepción parcial" 200 "$STATUS" "$BODY"
+
+  # 5.2 Verificar stock de Ibuprofeno subió
+  IBU_ID="d4e5f6a7-b8c9-0123-defa-234567890123"
+  RESULT=$(GET "/inventory/medications/$IBU_ID")
+  STATUS=$(echo "$RESULT" | cut -d'|' -f1)
+  BODY=$(echo "$RESULT" | cut -d'|' -f2-)
+  IBU_STOCK=$(echo "$BODY" | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['current_stock'])" 2>/dev/null || echo "0")
+  TOTAL=$((TOTAL + 1))
+  if [ "$IBU_STOCK" -ge 50 ]; then
+    PASS=$((PASS + 1))
+    echo -e "${GREEN}✓ PASS${NC} [stock=$IBU_STOCK] Ibuprofeno stock >= 50 tras recepción"
+  else
+    FAIL=$((FAIL + 1))
+    echo -e "${RED}✗ FAIL${NC} [stock=$IBU_STOCK] Ibuprofeno stock esperado >= 50"
+  fi
+
+  # 5.3 Recepción completa (ítem 2 — Metformina)
+  RESULT=$(POST "/inventory/purchase-orders/$PO_ID/receive" "{
+    \"items\": [{
+      \"purchase_order_item_id\": \"$PO_ITEM2_ID\",
+      \"quantity_received\": 30,
+      \"lot_number\": \"LOT-E2E-MET-001\",
+      \"expiration_date\": \"2027-09-15\",
+      \"unit_cost\": 0.85
+    }]
+  }")
+  STATUS=$(echo "$RESULT" | cut -d'|' -f1)
+  BODY=$(echo "$RESULT" | cut -d'|' -f2-)
+  assert_status "POST /purchase-orders/:id/receive — recepción completa" 200 "$STATUS" "$BODY"
+
+  # 5.4 Orden ya received — no puede re-recibirse (status invalido)
+  RESULT=$(POST "/inventory/purchase-orders/$PO_ID/receive" "{
+    \"items\": [{
+      \"purchase_order_item_id\": \"$PO_ITEM1_ID\",
+      \"quantity_received\": 10,
+      \"lot_number\": \"LOT-EXTRA\",
+      \"expiration_date\": \"2028-01-01\"
+    }]
+  }")
+  STATUS=$(echo "$RESULT" | cut -d'|' -f1)
+  BODY=$(echo "$RESULT" | cut -d'|' -f2-)
+  assert_status "POST /receive — orden cerrada → 403" 403 "$STATUS" "$BODY"
+
+  # 5.5 Item que no pertenece a la orden → 403 ITEM_NOT_IN_ORDER
+  # Crear una segunda orden para obtener un item ajeno
+  PO_SEED2=$(python3 -c "
+import asyncio, uuid, logging
+logging.disable(logging.CRITICAL)
+from datetime import date
+async def seed():
+    from app.shared.database.session import async_session_factory as async_session
+    from app.modules.inventory.infrastructure.models import (
+        PurchaseOrderModel, PurchaseOrderItemModel,
+    )
+    oid = str(uuid.uuid4())
+    iid = str(uuid.uuid4())
+    async with async_session() as session:
+        session.add(PurchaseOrderModel(
+            id=oid,
+            fk_supplier_id='a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+            order_number=f'OC-E2E2-{oid[:8]}',
+            order_date=date.today(),
+            order_status='sent',
+            created_by='system',
+        ))
+        await session.flush()
+        session.add(PurchaseOrderItemModel(
+            id=iid,
+            fk_purchase_order_id=oid,
+            fk_medication_id='c3d4e5f6-a7b8-9012-cdef-123456789012',
+            quantity_ordered=10,
+            quantity_received=0,
+            item_status='pending',
+            created_by='system',
+        ))
+        await session.commit()
+    print(f'{oid}|{iid}')
+asyncio.run(seed())
+" 2>/dev/null || echo "")
+
+  PO2_ID=$(echo "$PO_SEED2" | cut -d'|' -f1)
+  PO2_ITEM_ID=$(echo "$PO_SEED2" | cut -d'|' -f2)
+
+  if [ -n "$PO2_ID" ] && [ -n "$PO2_ITEM_ID" ]; then
+    # Intentar recibir item de orden 2 en orden 1 — debe fallar
+    # (orden 1 ya está "received" así que dará 403 por status,
+    #  pero el chequeo de ownership está antes del status check)
+    # Probemos con la orden 2 en sí, enviando item de orden 1
+    RESULT=$(POST "/inventory/purchase-orders/$PO2_ID/receive" "{
+      \"items\": [{
+        \"purchase_order_item_id\": \"$PO_ITEM1_ID\",
+        \"quantity_received\": 5,
+        \"lot_number\": \"LOT-FAKE\",
+        \"expiration_date\": \"2028-01-01\"
+      }]
+    }")
+    STATUS=$(echo "$RESULT" | cut -d'|' -f1)
+    BODY=$(echo "$RESULT" | cut -d'|' -f2-)
+    assert_status "POST /receive — item de otra orden → 403 ITEM_NOT_IN_ORDER" 403 "$STATUS" "$BODY"
+  fi
+fi
+
+# 5.6 Orden inexistente
+RESULT=$(POST "/inventory/purchase-orders/00000000-0000-0000-0000-000000000000/receive" '{"items":[{"purchase_order_item_id":"x","quantity_received":1,"lot_number":"L","expiration_date":"2028-01-01"}]}')
+STATUS=$(echo "$RESULT" | cut -d'|' -f1)
+BODY=$(echo "$RESULT" | cut -d'|' -f2-)
+assert_status "POST /receive — orden inexistente → 404" 404 "$STATUS" "$BODY"
+
+# 5.7 Body vacío (items=[]) → 422 (Pydantic min_length=1)
+RESULT=$(POST "/inventory/purchase-orders/some-id/receive" '{"items":[]}')
+STATUS=$(echo "$RESULT" | cut -d'|' -f1)
+BODY=$(echo "$RESULT" | cut -d'|' -f2-)
+assert_status "POST /receive — items vacío → 422" 422 "$STATUS" "$BODY"
+
+echo ""
+
+# ═══════════════════════════════════════════════════════════════
+# 6. AUTH — Endpoints sin token deben fallar
+# ═══════════════════════════════════════════════════════════════
+
+echo "── Auth — Sin token ─────────────────────────────────"
 
 NO_AUTH_RESP=$(curl -s -w "\n%{http_code}" "$BASE/inventory/medications")
 NO_AUTH_STATUS=$(echo "$NO_AUTH_RESP" | tail -1)

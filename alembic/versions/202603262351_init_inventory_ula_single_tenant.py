@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "202603262351"
@@ -46,7 +47,7 @@ def upgrade() -> None:
         # business status
         sa.Column("supplier_status", sa.String(20), nullable=False, server_default="active"),
         # technical control
-        sa.Column("status", sa.Enum("A", "I", "T", name="record_status"), nullable=False, server_default="A"),
+        sa.Column("status", postgresql.ENUM("A", "I", "T", name="record_status", create_type=False), nullable=False, server_default="A"),
         # audit
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
         sa.Column("created_by", sa.String(36)),
@@ -77,7 +78,7 @@ def upgrade() -> None:
         # business status
         sa.Column("medication_status", sa.String(20), nullable=False, server_default="active"),
         # technical control
-        sa.Column("status", sa.Enum("A", "I", "T", name="record_status"), nullable=False, server_default="A"),
+        sa.Column("status", postgresql.ENUM("A", "I", "T", name="record_status", create_type=False), nullable=False, server_default="A"),
         # audit
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
         sa.Column("created_by", sa.String(36)),
@@ -107,7 +108,7 @@ def upgrade() -> None:
         # business status
         sa.Column("order_status", sa.String(20), nullable=False, server_default="draft"),
         # technical control
-        sa.Column("status", sa.Enum("A", "I", "T", name="record_status"), nullable=False, server_default="A"),
+        sa.Column("status", postgresql.ENUM("A", "I", "T", name="record_status", create_type=False), nullable=False, server_default="A"),
         # audit
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
         sa.Column("created_by", sa.String(36)),
@@ -137,7 +138,7 @@ def upgrade() -> None:
         # business status
         sa.Column("item_status", sa.String(20), nullable=False, server_default="pending"),
         # technical control
-        sa.Column("status", sa.Enum("A", "I", "T", name="record_status"), nullable=False, server_default="A"),
+        sa.Column("status", postgresql.ENUM("A", "I", "T", name="record_status", create_type=False), nullable=False, server_default="A"),
         # audit
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
         sa.Column("created_by", sa.String(36)),
@@ -170,7 +171,7 @@ def upgrade() -> None:
         # business status
         sa.Column("batch_status", sa.String(20), nullable=False, server_default="available"),
         # technical control
-        sa.Column("status", sa.Enum("A", "I", "T", name="record_status"), nullable=False, server_default="A"),
+        sa.Column("status", postgresql.ENUM("A", "I", "T", name="record_status", create_type=False), nullable=False, server_default="A"),
         # audit
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
         sa.Column("created_by", sa.String(36)),
@@ -212,7 +213,7 @@ def upgrade() -> None:
         # business status
         sa.Column("prescription_status", sa.String(20), nullable=False, server_default="draft"),
         # technical control
-        sa.Column("status", sa.Enum("A", "I", "T", name="record_status"), nullable=False, server_default="A"),
+        sa.Column("status", postgresql.ENUM("A", "I", "T", name="record_status", create_type=False), nullable=False, server_default="A"),
         # audit
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
         sa.Column("created_by", sa.String(36)),
@@ -246,7 +247,7 @@ def upgrade() -> None:
         # business status
         sa.Column("item_status", sa.String(20), nullable=False, server_default="pending"),
         # technical control
-        sa.Column("status", sa.Enum("A", "I", "T", name="record_status"), nullable=False, server_default="A"),
+        sa.Column("status", postgresql.ENUM("A", "I", "T", name="record_status", create_type=False), nullable=False, server_default="A"),
         # audit
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
         sa.Column("created_by", sa.String(36)),
@@ -276,7 +277,7 @@ def upgrade() -> None:
         # business status
         sa.Column("dispatch_status", sa.String(20), nullable=False, server_default="pending"),
         # technical control
-        sa.Column("status", sa.Enum("A", "I", "T", name="record_status"), nullable=False, server_default="A"),
+        sa.Column("status", postgresql.ENUM("A", "I", "T", name="record_status", create_type=False), nullable=False, server_default="A"),
         # audit
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
         sa.Column("created_by", sa.String(36)),
@@ -312,7 +313,7 @@ def upgrade() -> None:
         # domain
         sa.Column("quantity_dispatched", sa.Integer(), nullable=False),
         # technical control
-        sa.Column("status", sa.Enum("A", "I", "T", name="record_status"), nullable=False, server_default="A"),
+        sa.Column("status", postgresql.ENUM("A", "I", "T", name="record_status", create_type=False), nullable=False, server_default="A"),
         # audit
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
         sa.Column("created_by", sa.String(36)),
@@ -339,7 +340,7 @@ def upgrade() -> None:
         sa.Column("applies_to", sa.String(20), nullable=False, server_default="all"),
         sa.Column("active", sa.Boolean(), nullable=False, server_default="true"),
         # technical control
-        sa.Column("status", sa.Enum("A", "I", "T", name="record_status"), nullable=False, server_default="A"),
+        sa.Column("status", postgresql.ENUM("A", "I", "T", name="record_status", create_type=False), nullable=False, server_default="A"),
         # audit
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
         sa.Column("created_by", sa.String(36)),
@@ -377,7 +378,7 @@ def upgrade() -> None:
         sa.Column("reason", sa.String(500), nullable=False),
         sa.Column("authorized_by", sa.String(200)),
         # technical control
-        sa.Column("status", sa.Enum("A", "I", "T", name="record_status"), nullable=False, server_default="A"),
+        sa.Column("status", postgresql.ENUM("A", "I", "T", name="record_status", create_type=False), nullable=False, server_default="A"),
         # audit
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
         sa.Column("created_by", sa.String(36)),

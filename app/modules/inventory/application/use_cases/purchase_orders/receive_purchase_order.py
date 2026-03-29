@@ -29,7 +29,7 @@ class ReceivePurchaseOrder:
     """Registra la recepción física de una orden de compra.
 
     Por cada ítem recibido:
-      1. Valida que el ítem y su medicamento existan en el catálogo.
+      1. Valida que el ítem pertenezca a la orden y su medicamento exista.
       2. Crea un nuevo lote (Batch) vinculado al medicamento existente —
          esto incrementa automáticamente el stock calculado del catálogo
          sin crear duplicados en la tabla medications.
@@ -37,7 +37,8 @@ class ReceivePurchaseOrder:
          operación DB-side (quantity_received + delta) para tolerar
          recepciones parciales concurrentes sin condiciones de carrera.
 
-    Al finalizar todos los ítems, la orden pasa al estado "received".
+    Al finalizar, la orden pasa a "received" solo si todos sus ítems
+    están completamente recibidos; de lo contrario pasa a "partial".
     """
 
     def __init__(
@@ -65,36 +66,41 @@ class ReceivePurchaseOrder:
                 code="INVALID_ORDER_STATUS",
             )
 
+        # Build lookup from already-loaded order items — avoids N find_item_by_id queries
+        items_by_id = {item.id: item for item in order.items}
+        valid_item_ids = set(items_by_id.keys())
+
         today = date.today()
 
-        # ── 2. Procesar cada ítem recibido ────────────────────────────────
+        # ── 2a. Pre-validate all received items and medications ───────────
         for received_item in dto.items:
-
-            # Validación de negocio: cantidad positiva obligatoria
             if received_item.quantity_received <= 0:
                 raise ForbiddenException(
                     "La cantidad recibida debe ser mayor a cero.",
                     code="INVALID_QUANTITY",
                 )
-
-            # Buscar el ítem de la orden
-            po_item = await self._order_repo.find_item_by_id(
-                received_item.purchase_order_item_id
-            )
-            if not po_item:
-                raise NotFoundException(
-                    f"Ítem de orden '{received_item.purchase_order_item_id}' no encontrado."
+            if received_item.purchase_order_item_id not in valid_item_ids:
+                raise ForbiddenException(
+                    f"El ítem '{received_item.purchase_order_item_id}' no "
+                    f"pertenece a la orden '{order.order_number}'.",
+                    code="ITEM_NOT_IN_ORDER",
                 )
 
-            # Verificar que el medicamento existe en el catálogo
-            medication = await self._medication_repo.find_by_id(
-                po_item.fk_medication_id
-            )
-            if not medication:
+        # Deduplicate medication lookups — only query each unique medication once
+        med_ids = {
+            items_by_id[ri.purchase_order_item_id].fk_medication_id
+            for ri in dto.items
+        }
+        for mid in med_ids:
+            if not await self._medication_repo.find_by_id(mid):
                 raise NotFoundException(
-                    f"Medicamento con ID '{po_item.fk_medication_id}' no "
-                    "encontrado en el catálogo."
+                    f"Medicamento con ID '{mid}' no encontrado en el catálogo."
                 )
+
+        # ── 2b. Procesar cada ítem recibido ───────────────────────────────
+        for received_item in dto.items:
+
+            po_item = items_by_id[received_item.purchase_order_item_id]
 
             # Crear nuevo lote vinculado al medicamento existente.
             # quantity_available = quantity_received: el lote entra disponible
@@ -129,9 +135,12 @@ class ReceivePurchaseOrder:
                 updated_by=received_by,
             )
 
-        # ── 3. Cerrar la orden ────────────────────────────────────────────
+        # ── 3. Determinar estado final de la orden ───────────────────────
+        all_received = await self._order_repo.all_items_received(dto.order_id)
+        final_status = "received" if all_received else "partial"
+
         await self._order_repo.update_order_status(
             id=dto.order_id,
-            status="received",
+            status=final_status,
             updated_by=received_by,
         )

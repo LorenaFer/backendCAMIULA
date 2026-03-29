@@ -57,6 +57,7 @@ async def execute_dispatch(
 
     # ── 2. Planificar asignaciones FEFO por ítem ──────────────────────────────
     item_allocations: list[dict] = []  # lista de dicts para crear DispatchItems
+    batch_available: dict[str, int] = {}  # track remaining qty per batch to avoid re-reads
 
     for item in prescription.items:
         if item.item_status in ("dispensed", "cancelled"):
@@ -114,6 +115,8 @@ async def execute_dispatch(
                 break
             take = min(batch.quantity_available, to_dispatch)
             allocations.append((batch.id, take))
+            # Track available qty so step 4 can skip find_by_id
+            batch_available[batch.id] = batch.quantity_available - take
             to_dispatch -= take
 
         item_allocations.append(
@@ -158,12 +161,10 @@ async def execute_dispatch(
         created_by=pharmacist_id,
     )
 
-    # ── 4. Actualizar cantidades en lotes ─────────────────────────────────────
+    # ── 4. Actualizar cantidades en lotes (uses cached qty from FEFO step) ──
     for alloc in item_allocations:
         for batch_id, qty in alloc["batch_allocations"]:
-            # Releer lote para obtener cantidad actual post-flush
-            batch = await batch_repo.find_by_id(batch_id)
-            new_qty = batch.quantity_available - qty
+            new_qty = batch_available[batch_id]
             await batch_repo.update_quantity(batch_id, new_qty, pharmacist_id)
 
     # ── 5. Actualizar PrescriptionItems ───────────────────────────────────────

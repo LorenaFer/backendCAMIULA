@@ -40,3 +40,9 @@ class PurchaseOrderRepository(ABC):
         """Incrementa quantity_received del ítem usando una operación DB-side
         para evitar condiciones de carrera en recepciones concurrentes."""
         ...
+
+    @abstractmethod
+    async def all_items_received(self, order_id: str) -> bool:
+        """Retorna True si todos los ítems activos de la orden tienen
+        item_status == 'received'."""
+        ...

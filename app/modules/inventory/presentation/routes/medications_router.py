@@ -65,11 +65,13 @@ async def list_medications(
 
 @router.get("/options", summary="Lista simplificada para selects")
 async def get_medication_options(
+    search: Optional[str] = Query(None, description="Filtrar por nombre genérico"),
+    limit: int = Query(100, ge=1, le=500, description="Máximo de resultados"),
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
     repo = SQLAlchemyMedicationRepository(session)
-    options = await repo.find_options()
+    options = await repo.find_options(search=search, limit=limit)
     data = [MedicationOptionResponse(**m.__dict__) for m in options]
     return ok(data=data, message="Opciones de medicamentos obtenidas")
 

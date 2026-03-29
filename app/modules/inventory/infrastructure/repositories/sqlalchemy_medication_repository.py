@@ -136,10 +136,12 @@ class SQLAlchemyMedicationRepository(MedicationRepository):
         model = result.scalar_one_or_none()
         return self._to_entity(model) if model else None
 
-    async def find_options(self) -> list[Medication]:
+    async def find_options(
+        self, search: Optional[str] = None, limit: int = 100
+    ) -> list[Medication]:
         """Lista simplificada para selects — stock calculado en un solo JOIN."""
         stock_sq = _stock_subquery()
-        result = await self._session.execute(
+        q = (
             select(
                 MedicationModel,
                 func.coalesce(stock_sq.c.current_stock, 0).label("current_stock"),
@@ -149,8 +151,11 @@ class SQLAlchemyMedicationRepository(MedicationRepository):
                 MedicationModel.status == RecordStatus.ACTIVE,
                 MedicationModel.medication_status == "active",
             )
-            .order_by(MedicationModel.generic_name)
         )
+        if search:
+            q = q.where(MedicationModel.generic_name.ilike(f"%{search}%"))
+        q = q.order_by(MedicationModel.generic_name).limit(limit)
+        result = await self._session.execute(q)
         return [
             self._to_entity(row.MedicationModel, int(row.current_stock))
             for row in result.all()

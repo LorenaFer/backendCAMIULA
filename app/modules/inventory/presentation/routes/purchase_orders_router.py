@@ -3,7 +3,6 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import ForbiddenException, NotFoundException
 from app.modules.inventory.application.dtos.purchase_order_dto import (
     ReceivedItemDTO,
     ReceivePurchaseOrderDTO,
@@ -21,7 +20,6 @@ from app.modules.inventory.infrastructure.repositories.sqlalchemy_purchase_order
     SQLAlchemyPurchaseOrderRepository,
 )
 from app.modules.inventory.presentation.schemas.purchase_order_schemas import (
-    ReceiveItemInput,
     ReceivePurchaseOrderInput,
 )
 from app.shared.database.session import get_db
@@ -55,13 +53,7 @@ async def receive_purchase_order(
     dto = ReceivePurchaseOrderDTO(
         order_id=order_id,
         items=[
-            ReceivedItemDTO(
-                purchase_order_item_id=item.purchase_order_item_id,
-                quantity_received=item.quantity_received,
-                lot_number=item.lot_number,
-                expiration_date=item.expiration_date,
-                unit_cost=item.unit_cost,
-            )
+            ReceivedItemDTO(**item.model_dump())
             for item in body.items
         ],
     )
