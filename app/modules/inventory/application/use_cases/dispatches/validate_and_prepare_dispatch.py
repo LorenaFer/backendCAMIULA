@@ -48,6 +48,18 @@ async def validate_and_prepare_dispatch(
     item_results: list[DispatchValidationItemDTO] = []
     overall_can_dispatch = True
 
+    # Pre-load medication names for all pending items (avoids N+1 per item)
+    pending_med_ids = {
+        item.fk_medication_id
+        for item in prescription.items
+        if item.item_status not in ("dispensed", "cancelled")
+        and item.quantity_prescribed - item.quantity_dispatched > 0
+    }
+    med_names: dict[str, str] = {}
+    for med_id in pending_med_ids:
+        medication = await medication_repo.find_by_id(med_id)
+        med_names[med_id] = medication.generic_name if medication else med_id
+
     for item in prescription.items:
         if item.item_status in ("dispensed", "cancelled"):
             continue
@@ -114,8 +126,7 @@ async def validate_and_prepare_dispatch(
         if not can_dispatch:
             overall_can_dispatch = False
 
-        medication = await medication_repo.find_by_id(item.fk_medication_id)
-        generic_name = medication.generic_name if medication else item.fk_medication_id
+        generic_name = med_names.get(item.fk_medication_id, item.fk_medication_id)
 
         item_results.append(
             DispatchValidationItemDTO(

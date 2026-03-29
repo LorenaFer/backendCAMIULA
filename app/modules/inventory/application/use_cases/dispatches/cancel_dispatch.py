@@ -34,11 +34,23 @@ async def cancel_dispatch(
         )
 
     # ── 2. Revertir stock en lotes ────────────────────────────────────────────
+    # Build batch lookup — deduplicate find_by_id calls for repeated batch IDs
+    batch_ids = [item.fk_batch_id for item in dispatch.items]
+    batch_map: dict[str, int] = {}
+    for bid in batch_ids:
+        if bid not in batch_map:
+            batch = await batch_repo.find_by_id(bid)
+            if batch:
+                batch_map[bid] = batch.quantity_available
+
+    # Accumulate reversals per batch (multiple items may reference same batch)
     for item in dispatch.items:
-        batch = await batch_repo.find_by_id(item.fk_batch_id)
-        if batch:
-            restored_qty = batch.quantity_available + item.quantity_dispatched
-            await batch_repo.update_quantity(item.fk_batch_id, restored_qty, cancelled_by)
+        if item.fk_batch_id in batch_map:
+            batch_map[item.fk_batch_id] += item.quantity_dispatched
+
+    # Apply all updates
+    for bid, new_qty in batch_map.items():
+        await batch_repo.update_quantity(bid, new_qty, cancelled_by)
 
     # ── 3. Cancelar despacho ──────────────────────────────────────────────────
     await dispatch_repo.update_status(dispatch_id, "cancelled", cancelled_by)

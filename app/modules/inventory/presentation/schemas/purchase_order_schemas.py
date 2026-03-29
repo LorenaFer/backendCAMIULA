@@ -35,7 +35,6 @@ class ReceiveItemInput(BaseModel):
 
 
 class ReceivePurchaseOrderInput(BaseModel):
-    order_id: str
     items: List[ReceiveItemInput] = Field(..., min_length=1)
 
 
