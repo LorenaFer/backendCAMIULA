@@ -37,7 +37,7 @@ from app.modules.doctors.presentation.schemas.availability_schemas import (
     ExceptionResponse,
 )
 from app.shared.database.session import get_db
-from app.shared.middleware.auth import get_current_user_id
+from app.shared.middleware.auth import get_current_user_id, get_optional_user_id
 from app.shared.schemas.responses import created, ok
 
 router = APIRouter(prefix="/doctors", tags=["Doctors -- Availability"])
@@ -49,7 +49,7 @@ router = APIRouter(prefix="/doctors", tags=["Doctors -- Availability"])
 )
 async def availability_summary(
     session: AsyncSession = Depends(get_db),
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(get_optional_user_id),
 ):
     from app.modules.dashboard.infrastructure.dashboard_query_service import (
         DashboardQueryService,
@@ -68,7 +68,7 @@ async def get_availability(
     doctor_id: str,
     dow: Optional[int] = Query(None, ge=0, le=6, description="Day of week (0=Mon)"),
     session: AsyncSession = Depends(get_db),
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(get_optional_user_id),
 ):
     repo = SQLAlchemyAvailabilityRepository(session)
     items = await GetAvailability(repo).execute(doctor_id, day_of_week=dow)
@@ -141,7 +141,7 @@ async def get_exceptions(
     doctor_id: str,
     date: Optional[str] = Query(None, description="Filter by date (YYYY-MM-DD)"),
     session: AsyncSession = Depends(get_db),
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(get_optional_user_id),
 ):
     repo = SQLAlchemyExceptionRepository(session)
     items = await GetExceptions(repo).execute(doctor_id, exception_date=date)
