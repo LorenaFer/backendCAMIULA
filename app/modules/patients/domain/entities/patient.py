@@ -16,7 +16,6 @@ class Patient:
     sex: Optional[str] = None
     birth_date: Optional[str] = None
     birth_place: Optional[str] = None
-    age: Optional[int] = None
     marital_status: Optional[str] = None
     religion: Optional[str] = None
     origin: Optional[str] = None

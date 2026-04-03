@@ -32,7 +32,6 @@ class SQLAlchemyPatientRepository(PatientRepository):
                 model.birth_date.isoformat() if model.birth_date else None
             ),
             birth_place=model.birth_place,
-            age=model.age,
             marital_status=model.marital_status,
             religion=model.religion,
             origin=model.origin,

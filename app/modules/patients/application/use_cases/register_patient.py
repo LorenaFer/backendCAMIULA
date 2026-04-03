@@ -38,20 +38,6 @@ class RegisterPatient:
                 )
             holder_id = holder.id
 
-        # Calculate age from birth_date
-        age = dto.age
-        if dto.birth_date and not age:
-            try:
-                born = date.fromisoformat(dto.birth_date)
-                today = date.today()
-                age = (
-                    today.year
-                    - born.year
-                    - ((today.month, today.day) < (born.month, born.day))
-                )
-            except ValueError:
-                pass
-
         # Compose birth_place
         birth_place = dto.birth_place
         if not birth_place and any([dto.city, dto.state_geo, dto.country]):
@@ -100,7 +86,6 @@ class RegisterPatient:
             "sex": dto.sex,
             "birth_date": dto.birth_date,
             "birth_place": birth_place,
-            "age": age,
             "marital_status": dto.marital_status,
             "religion": dto.religion,
             "origin": dto.origin,

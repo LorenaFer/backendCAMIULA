@@ -36,7 +36,6 @@ class PatientModel(Base, SoftDeleteMixin, AuditMixin):
     sex: Mapped[Optional[str]] = mapped_column(String(1), nullable=True)
     birth_date: Mapped[Optional[str]] = mapped_column(Date, nullable=True)
     birth_place: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
-    age: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     marital_status: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
     religion: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     origin: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)

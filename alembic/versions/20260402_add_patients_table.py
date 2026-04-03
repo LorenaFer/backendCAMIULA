@@ -1,11 +1,10 @@
-"""add_patients_age_column — add missing 'age' column and new indices
+"""add_patients_indices
 
 Revision ID: 20260402_patients
 Revises: 202603262351
 Create Date: 2026-04-02
 
-The patients table already exists from the init migration.
-This adds the missing 'age' column and new indices.
+Adds missing indices to the existing patients table.
 """
 from typing import Sequence, Union
 
@@ -21,15 +20,15 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     conn = op.get_bind()
 
-    # Add 'age' column if it doesn't exist
+    # Drop age column if it was added by a previous run
     result = conn.execute(
         sa.text(
             "SELECT 1 FROM information_schema.columns "
             "WHERE table_name = 'patients' AND column_name = 'age'"
         )
     )
-    if not result.fetchone():
-        op.add_column("patients", sa.Column("age", sa.Integer, nullable=True))
+    if result.fetchone():
+        op.drop_column("patients", "age")
 
     # Add indices if they don't exist
     for idx_name, columns in [
@@ -57,12 +56,3 @@ def downgrade() -> None:
         )
         if result.fetchone():
             op.drop_index(idx_name, table_name="patients")
-
-    result = conn.execute(
-        sa.text(
-            "SELECT 1 FROM information_schema.columns "
-            "WHERE table_name = 'patients' AND column_name = 'age'"
-        )
-    )
-    if result.fetchone():
-        op.drop_column("patients", "age")

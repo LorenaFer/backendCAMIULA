@@ -29,7 +29,6 @@ class CreatePatient:
             "sex": dto.sex,
             "birth_date": dto.birth_date,
             "birth_place": dto.birth_place,
-            "age": dto.age,
             "marital_status": dto.marital_status,
             "religion": dto.religion,
             "origin": dto.origin,

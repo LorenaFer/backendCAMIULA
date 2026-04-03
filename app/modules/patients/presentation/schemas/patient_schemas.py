@@ -20,7 +20,6 @@ class PatientCreate(BaseModel):
     sex: Optional[str] = Field(None, max_length=1)
     birth_date: Optional[str] = Field(None, description="ISO date YYYY-MM-DD")
     birth_place: Optional[str] = Field(None, max_length=200)
-    age: Optional[int] = Field(None, ge=0, le=150)
     marital_status: Optional[str] = Field(None, max_length=20)
     religion: Optional[str] = Field(None, max_length=100)
     origin: Optional[str] = Field(None, max_length=200)
@@ -84,7 +83,6 @@ class PatientResponse(BaseModel):
     sex: Optional[str] = None
     birth_date: Optional[str] = None
     birth_place: Optional[str] = None
-    age: Optional[int] = None
     marital_status: Optional[str] = None
     religion: Optional[str] = None
     origin: Optional[str] = None
