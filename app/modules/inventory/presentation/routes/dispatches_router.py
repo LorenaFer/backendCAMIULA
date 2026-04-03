@@ -36,10 +36,45 @@ from app.modules.inventory.presentation.schemas.dispatch_schemas import (
     DispatchValidationResponse,
 )
 from app.shared.database.session import get_db
-from app.shared.middleware.auth import get_current_user_id
+from app.shared.middleware.auth import get_current_user_id, get_optional_user_id
 from app.shared.schemas.responses import created, ok, paginated
 
 router = APIRouter(prefix="/dispatches", tags=["Inventory — Dispatches"])
+
+
+# ──────────────────────────────────────────────────────────
+# List dispatches (paginated)
+# ──────────────────────────────────────────────────────────
+
+
+@router.get("", summary="List dispatches (paginated, filterable)")
+async def list_dispatches(
+    patient_id: Optional[str] = Query(None, description="Filter by patient ID"),
+    prescription_number: Optional[str] = Query(None, description="Search by prescription number"),
+    status: Optional[str] = Query(None, description="Filter by dispatch_status"),
+    date_from: Optional[str] = Query(None, description="Start date YYYY-MM-DD"),
+    date_to: Optional[str] = Query(None, description="End date YYYY-MM-DD"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=10000),
+    session: AsyncSession = Depends(get_db),
+    user_id: str = Depends(get_optional_user_id),
+):
+    repo = SQLAlchemyDispatchRepository(session)
+    items, total = await repo.find_all(
+        patient_id=patient_id,
+        prescription_number=prescription_number,
+        status=status,
+        date_from=date_from,
+        date_to=date_to,
+        page=page,
+        page_size=page_size,
+    )
+    from app.modules.inventory.presentation.schemas.dispatch_schemas import (
+        DispatchResponse,
+    )
+
+    data = [DispatchResponse(**d.__dict__) for d in items]
+    return paginated(data, total, page, page_size, "Dispatches retrieved successfully")
 
 
 # ──────────────────────────────────────────────────────────
