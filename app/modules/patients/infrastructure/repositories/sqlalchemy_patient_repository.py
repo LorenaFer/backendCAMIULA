@@ -3,7 +3,7 @@
 from typing import Optional
 from uuid import uuid4
 
-from sqlalchemy import func, select, text
+from sqlalchemy import func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.patients.domain.entities.patient import Patient
@@ -55,11 +55,23 @@ class SQLAlchemyPatientRepository(PatientRepository):
     # ── Queries ───────────────────────────────────────────────
 
     async def find_all(
-        self, page: int, page_size: int
+        self, page: int, page_size: int, search: Optional[str] = None
     ) -> tuple[list[Patient], int]:
         base = select(PatientModel).where(
             PatientModel.status == RecordStatus.ACTIVE
         )
+
+        if search:
+            pattern = f"%{search}%"
+            base = base.where(
+                or_(
+                    PatientModel.cedula.ilike(pattern),
+                    PatientModel.first_name.ilike(pattern),
+                    PatientModel.last_name.ilike(pattern),
+                    (PatientModel.first_name + " " + PatientModel.last_name).ilike(pattern),
+                    PatientModel.nhm == int(search) if search.isdigit() else False,
+                )
+            )
 
         count_q = select(func.count()).select_from(base.subquery())
         total = (await self._session.execute(count_q)).scalar_one()

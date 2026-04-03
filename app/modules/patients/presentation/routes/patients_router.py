@@ -86,10 +86,11 @@ async def get_max_nhm(
     )
 
 
-@router.get("", summary="List patients or search by NHM/cedula")
+@router.get("", summary="List patients or search by NHM/cedula/text")
 async def list_or_search_patients(
     nhm: Optional[int] = Query(None, description="Search by NHM"),
     cedula: Optional[str] = Query(None, description="Search by cedula"),
+    search: Optional[str] = Query(None, description="Search by cedula, name or NHM"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=10000),
     session: AsyncSession = Depends(get_db),
@@ -113,8 +114,8 @@ async def list_or_search_patients(
             message="Paciente encontrado" if patient else "Paciente no encontrado",
         )
 
-    # No filters -> paginated list
-    items, total = await ListPatients(repo).execute(page, page_size)
+    # Paginated list with optional text search
+    items, total = await repo.find_all(page, page_size, search=search)
     data = [PatientResponse(**p.__dict__) for p in items]
     return paginated(data, total, page, page_size, "Pacientes obtenidos exitosamente")
 

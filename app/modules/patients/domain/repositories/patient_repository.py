@@ -10,9 +10,9 @@ class PatientRepository(ABC):
 
     @abstractmethod
     async def find_all(
-        self, page: int, page_size: int
+        self, page: int, page_size: int, search: Optional[str] = None
     ) -> tuple[list[Patient], int]:
-        """Returns (items, total) paginated by last_name."""
+        """Returns (items, total) paginated by last_name, with optional text search."""
         ...
 
     @abstractmethod
