@@ -66,7 +66,7 @@ class SQLAlchemyDoctorRepository(DoctorRepository):
             .options(joinedload(DoctorModel.specialty))
             .where(
                 DoctorModel.status == RecordStatus.ACTIVE,
-                DoctorModel.doctor_status == "active",
+                DoctorModel.doctor_status.in_(["active", "ACTIVE"]),
             )
             .order_by(DoctorModel.last_name, DoctorModel.first_name)
         )
