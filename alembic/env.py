@@ -34,6 +34,12 @@ from app.modules.inventory.infrastructure.models import (  # noqa: F401
     PurchaseOrderModel,
     SupplierModel,
 )
+from app.modules.doctors.infrastructure.models import (  # noqa: F401
+    DoctorAvailabilityModel,
+    DoctorExceptionModel,
+    DoctorModel,
+    SpecialtyModel,
+)
 
 settings = get_settings()
 config = context.config
