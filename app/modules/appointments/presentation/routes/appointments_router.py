@@ -234,7 +234,7 @@ async def update_appointment_status(
     appointment_id: str,
     body: AppointmentStatusUpdate,
     session: AsyncSession = Depends(get_db),
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(get_optional_user_id),
 ):
     repo = SQLAlchemyAppointmentRepository(session)
     appointment = await UpdateAppointmentStatus(repo).execute(
