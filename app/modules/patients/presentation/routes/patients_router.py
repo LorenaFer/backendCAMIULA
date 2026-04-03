@@ -30,7 +30,7 @@ from app.modules.patients.presentation.schemas.patient_schemas import (
     PatientResponse,
 )
 from app.shared.database.session import get_db
-from app.shared.middleware.auth import get_current_user_id
+from app.shared.middleware.auth import get_current_user_id, get_optional_user_id
 from app.shared.schemas.responses import created, ok, paginated
 
 router = APIRouter(prefix="/patients", tags=["Patients"])
@@ -93,7 +93,7 @@ async def list_or_search_patients(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     session: AsyncSession = Depends(get_db),
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(get_optional_user_id),
 ):
     repo = SQLAlchemyPatientRepository(session)
 
@@ -138,7 +138,7 @@ async def create_patient(
 async def register_patient(
     body: PatientRegister,
     session: AsyncSession = Depends(get_db),
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(get_optional_user_id),
 ):
     repo = SQLAlchemyPatientRepository(session)
     dto = RegisterPatientDTO(**body.model_dump())

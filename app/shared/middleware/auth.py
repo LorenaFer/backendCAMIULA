@@ -69,6 +69,25 @@ async def get_current_user_id(
     return user_id
 
 
+_optional_scheme = HTTPBearer(auto_error=False)
+
+
+async def get_optional_user_id(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(_optional_scheme),
+) -> str:
+    """Returns user_id if token present, 'anonymous' otherwise.
+
+    Use for endpoints that work both authenticated and unauthenticated
+    (e.g. patient portal registration, public search).
+    """
+    if credentials is None:
+        return "anonymous"
+    payload = decode_access_token(credentials.credentials)
+    if payload is None:
+        return "anonymous"
+    return payload.get("sub", "anonymous")
+
+
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security_scheme),
     db: AsyncSession = Depends(get_db),

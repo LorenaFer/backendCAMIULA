@@ -307,12 +307,28 @@ class TestRegisterPatient:
 
 
 class TestUnauthenticated:
-    """Endpoints without token must return 401/403."""
+    """Public endpoints work without token; protected ones reject."""
 
     @pytest.mark.asyncio
-    async def test_list_without_token(self, client):
-        resp = await client.get(BASE)
-        assert resp.status_code in (401, 403)
+    async def test_search_without_token_is_public(self, client):
+        """GET /patients?cedula=X is public (portal needs it)."""
+        resp = await client.get(f"{BASE}?cedula=V-NOEXISTE")
+        assert resp.status_code == 200
+
+    @pytest.mark.asyncio
+    async def test_register_without_token_is_public(self, client):
+        """POST /patients/register is public (portal registration)."""
+        cedula = f"V-PUB-{uuid.uuid4().hex[:8]}"
+        resp = await client.post(
+            f"{BASE}/register",
+            json={
+                "cedula": cedula,
+                "first_name": "Public",
+                "last_name": "Register",
+                "university_relation": "estudiante",
+            },
+        )
+        assert resp.status_code == 201
 
     @pytest.mark.asyncio
     async def test_create_without_token(self, client):
