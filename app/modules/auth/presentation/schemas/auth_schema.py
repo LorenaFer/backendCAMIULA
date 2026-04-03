@@ -37,3 +37,27 @@ class UpdateProfileRequest(BaseModel):
 
 class AssignRoleRequest(BaseModel):
     role_name: str = Field(min_length=2, max_length=50)
+
+
+# ---------------------------------------------------------------------------
+# Patient portal login (no password)
+# ---------------------------------------------------------------------------
+
+
+class PatientLoginRequest(BaseModel):
+    query: str = Field(min_length=1, max_length=30)
+    query_type: str = Field(pattern="^(cedula|nhm)$")
+
+
+class PatientLoginData(BaseModel):
+    id: str
+    nhm: int
+    first_name: str
+    last_name: str
+    university_relation: str
+    is_new: bool
+
+
+class PatientLoginResponse(BaseModel):
+    found: bool
+    patient: Optional[PatientLoginData] = None

@@ -114,6 +114,10 @@ def create_app() -> FastAPI:
 
     app.include_router(medical_records_router, prefix="/api")
 
+    from app.modules.dashboard.router import router as dashboard_router
+
+    app.include_router(dashboard_router, prefix="/api")
+
     return app
 
 

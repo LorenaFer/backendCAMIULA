@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.auth.application.dtos.auth_dto import LoginDTO, RegisterDTO
@@ -12,10 +13,14 @@ from app.modules.auth.infrastructure.repositories.sqlalchemy_user_repository imp
 )
 from app.modules.auth.presentation.schemas.auth_schema import (
     LoginRequest,
+    PatientLoginData,
+    PatientLoginRequest,
+    PatientLoginResponse,
     RegisterRequest,
     TokenResponse,
     UserResponse,
 )
+from app.modules.patients.infrastructure.models import PatientModel
 from app.shared.database.session import get_db
 from app.shared.schemas.common import StandardResponse
 from app.shared.schemas.responses import created, ok
@@ -77,4 +82,49 @@ async def register(
             roles=user.roles,
         ).model_dump(),
         message="Usuario registrado exitosamente",
+    )
+
+
+@router.post(
+    "/patient/login",
+    response_model=StandardResponse[PatientLoginResponse],
+)
+async def patient_login(
+    body: PatientLoginRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Authenticate patient by cedula or NHM (no password required)."""
+    if body.query_type == "cedula":
+        stmt = select(PatientModel).where(
+            PatientModel.cedula == body.query,
+            PatientModel.deleted_at.is_(None),
+        )
+    else:
+        stmt = select(PatientModel).where(
+            PatientModel.nhm == int(body.query),
+            PatientModel.deleted_at.is_(None),
+        )
+
+    result = await db.execute(stmt)
+    patient = result.scalars().first()
+
+    if not patient:
+        return ok(
+            data=PatientLoginResponse(found=False, patient=None).model_dump(),
+            message="Patient not found",
+        )
+
+    return ok(
+        data=PatientLoginResponse(
+            found=True,
+            patient=PatientLoginData(
+                id=patient.id,
+                nhm=patient.nhm,
+                first_name=patient.first_name,
+                last_name=patient.last_name,
+                university_relation=patient.university_relation,
+                is_new=patient.is_new,
+            ),
+        ).model_dump(),
+        message="Patient found",
     )

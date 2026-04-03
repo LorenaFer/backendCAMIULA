@@ -39,6 +39,20 @@ router = APIRouter(prefix="/patients", tags=["Patients"])
 # ── Static routes first (before any {id} params) ─────────────
 
 
+@router.get("/demographics", summary="Patient demographics breakdown")
+async def patient_demographics(
+    session: AsyncSession = Depends(get_db),
+    user_id: str = Depends(get_current_user_id),
+):
+    from app.modules.dashboard.infrastructure.dashboard_query_service import (
+        DashboardQueryService,
+    )
+
+    svc = DashboardQueryService(session)
+    data = await svc.patient_demographics()
+    return ok(data=data, message="Patient demographics retrieved successfully")
+
+
 @router.get("/full", summary="Get full patient by cedula or NHM")
 async def get_patient_full(
     cedula: Optional[str] = Query(None, description="Patient cedula"),

@@ -44,6 +44,23 @@ router = APIRouter(prefix="/doctors", tags=["Doctors -- Availability"])
 
 
 @router.get(
+    "/availability/summary",
+    summary="Availability summary by specialty",
+)
+async def availability_summary(
+    session: AsyncSession = Depends(get_db),
+    user_id: str = Depends(get_current_user_id),
+):
+    from app.modules.dashboard.infrastructure.dashboard_query_service import (
+        DashboardQueryService,
+    )
+
+    svc = DashboardQueryService(session)
+    data = await svc.availability_summary()
+    return ok(data=data, message="Availability summary retrieved successfully")
+
+
+@router.get(
     "/{doctor_id}/availability",
     summary="Get availability blocks for a doctor",
 )

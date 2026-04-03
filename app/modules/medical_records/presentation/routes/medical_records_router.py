@@ -34,6 +34,34 @@ from app.shared.schemas.responses import created, ok
 router = APIRouter(prefix="/medical-records", tags=["Medical Records"])
 
 
+@router.get("/diagnostics/top", summary="Top diagnoses")
+async def top_diagnostics(
+    limit: int = Query(5, ge=1, le=50, description="Number of top diagnoses"),
+    periodo: Optional[str] = Query(
+        None, description="Period: week | month | year (from today)"
+    ),
+    session: AsyncSession = Depends(get_db),
+    user_id: str = Depends(get_current_user_id),
+):
+    from datetime import date as _date
+
+    from app.modules.dashboard.infrastructure.dashboard_query_service import (
+        DashboardQueryService,
+        _parse_date,
+        _period_range,
+    )
+
+    svc = DashboardQueryService(session)
+    start = None
+    end = None
+    if periodo:
+        ref = _date.today()
+        start, end = _period_range(ref, periodo)
+
+    data = await svc.top_diagnoses(limit=limit, start=start, end=end)
+    return ok(data=data, message="Top diagnoses retrieved successfully")
+
+
 @router.get("", summary="Find medical record by appointment ID")
 async def find_by_appointment(
     appointment_id: str = Query(..., description="Appointment UUID"),

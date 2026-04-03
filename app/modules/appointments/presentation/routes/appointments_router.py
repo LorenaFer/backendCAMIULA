@@ -53,6 +53,31 @@ router = APIRouter(prefix="/appointments", tags=["Appointments"])
 # ── Static routes first (before {id} params) ──────────────────
 
 
+@router.get("/heatmap", summary="Appointments heatmap (day x hour)")
+async def get_heatmap(
+    fecha_desde: str = Query(..., description="Start date YYYY-MM-DD"),
+    fecha_hasta: str = Query(..., description="End date YYYY-MM-DD"),
+    session: AsyncSession = Depends(get_db),
+    user_id: str = Depends(get_current_user_id),
+):
+    from datetime import date as _date
+
+    from app.modules.dashboard.infrastructure.dashboard_query_service import (
+        DashboardQueryService,
+    )
+
+    svc = DashboardQueryService(session)
+    heatmap = await svc.heatmap(
+        _date.fromisoformat(fecha_desde), _date.fromisoformat(fecha_hasta)
+    )
+    data = {
+        "fecha_desde": fecha_desde,
+        "fecha_hasta": fecha_hasta,
+        "heatmap": heatmap,
+    }
+    return ok(data=data, message="Heatmap generated successfully")
+
+
 @router.get("/stats", summary="Appointment stats")
 async def get_stats(
     fecha: Optional[str] = Query(None, description="ISO date YYYY-MM-DD"),
