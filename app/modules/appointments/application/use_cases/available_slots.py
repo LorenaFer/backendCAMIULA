@@ -1,6 +1,7 @@
 """Use case: compute available time slots for a doctor on a given date."""
 
 from datetime import date as date_type
+from datetime import time as time_type
 from typing import Any, Dict, List
 
 from sqlalchemy import select
@@ -58,46 +59,49 @@ class AvailableSlots:
 
         # 4. Duration based on es_nuevo
         duration = 60 if es_nuevo else 30
+        # Slot step = block's slot_duration (usually 30min)
+        slot_step = blocks[0].slot_duration if blocks else 30
 
         # 5. Generate slots
         slots = []
         for block in blocks:
-            block_start = _time_to_minutes(block.start_time)
-            block_end = _time_to_minutes(block.end_time)
+            block_start = _to_minutes(block.start_time)
+            block_end = _to_minutes(block.end_time)
 
             current = block_start
             while current + duration <= block_end:
-                slot_start = _minutes_to_time(current)
-                slot_end = _minutes_to_time(current + duration)
+                slot_start_str = _minutes_to_hhmm(current)
+                slot_end_str = _minutes_to_hhmm(current + duration)
 
                 # 6. Check overlap with existing appointments
                 available = True
                 for appt in existing:
-                    appt_start = _time_to_minutes(appt.start_time)
-                    appt_end = _time_to_minutes(appt.end_time)
-                    # Overlap: slot_start < appt_end AND slot_end > appt_start
+                    appt_start = _to_minutes(appt.start_time)
+                    appt_end = _to_minutes(appt.end_time)
                     if current < appt_end and (current + duration) > appt_start:
                         available = False
                         break
 
                 slots.append({
-                    "start_time": slot_start,
-                    "end_time": slot_end,
+                    "start_time": slot_start_str,
+                    "end_time": slot_end_str,
                     "available": available,
                 })
-                current += duration
+                current += slot_step
 
         return slots
 
 
-def _time_to_minutes(t: str) -> int:
-    """Convert 'HH:MM' to minutes since midnight."""
-    h, m = t.split(":")
-    return int(h) * 60 + int(m)
+def _to_minutes(t) -> int:
+    """Convert time object or 'HH:MM' string to minutes since midnight."""
+    if isinstance(t, time_type):
+        return t.hour * 60 + t.minute
+    if isinstance(t, str):
+        parts = t.split(":")
+        return int(parts[0]) * 60 + int(parts[1])
+    return 0
 
 
-def _minutes_to_time(minutes: int) -> str:
+def _minutes_to_hhmm(minutes: int) -> str:
     """Convert minutes since midnight to 'HH:MM'."""
-    h = minutes // 60
-    m = minutes % 60
-    return f"{h:02d}:{m:02d}"
+    return f"{minutes // 60:02d}:{minutes % 60:02d}"
