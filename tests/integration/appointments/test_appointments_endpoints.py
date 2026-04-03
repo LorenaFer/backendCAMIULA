@@ -382,30 +382,21 @@ class TestAvailableDates:
 
 
 class TestUnauthenticated:
-    """Endpoints without token must return 401/403."""
+    """Public GET endpoints return 200 without token; POST still requires auth."""
 
     @pytest.mark.asyncio
     async def test_list_without_token(self, client):
         resp = await client.get(BASE)
-        assert resp.status_code in (401, 403)
+        assert resp.status_code == 200
 
     @pytest.mark.asyncio
-    async def test_create_without_token(self, client):
-        resp = await client.post(
-            BASE,
-            json={
-                "fk_patient_id": "x",
-                "fk_doctor_id": "x",
-                "fk_specialty_id": "x",
-                "appointment_date": "2026-01-01",
-                "start_time": "08:00",
-                "end_time": "08:30",
-                "duration_minutes": 30,
-            },
-        )
-        assert resp.status_code in (401, 403)
+    async def test_create_without_token_no_auth_block(self, client):
+        """POST /appointments is public for portal — missing fields give 422, not 403."""
+        resp = await client.post(BASE, json={})
+        # Without required fields → 422 (validation error), NOT 403 (auth)
+        assert resp.status_code == 422
 
     @pytest.mark.asyncio
     async def test_stats_without_token(self, client):
         resp = await client.get(f"{BASE}/stats")
-        assert resp.status_code in (401, 403)
+        assert resp.status_code == 200

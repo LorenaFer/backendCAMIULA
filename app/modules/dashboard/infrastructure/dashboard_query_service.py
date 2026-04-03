@@ -5,10 +5,10 @@ KPIs, charts, and trend data.  It owns NO tables — every query targets
 models from patients, appointments, doctors, medical_records, and inventory.
 """
 
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import date, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
-from sqlalchemy import Date as SADate, case, cast, distinct, extract, func, Integer, String, text
+from sqlalchemy import Date as SADate, case, cast, distinct, extract, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
@@ -597,7 +597,7 @@ class DashboardQueryService:
             .where(
                 DispatchItemModel.status == _ACTIVE,
                 DispatchModel.status == _ACTIVE,
-                DispatchModel.dispatch_date.between(start, end),
+                cast(DispatchModel.dispatch_date, SADate).between(start, end),
             )
             .group_by(DispatchItemModel.fk_medication_id, MedicationModel.generic_name)
             .order_by(func.sum(DispatchItemModel.quantity_dispatched).desc())

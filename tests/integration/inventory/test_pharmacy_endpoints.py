@@ -452,7 +452,7 @@ class TestUnauthenticated:
     @pytest.mark.asyncio
     async def test_prescriptions_without_token(self, client):
         resp = await client.get(f"{INV}/prescriptions")
-        assert resp.status_code in (401, 403)
+        assert resp.status_code == 200
 
     @pytest.mark.asyncio
     async def test_batches_without_token(self, client):

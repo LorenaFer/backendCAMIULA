@@ -17,7 +17,7 @@ from app.modules.doctors.presentation.schemas.doctor_schemas import (
     DoctorResponse,
 )
 from app.shared.database.session import get_db
-from app.shared.middleware.auth import get_current_user_id
+from app.shared.middleware.auth import get_optional_user_id
 from app.shared.schemas.responses import ok
 
 router = APIRouter(prefix="/doctors", tags=["Doctors -- Doctors"])
@@ -26,7 +26,7 @@ router = APIRouter(prefix="/doctors", tags=["Doctors -- Doctors"])
 @router.get("/options", summary="Lightweight doctor list for selects")
 async def get_doctor_options(
     session: AsyncSession = Depends(get_db),
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(get_optional_user_id),
 ):
     repo = SQLAlchemyDoctorRepository(session)
     items = await GetDoctorOptions(repo).execute()
@@ -37,7 +37,7 @@ async def get_doctor_options(
 @router.get("", summary="List active doctors with specialty")
 async def list_doctors(
     session: AsyncSession = Depends(get_db),
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(get_optional_user_id),
 ):
     repo = SQLAlchemyDoctorRepository(session)
     items = await GetDoctors(repo).execute()

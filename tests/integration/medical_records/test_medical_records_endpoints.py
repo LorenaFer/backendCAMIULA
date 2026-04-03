@@ -472,20 +472,32 @@ async def test_delete_schema_not_found(client, token):
 
 
 @pytest.mark.anyio
-async def test_endpoints_require_auth(client):
-    """All endpoints return 401/403 without a token."""
-    endpoints = [
+async def test_public_get_endpoints(client):
+    """GET endpoints are public and return 200 without a token."""
+    public_endpoints = [
         ("GET", f"{BASE_RECORDS}?appointment_id=x"),
         ("GET", f"{BASE_RECORDS}/{_unique_id()}"),
-        ("PUT", BASE_RECORDS),
         ("GET", f"{BASE_RECORDS}/patient/{_unique_id()}"),
-        ("PATCH", f"{BASE_RECORDS}/{_unique_id()}/prepared"),
         ("GET", BASE_SCHEMAS),
         ("GET", f"{BASE_SCHEMAS}/some-key"),
+    ]
+    for method, url in public_endpoints:
+        resp = await client.request(method, url)
+        assert resp.status_code in (200, 404), (
+            f"{method} {url} should be public, got {resp.status_code}"
+        )
+
+
+@pytest.mark.anyio
+async def test_write_endpoints_require_auth(client):
+    """PUT/PATCH/DELETE endpoints return 401/403 without a token."""
+    protected_endpoints = [
+        ("PUT", BASE_RECORDS),
+        ("PATCH", f"{BASE_RECORDS}/{_unique_id()}/prepared"),
         ("PUT", BASE_SCHEMAS),
         ("DELETE", f"{BASE_SCHEMAS}/some-key"),
     ]
-    for method, url in endpoints:
+    for method, url in protected_endpoints:
         resp = await client.request(method, url)
         assert resp.status_code in (401, 403), (
             f"{method} {url} should require auth, got {resp.status_code}"

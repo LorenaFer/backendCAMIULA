@@ -286,17 +286,17 @@ class TestGetExceptions:
 
 
 class TestUnauthenticated:
-    """Endpoints without token must return 401/403."""
+    """Public GET endpoints return 200 without token; POST still requires auth."""
 
     @pytest.mark.asyncio
     async def test_specialties_without_token(self, client):
         resp = await client.get(SPECIALTIES_BASE)
-        assert resp.status_code in (401, 403)
+        assert resp.status_code == 200
 
     @pytest.mark.asyncio
     async def test_doctors_without_token(self, client):
         resp = await client.get(DOCTORS_BASE)
-        assert resp.status_code in (401, 403)
+        assert resp.status_code == 200
 
     @pytest.mark.asyncio
     async def test_create_specialty_without_token(self, client):

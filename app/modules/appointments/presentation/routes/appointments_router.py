@@ -44,7 +44,7 @@ from app.modules.appointments.presentation.schemas.appointment_schemas import (
     SlotResponse,
 )
 from app.shared.database.session import get_db
-from app.shared.middleware.auth import get_current_user_id
+from app.shared.middleware.auth import get_current_user_id, get_optional_user_id
 from app.shared.schemas.responses import created, ok, paginated
 
 router = APIRouter(prefix="/appointments", tags=["Appointments"])
@@ -58,7 +58,7 @@ async def get_heatmap(
     fecha_desde: str = Query(..., description="Start date YYYY-MM-DD"),
     fecha_hasta: str = Query(..., description="End date YYYY-MM-DD"),
     session: AsyncSession = Depends(get_db),
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(get_optional_user_id),
 ):
     from datetime import date as _date
 
@@ -85,7 +85,7 @@ async def get_stats(
     especialidad_id: Optional[str] = Query(None),
     estado: Optional[str] = Query(None),
     session: AsyncSession = Depends(get_db),
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(get_optional_user_id),
 ):
     repo = SQLAlchemyAppointmentRepository(session)
     stats = await GetAppointmentStats(repo).execute(
@@ -103,7 +103,7 @@ async def check_slot(
     fecha: str = Query(..., description="ISO date YYYY-MM-DD"),
     hora_inicio: str = Query(..., description="HH:MM"),
     session: AsyncSession = Depends(get_db),
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(get_optional_user_id),
 ):
     repo = SQLAlchemyAppointmentRepository(session)
     occupied = await CheckSlot(repo).execute(
@@ -121,7 +121,7 @@ async def get_available_slots(
     fecha: str = Query(..., description="ISO date YYYY-MM-DD"),
     es_nuevo: bool = Query(False, description="True=60min, False=30min"),
     session: AsyncSession = Depends(get_db),
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(get_optional_user_id),
 ):
     repo = SQLAlchemyAppointmentRepository(session)
     slots = await AvailableSlots(repo, session).execute(
@@ -137,7 +137,7 @@ async def get_available_dates(
     year: int = Query(...),
     month: int = Query(..., ge=1, le=12),
     session: AsyncSession = Depends(get_db),
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(get_optional_user_id),
 ):
     dates = await AvailableDates(session).execute(
         doctor_id=doctor_id, year=year, month=month
@@ -149,7 +149,7 @@ async def get_available_dates(
 async def get_appointment(
     appointment_id: str,
     session: AsyncSession = Depends(get_db),
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(get_optional_user_id),
 ):
     repo = SQLAlchemyAppointmentRepository(session)
     appointment = await GetAppointment(repo).execute(appointment_id)
@@ -171,7 +171,7 @@ async def list_appointments(
     page: int = Query(1, ge=1),
     page_size: int = Query(25, ge=1, le=100),
     session: AsyncSession = Depends(get_db),
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(get_optional_user_id),
 ):
     repo = SQLAlchemyAppointmentRepository(session)
 
@@ -216,7 +216,7 @@ async def list_appointments(
 async def create_appointment(
     body: AppointmentCreate,
     session: AsyncSession = Depends(get_db),
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(get_optional_user_id),
 ):
     repo = SQLAlchemyAppointmentRepository(session)
     dto = CreateAppointmentDTO(**body.model_dump())

@@ -28,7 +28,7 @@ from app.modules.doctors.presentation.schemas.specialty_schemas import (
     SpecialtyUpdate,
 )
 from app.shared.database.session import get_db
-from app.shared.middleware.auth import get_current_user_id
+from app.shared.middleware.auth import get_current_user_id, get_optional_user_id
 from app.shared.schemas.responses import created, ok
 
 router = APIRouter(prefix="/specialties", tags=["Doctors -- Specialties"])
@@ -37,7 +37,7 @@ router = APIRouter(prefix="/specialties", tags=["Doctors -- Specialties"])
 @router.get("", summary="List all specialties")
 async def list_specialties(
     session: AsyncSession = Depends(get_db),
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(get_optional_user_id),
 ):
     repo = SQLAlchemySpecialtyRepository(session)
     items = await GetSpecialties(repo).execute()

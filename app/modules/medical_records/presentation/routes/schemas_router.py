@@ -19,7 +19,7 @@ from app.modules.medical_records.presentation.schemas.form_schema_schemas import
     FormSchemaUpsert,
 )
 from app.shared.database.session import get_db
-from app.shared.middleware.auth import get_current_user_id
+from app.shared.middleware.auth import get_current_user_id, get_optional_user_id
 from app.shared.schemas.responses import created, ok
 
 router = APIRouter(prefix="/schemas", tags=["Medical Records — Form Schemas"])
@@ -28,7 +28,7 @@ router = APIRouter(prefix="/schemas", tags=["Medical Records — Form Schemas"])
 @router.get("", summary="List all form schemas")
 async def list_schemas(
     session: AsyncSession = Depends(get_db),
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(get_optional_user_id),
 ):
     repo = SQLAlchemyFormSchemaRepository(session)
     schemas = await ListSchemas(repo).execute()
@@ -40,7 +40,7 @@ async def list_schemas(
 async def get_schema(
     specialty_key: str,
     session: AsyncSession = Depends(get_db),
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(get_optional_user_id),
 ):
     repo = SQLAlchemyFormSchemaRepository(session)
     schema = await GetSchema(repo).execute(specialty_key)

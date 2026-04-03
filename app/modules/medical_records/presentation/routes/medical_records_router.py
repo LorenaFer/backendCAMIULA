@@ -28,7 +28,7 @@ from app.modules.medical_records.presentation.schemas.medical_record_schemas imp
     PatientHistoryItem,
 )
 from app.shared.database.session import get_db
-from app.shared.middleware.auth import get_current_user_id
+from app.shared.middleware.auth import get_current_user_id, get_optional_user_id
 from app.shared.schemas.responses import created, ok
 
 router = APIRouter(prefix="/medical-records", tags=["Medical Records"])
@@ -41,7 +41,7 @@ async def top_diagnostics(
         None, description="Period: week | month | year (from today)"
     ),
     session: AsyncSession = Depends(get_db),
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(get_optional_user_id),
 ):
     from datetime import date as _date
 
@@ -66,7 +66,7 @@ async def top_diagnostics(
 async def find_by_appointment(
     appointment_id: str = Query(..., description="Appointment UUID"),
     session: AsyncSession = Depends(get_db),
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(get_optional_user_id),
 ):
     repo = SQLAlchemyMedicalRecordRepository(session)
     record = await FindByAppointment(repo).execute(appointment_id)
@@ -84,7 +84,7 @@ async def patient_history(
     limit: int = Query(5, ge=1, le=50),
     exclude: Optional[str] = Query(None, description="Record ID to exclude"),
     session: AsyncSession = Depends(get_db),
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(get_optional_user_id),
 ):
     repo = SQLAlchemyMedicalRecordRepository(session)
     history = await PatientHistory(repo).execute(patient_id, limit, exclude)
@@ -96,7 +96,7 @@ async def patient_history(
 async def find_by_id(
     record_id: str,
     session: AsyncSession = Depends(get_db),
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(get_optional_user_id),
 ):
     repo = SQLAlchemyMedicalRecordRepository(session)
     record = await FindById(repo).execute(record_id)
