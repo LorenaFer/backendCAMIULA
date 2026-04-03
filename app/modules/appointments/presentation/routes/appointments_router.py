@@ -170,7 +170,7 @@ async def list_appointments(
     mes: Optional[str] = Query(None, description="YYYY-MM for month view"),
     excluir_canceladas: bool = Query(False),
     page: int = Query(1, ge=1),
-    page_size: int = Query(25, ge=1, le=100),
+    page_size: int = Query(25, ge=1, le=10000),
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):

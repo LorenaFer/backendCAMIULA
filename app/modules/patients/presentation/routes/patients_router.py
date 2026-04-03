@@ -91,7 +91,7 @@ async def list_or_search_patients(
     nhm: Optional[int] = Query(None, description="Search by NHM"),
     cedula: Optional[str] = Query(None, description="Search by cedula"),
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
+    page_size: int = Query(20, ge=1, le=10000),
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
