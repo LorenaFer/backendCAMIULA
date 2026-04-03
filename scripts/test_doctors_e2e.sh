@@ -54,7 +54,7 @@ RESP=$(curl -s -w "\n%{http_code}" "$API/specialties" \
   -X POST -H 'Content-Type: application/json' -H "$AUTH" \
   -d "{\"name\":\"$SPEC_NAME\"}")
 STATUS=$(echo "$RESP" | tail -1)
-BODY=$(echo "$RESP" | head -n -1)
+BODY=$(echo "$RESP" | sed '$d')
 assert_status "POST /specialties" 201 "$STATUS"
 
 SPEC_ID=$(echo "$BODY" | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['id'])" 2>/dev/null || echo "")

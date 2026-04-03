@@ -29,11 +29,18 @@ echo "════════════════════════�
 # ── 0. Get auth token ─────────────────────────────────────────
 echo ""
 echo "▶ Getting auth token..."
-TOKEN_RESP=$(curl -s -X POST "$API/auth/login" \
+E2E_EMAIL="e2e-patients-$(date +%s)@test.com"
+E2E_PASS="pytest12345"
+
+# Register a fresh user
+curl -s -X POST "$API/auth/register" \
     -H "Content-Type: application/json" \
-    -d '{"email":"admin@camiula.com","password":"Admin123!"}')
+    -d "{\"email\":\"$E2E_EMAIL\",\"full_name\":\"E2E Patient Tester\",\"password\":\"$E2E_PASS\"}" > /dev/null 2>&1
 
-TOKEN=$(echo "$TOKEN_RESP" | python3 -c "
+# Login to get token
+TOKEN=$(curl -s -X POST "$API/auth/login" \
+    -H "Content-Type: application/json" \
+    -d "{\"email\":\"$E2E_EMAIL\",\"password\":\"$E2E_PASS\"}" | python3 -c "
 import sys, json
 try:
     d = json.load(sys.stdin)
@@ -41,21 +48,6 @@ try:
 except:
     print('')
 " 2>/dev/null)
-
-if [ -z "$TOKEN" ]; then
-    echo "⚠ Login failed. Registering user..."
-    REG_RESP=$(curl -s -X POST "$API/auth/register" \
-        -H "Content-Type: application/json" \
-        -d '{"email":"admin@camiula.com","password":"Admin123!","name":"Admin E2E"}')
-    TOKEN=$(echo "$REG_RESP" | python3 -c "
-import sys, json
-try:
-    d = json.load(sys.stdin)
-    print(d.get('data',{}).get('access_token',''))
-except:
-    print('')
-" 2>/dev/null)
-fi
 
 if [ -z "$TOKEN" ]; then
     red "Could not get token. Aborting."
