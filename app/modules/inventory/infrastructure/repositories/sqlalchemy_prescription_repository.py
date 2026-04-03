@@ -150,6 +150,11 @@ class SQLAlchemyPrescriptionRepository(PrescriptionRepository):
     # ──────────────────────────────────────────────────────────
 
     async def create(self, data: dict, created_by: str) -> Prescription:
+        # Convert prescription_date string to date object for asyncpg
+        if isinstance(data.get("prescription_date"), str):
+            from datetime import date as date_type
+            data["prescription_date"] = date_type.fromisoformat(data["prescription_date"])
+
         items_data: list[dict] = data.pop("items", [])
         prescription_id = str(uuid4())
 

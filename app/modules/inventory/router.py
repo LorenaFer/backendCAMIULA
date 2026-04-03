@@ -16,6 +16,7 @@ from app.modules.inventory.presentation.routes.dispatches_router import (
     router as dispatches_router,
 )
 from app.modules.inventory.presentation.routes.limits_router import (
+    exceptions_router,
     router as limits_router,
 )
 from app.modules.inventory.presentation.routes.medications_router import (
@@ -43,4 +44,5 @@ router.include_router(batches_router)
 router.include_router(prescriptions_router)
 router.include_router(dispatches_router)
 router.include_router(limits_router)
+router.include_router(exceptions_router)
 router.include_router(reports_router)
