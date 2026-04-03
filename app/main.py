@@ -110,6 +110,10 @@ def create_app() -> FastAPI:
 
     app.include_router(appointments_router, prefix="/api")
 
+    from app.modules.medical_records.router import router as medical_records_router
+
+    app.include_router(medical_records_router, prefix="/api")
+
     return app
 
 

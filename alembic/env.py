@@ -40,6 +40,10 @@ from app.modules.doctors.infrastructure.models import (  # noqa: F401
     DoctorModel,
     SpecialtyModel,
 )
+from app.modules.medical_records.infrastructure.models import (  # noqa: F401
+    FormSchemaModel,
+    MedicalRecordModel,
+)
 
 settings = get_settings()
 config = context.config
