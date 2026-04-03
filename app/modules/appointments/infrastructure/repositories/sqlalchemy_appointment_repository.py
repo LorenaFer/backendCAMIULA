@@ -135,9 +135,12 @@ class SQLAlchemyAppointmentRepository(AppointmentRepository):
         especialidad_id: Optional[str] = None,
         estado: Optional[str] = None,
         q: Optional[str] = None,
+        fk_patient_id: Optional[str] = None,
     ) -> Tuple[List[Appointment], int]:
         stmt = self._base_with_joins()
 
+        if fk_patient_id:
+            stmt = stmt.where(AppointmentModel.fk_patient_id == fk_patient_id)
         if fecha:
             stmt = stmt.where(
                 AppointmentModel.appointment_date == date_type.fromisoformat(fecha)
@@ -155,6 +158,7 @@ class SQLAlchemyAppointmentRepository(AppointmentRepository):
                     PatientModel.first_name.ilike(pattern),
                     PatientModel.last_name.ilike(pattern),
                     PatientModel.cedula.ilike(pattern),
+                    (PatientModel.first_name + " " + PatientModel.last_name).ilike(pattern),
                 )
             )
 

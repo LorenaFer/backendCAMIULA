@@ -21,6 +21,7 @@ class ListAppointments:
         especialidad_id: Optional[str] = None,
         estado: Optional[str] = None,
         q: Optional[str] = None,
+        fk_patient_id: Optional[str] = None,
     ) -> Tuple[List[Appointment], int]:
         return await self._repo.find_all(
             page=page,
@@ -30,6 +31,7 @@ class ListAppointments:
             especialidad_id=especialidad_id,
             estado=estado,
             q=q,
+            fk_patient_id=fk_patient_id,
         )
 
 

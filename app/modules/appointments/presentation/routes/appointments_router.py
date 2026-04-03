@@ -166,6 +166,7 @@ async def list_appointments(
     especialidad_id: Optional[str] = Query(None),
     estado: Optional[str] = Query(None),
     q: Optional[str] = Query(None, description="Search patient name/cedula"),
+    fk_patient_id: Optional[str] = Query(None, description="Filter by patient ID"),
     mes: Optional[str] = Query(None, description="YYYY-MM for month view"),
     excluir_canceladas: bool = Query(False),
     page: int = Query(1, ge=1),
@@ -207,6 +208,7 @@ async def list_appointments(
         especialidad_id=especialidad_id,
         estado=estado,
         q=q,
+        fk_patient_id=fk_patient_id,
     )
     data = [AppointmentResponse(**a.__dict__) for a in items]
     return paginated(data, total, page, page_size, "Citas obtenidas exitosamente")
