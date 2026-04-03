@@ -84,6 +84,16 @@ class SQLAlchemyPatientRepository(PatientRepository):
         )
         return [self._to_entity(row) for row in result.scalars().all()], total
 
+    async def find_by_id(self, patient_id: str) -> Optional[Patient]:
+        result = await self._session.execute(
+            select(PatientModel).where(
+                PatientModel.id == patient_id,
+                PatientModel.status == RecordStatus.ACTIVE,
+            )
+        )
+        model = result.scalar_one_or_none()
+        return self._to_entity(model) if model else None
+
     async def find_by_nhm(self, nhm: int) -> Optional[Patient]:
         result = await self._session.execute(
             select(PatientModel).where(

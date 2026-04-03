@@ -53,16 +53,19 @@ async def patient_demographics(
     return ok(data=data, message="Patient demographics retrieved successfully")
 
 
-@router.get("/full", summary="Get full patient by cedula or NHM")
+@router.get("/full", summary="Get full patient by id, cedula or NHM")
 async def get_patient_full(
+    id: Optional[str] = Query(None, description="Patient UUID"),
     cedula: Optional[str] = Query(None, description="Patient cedula"),
     nhm: Optional[int] = Query(None, description="Patient NHM"),
     session: AsyncSession = Depends(get_db),
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(get_optional_user_id),
 ):
     repo = SQLAlchemyPatientRepository(session)
     patient = None
-    if cedula:
+    if id:
+        patient = await repo.find_by_id(id)
+    elif cedula:
         patient = await SearchPatientByCedula(repo).execute(cedula)
     elif nhm is not None:
         patient = await SearchPatientByNhm(repo).execute(nhm)
@@ -118,6 +121,23 @@ async def list_or_search_patients(
     items, total = await repo.find_all(page, page_size, search=search)
     data = [PatientResponse(**p.__dict__) for p in items]
     return paginated(data, total, page, page_size, "Pacientes obtenidos exitosamente")
+
+
+@router.get("/{patient_id}", summary="Get patient by ID")
+async def get_patient_by_id(
+    patient_id: str,
+    session: AsyncSession = Depends(get_db),
+    user_id: str = Depends(get_optional_user_id),
+):
+    repo = SQLAlchemyPatientRepository(session)
+    patient = await repo.find_by_id(patient_id)
+    if not patient:
+        from app.core.exceptions import NotFoundException
+        raise NotFoundException("Paciente no encontrado")
+    return ok(
+        data=PatientResponse(**patient.__dict__),
+        message="Paciente obtenido exitosamente",
+    )
 
 
 @router.post("", summary="Create patient", status_code=201)
