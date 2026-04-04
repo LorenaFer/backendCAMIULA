@@ -6,12 +6,14 @@ from app.modules.appointments.domain.repositories.appointment_repository import 
     AppointmentRepository,
 )
 
-# State machine transitions — accept both English and Spanish status names
+# State machine transitions
+# Accepts both English and Spanish status names
+# pendiente/pending can go directly to atendida/attended (walk-in/emergency)
 VALID_TRANSITIONS = {
-    "pendiente": {"confirmada", "cancelada", "confirmed", "cancelled"},
+    "pendiente": {"confirmada", "cancelada", "atendida", "confirmed", "cancelled", "attended"},
     "confirmada": {"atendida", "cancelada", "no_asistio", "attended", "cancelled", "no_show"},
     "confirmed": {"attended", "cancelled", "no_show", "atendida", "cancelada", "no_asistio"},
-    "pending": {"confirmed", "cancelled", "confirmada", "cancelada"},
+    "pending": {"confirmed", "cancelled", "attended", "confirmada", "cancelada", "atendida"},
 }
 
 
