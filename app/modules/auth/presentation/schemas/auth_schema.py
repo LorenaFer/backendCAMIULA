@@ -35,6 +35,14 @@ class UpdateProfileRequest(BaseModel):
     phone: Optional[str] = None
 
 
+class CreateUserRequest(BaseModel):
+    email: EmailStr
+    full_name: str = Field(min_length=2, max_length=255)
+    password: str = Field(min_length=8)
+    phone: Optional[str] = None
+    roles: List[str] = Field(default=["paciente"], min_length=1)
+
+
 class AssignRoleRequest(BaseModel):
     role_name: str = Field(min_length=2, max_length=50)
 

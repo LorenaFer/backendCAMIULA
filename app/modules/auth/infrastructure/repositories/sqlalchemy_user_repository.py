@@ -101,26 +101,61 @@ class SQLAlchemyUserRepository(UserRepository):
         return self._to_entity(model)
 
     async def list_paginated(
-        self, page: int, page_size: int
+        self,
+        page: int,
+        page_size: int,
+        search: Optional[str] = None,
+        role: Optional[str] = None,
+        exclude_only_role: Optional[str] = None,
     ) -> Tuple[list[User], int]:
-        # COUNT — O(log n) con índice en status
-        count_stmt = (
-            select(func.count())
-            .select_from(UserModel)
-            .where(UserModel.status == RecordStatus.ACTIVE)
-        )
-        total = (await self._session.execute(count_stmt)).scalar_one()
+        """List users with optional search and role filters.
 
-        # SELECT — O(log n + k) con k = page_size
-        stmt = (
+        - search: filter by email or full_name (ILIKE)
+        - role: only users with this role
+        - exclude_only_role: exclude users whose ONLY role is this one
+        """
+        base = (
             select(UserModel)
             .where(UserModel.status == RecordStatus.ACTIVE)
-            .order_by(UserModel.created_at.desc())
+        )
+
+        if search:
+            pattern = f"%{search}%"
+            from sqlalchemy import or_
+            base = base.where(
+                or_(
+                    UserModel.email.ilike(pattern),
+                    UserModel.full_name.ilike(pattern),
+                )
+            )
+
+        if role:
+            base = base.join(
+                UserRoleModel, UserRoleModel.fk_user_id == UserModel.id
+            ).join(
+                RoleModel, RoleModel.id == UserRoleModel.fk_role_id
+            ).where(RoleModel.name == role)
+
+        if exclude_only_role:
+            # Exclude users who have ONLY this role (no other roles)
+            has_other_role = (
+                select(UserRoleModel.fk_user_id)
+                .join(RoleModel, RoleModel.id == UserRoleModel.fk_role_id)
+                .where(RoleModel.name != exclude_only_role)
+                .subquery()
+            )
+            base = base.where(UserModel.id.in_(select(has_other_role.c.fk_user_id)))
+
+        count_stmt = select(func.count()).select_from(base.subquery())
+        total = (await self._session.execute(count_stmt)).scalar_one()
+
+        stmt = (
+            base.order_by(UserModel.created_at.desc())
             .offset((page - 1) * page_size)
             .limit(page_size)
         )
         result = await self._session.execute(stmt)
-        users = [self._to_entity(m) for m in result.scalars()]
+        users = [self._to_entity(m) for m in result.unique().scalars()]
         return users, total
 
     # -- Permisos y roles --

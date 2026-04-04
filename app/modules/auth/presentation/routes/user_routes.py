@@ -15,8 +15,11 @@ from app.modules.auth.infrastructure.repositories.sqlalchemy_role_repository imp
 from app.modules.auth.infrastructure.repositories.sqlalchemy_user_repository import (
     SQLAlchemyUserRepository,
 )
+from app.modules.auth.application.dtos.auth_dto import RegisterDTO
+from app.modules.auth.application.use_cases.register_user import RegisterUserUseCase
 from app.modules.auth.presentation.schemas.auth_schema import (
     AssignRoleRequest,
+    CreateUserRequest,
     UpdateProfileRequest,
     UserResponse,
 )
@@ -27,7 +30,7 @@ from app.shared.middleware.auth import (
 )
 from app.shared.middleware.permission_cache import permission_cache
 from app.shared.schemas.common import PaginatedData, StandardResponse
-from app.shared.schemas.responses import ok, paginated
+from app.shared.schemas.responses import created, ok, paginated
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -73,15 +76,23 @@ async def update_my_profile(
 @router.get("", response_model=StandardResponse[PaginatedData[UserResponse]])
 async def list_users(
     _: User = Depends(require_permission("users:read")),
+    search: str = Query(None, description="Search by email or name"),
+    role: str = Query(None, description="Filter by role name"),
+    staff_only: bool = Query(False, description="Exclude users whose only role is paciente"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
 ):
-    """Listar usuarios con paginación. Requiere users:read."""
-    use_case = ListUsersUseCase(user_repo=SQLAlchemyUserRepository(db))
-    users, total = await use_case.execute(page, page_size)
-
+    """List users with pagination, search and role filters."""
     repo = SQLAlchemyUserRepository(db)
+    users, total = await repo.list_paginated(
+        page,
+        page_size,
+        search=search,
+        role=role,
+        exclude_only_role="paciente" if staff_only else None,
+    )
+
     items = []
     for u in users:
         u.roles = await repo.get_user_roles(u.id)
@@ -93,6 +104,52 @@ async def list_users(
         page=page,
         page_size=page_size,
         message="Listado de usuarios",
+    )
+
+
+@router.post("", status_code=201, response_model=StandardResponse[UserResponse])
+async def create_user(
+    body: CreateUserRequest,
+    current_user: User = Depends(require_permission("users:create")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a staff user with roles. Requires users:create."""
+    user_repo = SQLAlchemyUserRepository(db)
+    role_repo = SQLAlchemyRoleRepository(db)
+
+    # Register the user (assigns 'paciente' by default)
+    use_case = RegisterUserUseCase(user_repo=user_repo, role_repo=role_repo)
+    user = await use_case.execute(
+        RegisterDTO(
+            email=body.email,
+            full_name=body.full_name,
+            password=body.password,
+            phone=body.phone,
+        )
+    )
+
+    # Assign additional roles
+    assign_uc = AssignRoleUseCase(
+        user_repo=user_repo,
+        role_repo=role_repo,
+        permission_cache=permission_cache,
+    )
+    for role_name in body.roles:
+        if role_name != "paciente":  # paciente already assigned by register
+            try:
+                await assign_uc.execute(
+                    dto=AssignRoleDTO(user_id=user.id, role_name=role_name),
+                    assigned_by=current_user.id,
+                )
+            except Exception:
+                pass  # Role might not exist or already assigned
+
+    # Reload roles
+    user.roles = await user_repo.get_user_roles(user.id)
+
+    return created(
+        data=_to_response(user),
+        message="Usuario creado exitosamente",
     )
 
 
