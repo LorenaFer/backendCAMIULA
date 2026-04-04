@@ -12,7 +12,7 @@ import enum
 from typing import Optional
 from uuid import uuid4
 
-from sqlalchemy import Date, ForeignKey, Integer, String
+from sqlalchemy import Date, ForeignKey, Integer, String, Time
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.shared.database.base import Base
@@ -129,8 +129,8 @@ class DoctorAvailabilityModel(Base, SoftDeleteMixin, AuditMixin):
 
     # 3. Domain
     day_of_week: Mapped[int] = mapped_column(Integer, nullable=False)
-    start_time: Mapped[str] = mapped_column(String(5), nullable=False)
-    end_time: Mapped[str] = mapped_column(String(5), nullable=False)
+    start_time: Mapped[Optional[str]] = mapped_column(Time, nullable=False)
+    end_time: Mapped[Optional[str]] = mapped_column(Time, nullable=False)
     slot_duration: Mapped[int] = mapped_column(Integer, nullable=False, default=30)
 
     # 5-8. status + audit from mixins
