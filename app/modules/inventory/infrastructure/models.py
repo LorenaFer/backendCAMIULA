@@ -203,19 +203,19 @@ class PurchaseOrderModel(Base, SoftDeleteMixin, AuditMixin):
     expected_date: Mapped[Optional[date]] = mapped_column(Date)
     notes: Mapped[Optional[str]] = mapped_column(String(500))
 
-    # 4. Estado de negocio
+    # 3b. Domain — traceability
+    sent_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    sent_by: Mapped[Optional[str]] = mapped_column(String(36))
+    received_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    received_by: Mapped[Optional[str]] = mapped_column(String(36))
+
+    # 4. Business status (before control status)
     order_status: Mapped[str] = mapped_column(
         String(20),
         nullable=False,
         default=PurchaseOrderStatus.DRAFT,
         index=True,
     )
-
-    # Traceability
-    sent_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
-    sent_by: Mapped[Optional[str]] = mapped_column(String(36))
-    received_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
-    received_by: Mapped[Optional[str]] = mapped_column(String(36))
 
     # 5-8. status + audit → proporcionados por los mixins
 
