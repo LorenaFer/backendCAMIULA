@@ -37,7 +37,7 @@ from app.modules.inventory.presentation.schemas.report_schemas import (
     StockReportResponse,
 )
 from app.shared.database.session import get_db
-from app.shared.middleware.auth import get_current_user_id
+from app.shared.middleware.auth import get_optional_user_id as get_current_user_id
 from app.shared.schemas.responses import ok
 
 router = APIRouter(prefix="/reports", tags=["Inventory — Reports"])
