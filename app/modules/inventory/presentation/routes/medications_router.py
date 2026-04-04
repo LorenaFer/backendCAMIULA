@@ -107,7 +107,7 @@ async def create_medication(
     )
 
 
-@router.put("/{id}", summary="Actualizar medicamento")
+@router.patch("/{id}", summary="Actualizar medicamento")
 async def update_medication(
     id: str,
     body: MedicationUpdate,
