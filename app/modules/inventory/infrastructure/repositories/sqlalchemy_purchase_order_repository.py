@@ -8,8 +8,10 @@ from sqlalchemy import func, select, update as sql_update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.inventory.domain.entities.purchase_order import (
+    MedicationEmbed,
     PurchaseOrder,
     PurchaseOrderItem,
+    SupplierEmbed,
 )
 from app.modules.inventory.domain.repositories.purchase_order_repository import (
     PurchaseOrderRepository,
@@ -32,6 +34,16 @@ class SQLAlchemyPurchaseOrderRepository(PurchaseOrderRepository):
 
     @staticmethod
     def _item_to_entity(model: PurchaseOrderItemModel) -> PurchaseOrderItem:
+        med_embed = None
+        if hasattr(model, "medication") and model.medication:
+            m = model.medication
+            med_embed = MedicationEmbed(
+                id=m.id,
+                code=m.code,
+                generic_name=m.generic_name,
+                pharmaceutical_form=m.pharmaceutical_form,
+                unit_measure=m.unit_measure,
+            )
         return PurchaseOrderItem(
             id=model.id,
             fk_purchase_order_id=model.fk_purchase_order_id,
@@ -40,21 +52,41 @@ class SQLAlchemyPurchaseOrderRepository(PurchaseOrderRepository):
             quantity_received=model.quantity_received,
             item_status=model.item_status,
             unit_cost=float(model.unit_cost) if model.unit_cost is not None else None,
+            medication=med_embed,
         )
 
     @staticmethod
     def _to_entity(
         model: PurchaseOrderModel, items: list[PurchaseOrderItem]
     ) -> PurchaseOrder:
+        supplier_embed = None
+        if hasattr(model, "supplier") and model.supplier:
+            s = model.supplier
+            supplier_embed = SupplierEmbed(
+                id=s.id,
+                name=s.name,
+                rif=s.rif if hasattr(s, "rif") else None,
+            )
+
+        total_amount = sum(
+            (it.unit_cost or 0) * it.quantity_ordered for it in items
+        )
+
         return PurchaseOrder(
             id=model.id,
             fk_supplier_id=model.fk_supplier_id,
             order_number=model.order_number,
-            order_date=model.order_date.isoformat(),
+            order_date=model.order_date.isoformat() if model.order_date else None,
             order_status=model.order_status,
             items=items,
             expected_date=model.expected_date.isoformat() if model.expected_date else None,
             notes=model.notes,
+            total_amount=total_amount,
+            supplier=supplier_embed,
+            sent_at=model.sent_at.isoformat() if hasattr(model, "sent_at") and model.sent_at else None,
+            sent_by=model.sent_by if hasattr(model, "sent_by") else None,
+            received_at=model.received_at.isoformat() if hasattr(model, "received_at") and model.received_at else None,
+            received_by=model.received_by if hasattr(model, "received_by") else None,
             created_at=model.created_at.isoformat() if model.created_at else None,
             created_by=model.created_by,
         )
@@ -63,6 +95,15 @@ class SQLAlchemyPurchaseOrderRepository(PurchaseOrderRepository):
     # Consultas
     # ──────────────────────────────────────────────────────────
 
+    def _model_to_entity(self, order_model: PurchaseOrderModel) -> PurchaseOrder:
+        """Convert ORM model (with eager-loaded relationships) to entity."""
+        items = [
+            self._item_to_entity(m)
+            for m in (order_model.items_rel or [])
+            if m.status == RecordStatus.ACTIVE or (hasattr(m.status, 'value') and m.status.value == 'A')
+        ]
+        return self._to_entity(order_model, items)
+
     async def find_by_id(self, id: str) -> Optional[PurchaseOrder]:
         result = await self._session.execute(
             select(PurchaseOrderModel).where(
@@ -70,20 +111,10 @@ class SQLAlchemyPurchaseOrderRepository(PurchaseOrderRepository):
                 PurchaseOrderModel.status == RecordStatus.ACTIVE,
             )
         )
-        order_model = result.scalar_one_or_none()
+        order_model = result.unique().scalar_one_or_none()
         if not order_model:
             return None
-
-        items_result = await self._session.execute(
-            select(PurchaseOrderItemModel).where(
-                PurchaseOrderItemModel.fk_purchase_order_id == id,
-                PurchaseOrderItemModel.status == RecordStatus.ACTIVE,
-            )
-        )
-        items = [
-            self._item_to_entity(m) for m in items_result.scalars().all()
-        ]
-        return self._to_entity(order_model, items)
+        return self._model_to_entity(order_model)
 
     async def find_item_by_id(self, item_id: str) -> Optional[PurchaseOrderItem]:
         result = await self._session.execute(
@@ -132,16 +163,9 @@ class SQLAlchemyPurchaseOrderRepository(PurchaseOrderRepository):
             .offset(offset)
             .limit(page_size)
         )
-        orders = []
-        for order_model in result.scalars().all():
-            items_result = await self._session.execute(
-                select(PurchaseOrderItemModel).where(
-                    PurchaseOrderItemModel.fk_purchase_order_id == order_model.id,
-                    PurchaseOrderItemModel.status == RecordStatus.ACTIVE,
-                )
-            )
-            items = [self._item_to_entity(m) for m in items_result.scalars().all()]
-            orders.append(self._to_entity(order_model, items))
+        orders = [
+            self._model_to_entity(m) for m in result.unique().scalars().all()
+        ]
         return orders, total
 
     async def get_next_order_number(self) -> str:
@@ -193,16 +217,18 @@ class SQLAlchemyPurchaseOrderRepository(PurchaseOrderRepository):
     # ──────────────────────────────────────────────────────────
 
     async def update_order_status(
-        self, id: str, status: str, updated_by: str
+        self, id: str, status: str, updated_by: str, **extra
     ) -> None:
+        values = {
+            "order_status": status,
+            "updated_at": datetime.now(timezone.utc),
+            "updated_by": updated_by,
+            **extra,
+        }
         await self._session.execute(
             sql_update(PurchaseOrderModel)
             .where(PurchaseOrderModel.id == id)
-            .values(
-                order_status=status,
-                updated_at=datetime.now(timezone.utc),
-                updated_by=updated_by,
-            )
+            .values(**values)
         )
         await self._session.flush()
 

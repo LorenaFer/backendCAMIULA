@@ -18,7 +18,7 @@ from typing import Optional
 from uuid import uuid4
 
 from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, Numeric, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.shared.database.base import Base
 from app.shared.database.mixins import AuditMixin, SoftDeleteMixin
@@ -211,7 +211,19 @@ class PurchaseOrderModel(Base, SoftDeleteMixin, AuditMixin):
         index=True,
     )
 
+    # Traceability
+    sent_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    sent_by: Mapped[Optional[str]] = mapped_column(String(36))
+    received_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    received_by: Mapped[Optional[str]] = mapped_column(String(36))
+
     # 5-8. status + audit → proporcionados por los mixins
+
+    # Relationships
+    supplier: Mapped["SupplierModel"] = relationship(lazy="joined")
+    items_rel: Mapped[list["PurchaseOrderItemModel"]] = relationship(
+        back_populates="order", lazy="selectin"
+    )
 
 
 class PurchaseOrderItemModel(Base, SoftDeleteMixin, AuditMixin):
@@ -249,6 +261,10 @@ class PurchaseOrderItemModel(Base, SoftDeleteMixin, AuditMixin):
     )
 
     # 5-8. status + audit → proporcionados por los mixins
+
+    # Relationships
+    order: Mapped["PurchaseOrderModel"] = relationship(back_populates="items_rel")
+    medication: Mapped["MedicationModel"] = relationship(lazy="joined")
 
 
 # ─────────────────────────────────────────────────────────────

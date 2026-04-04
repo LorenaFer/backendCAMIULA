@@ -114,7 +114,11 @@ async def send_purchase_order(
             f"Cannot send order in status '{order.order_status}'. Must be 'draft'.",
             status_code=400,
         )
-    await repo.update_order_status(order_id, "sent", updated_by=user_id)
+    from datetime import datetime, timezone
+    await repo.update_order_status(
+        order_id, "sent", updated_by=user_id,
+        sent_at=datetime.now(timezone.utc), sent_by=user_id,
+    )
     updated = await repo.find_by_id(order_id)
     return ok(data=PurchaseOrderResponse(**updated.__dict__), message="Order sent")
 
