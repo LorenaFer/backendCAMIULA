@@ -10,10 +10,10 @@ from app.modules.appointments.domain.repositories.appointment_repository import 
 # Accepts both English and Spanish status names
 # pendiente/pending can go directly to atendida/attended (walk-in/emergency)
 VALID_TRANSITIONS = {
-    "pendiente": {"confirmada", "cancelada", "atendida", "confirmed", "cancelled", "attended"},
+    "pendiente": {"confirmada", "cancelada", "atendida", "no_asistio", "confirmed", "cancelled", "attended", "no_show"},
     "confirmada": {"atendida", "cancelada", "no_asistio", "attended", "cancelled", "no_show"},
     "confirmed": {"attended", "cancelled", "no_show", "atendida", "cancelada", "no_asistio"},
-    "pending": {"confirmed", "cancelled", "attended", "confirmada", "cancelada", "atendida"},
+    "pending": {"confirmed", "cancelled", "attended", "no_show", "confirmada", "cancelada", "atendida", "no_asistio"},
 }
 
 
