@@ -165,6 +165,38 @@ async def create_user(
             db.add(ur)
             assigned_roles.append(role_name)
 
+    # If role 'doctor' assigned, create doctor record
+    if "doctor" in assigned_roles:
+        from app.modules.doctors.infrastructure.models import DoctorModel
+
+        # Parse name into first_name / last_name
+        name_parts = body.full_name.strip().split(" ", 1)
+        first_name = name_parts[0]
+        last_name = name_parts[1] if len(name_parts) > 1 else ""
+
+        # Use provided specialty or default to first active one
+        specialty_id = body.specialty_id
+        if not specialty_id:
+            from app.modules.doctors.infrastructure.models import SpecialtyModel
+            spec_result = await db.execute(
+                select(SpecialtyModel.id).where(SpecialtyModel.status == "A").limit(1)
+            )
+            row = spec_result.scalar_one_or_none()
+            if row:
+                specialty_id = row
+
+        if specialty_id:
+            doctor_model = DoctorModel(
+                id=str(uuid4()),
+                fk_user_id=user_id,
+                fk_specialty_id=specialty_id,
+                first_name=first_name,
+                last_name=last_name,
+                doctor_status="ACTIVE",
+                created_by=current_user.id,
+            )
+            db.add(doctor_model)
+
     await db.flush()
 
     # Build response

@@ -41,6 +41,7 @@ class CreateUserRequest(BaseModel):
     password: str = Field(min_length=8)
     phone: Optional[str] = None
     roles: List[str] = Field(default=["paciente"], min_length=1)
+    specialty_id: Optional[str] = Field(None, description="Required when role includes 'doctor'")
 
 
 class AssignRoleRequest(BaseModel):
