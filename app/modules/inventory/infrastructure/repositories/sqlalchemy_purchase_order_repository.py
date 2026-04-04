@@ -209,8 +209,8 @@ class SQLAlchemyPurchaseOrderRepository(PurchaseOrderRepository):
             item_models.append(im)
 
         await self._session.flush()
-        items = [self._item_to_entity(m) for m in item_models]
-        return self._to_entity(model, items)
+        # Re-fetch with eager-loaded relationships to avoid async lazy-load
+        return await self.find_by_id(order_id)
 
     # ──────────────────────────────────────────────────────────
     # Escritura
