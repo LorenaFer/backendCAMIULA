@@ -86,6 +86,21 @@ async def create_prescription(
 ):
     repo = SQLAlchemyPrescriptionRepository(session)
 
+    # Resolve fk_doctor_id from appointment if not provided
+    if not body.fk_doctor_id and body.fk_appointment_id:
+        from sqlalchemy import select, text
+        from app.modules.appointments.infrastructure.models import AppointmentModel
+        result = await session.execute(
+            select(AppointmentModel.fk_doctor_id).where(
+                AppointmentModel.id == body.fk_appointment_id
+            )
+        )
+        doctor_id = result.scalar_one_or_none()
+        if doctor_id:
+            body.fk_doctor_id = doctor_id
+        else:
+            body.fk_doctor_id = user_id  # fallback to current user
+
     # Build the data dict expected by the repository
     prescription_number = await repo.get_next_number()
     data = body.model_dump()

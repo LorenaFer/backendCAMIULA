@@ -22,7 +22,7 @@ class PrescriptionItemCreate(BaseModel):
 class PrescriptionCreate(BaseModel):
     fk_appointment_id: str
     fk_patient_id: str
-    fk_doctor_id: str
+    fk_doctor_id: Optional[str] = None
     notes: Optional[str] = Field(None, max_length=500)
     items: List[PrescriptionItemCreate] = Field(..., min_length=1)
 
