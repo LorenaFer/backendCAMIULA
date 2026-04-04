@@ -1,7 +1,8 @@
 """Implementación SQLAlchemy del repositorio de órdenes de compra."""
 
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import date, datetime, timezone
+from typing import List, Optional, Tuple
+from uuid import uuid4
 
 from sqlalchemy import func, select, update as sql_update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -115,6 +116,77 @@ class SQLAlchemyPurchaseOrderRepository(PurchaseOrderRepository):
         )
         row = result.one()
         return row.total > 0 and row.total == row.completed
+
+    async def find_all(
+        self, page: int = 1, page_size: int = 20
+    ) -> Tuple[List[PurchaseOrder], int]:
+        base = select(PurchaseOrderModel).where(
+            PurchaseOrderModel.status == RecordStatus.ACTIVE
+        )
+        count_q = select(func.count()).select_from(base.subquery())
+        total = (await self._session.execute(count_q)).scalar_one()
+
+        offset = (page - 1) * page_size
+        result = await self._session.execute(
+            base.order_by(PurchaseOrderModel.order_date.desc())
+            .offset(offset)
+            .limit(page_size)
+        )
+        orders = []
+        for order_model in result.scalars().all():
+            items_result = await self._session.execute(
+                select(PurchaseOrderItemModel).where(
+                    PurchaseOrderItemModel.fk_purchase_order_id == order_model.id,
+                    PurchaseOrderItemModel.status == RecordStatus.ACTIVE,
+                )
+            )
+            items = [self._item_to_entity(m) for m in items_result.scalars().all()]
+            orders.append(self._to_entity(order_model, items))
+        return orders, total
+
+    async def get_next_order_number(self) -> str:
+        year = date.today().year
+        result = await self._session.execute(
+            select(func.count()).select_from(
+                select(PurchaseOrderModel.id)
+                .where(PurchaseOrderModel.order_number.like(f"OC-{year}-%"))
+                .subquery()
+            )
+        )
+        count = result.scalar_one()
+        return f"OC-{year}-{count + 1:04d}"
+
+    async def create(self, data: dict, created_by: str) -> PurchaseOrder:
+        items_data = data.pop("items", [])
+        order_id = str(uuid4())
+
+        if isinstance(data.get("expected_date"), str):
+            data["expected_date"] = date.fromisoformat(data["expected_date"])
+        if isinstance(data.get("order_date"), str):
+            data["order_date"] = date.fromisoformat(data["order_date"])
+
+        model = PurchaseOrderModel(id=order_id, created_by=created_by, **data)
+        self._session.add(model)
+        await self._session.flush()
+
+        item_models = []
+        for item in items_data:
+            im = PurchaseOrderItemModel(
+                id=str(uuid4()),
+                fk_purchase_order_id=order_id,
+                fk_medication_id=item["medication_id"],
+                quantity_ordered=item["quantity_ordered"],
+                quantity_received=0,
+                unit_cost=item.get("unit_cost"),
+                item_status="pending",
+                created_by=created_by,
+            )
+            self._session.add(im)
+            item_models.append(im)
+
+        await self._session.flush()
+        items = [self._item_to_entity(m) for m in item_models]
+        return self._to_entity(model, items)
 
     # ──────────────────────────────────────────────────────────
     # Escritura
