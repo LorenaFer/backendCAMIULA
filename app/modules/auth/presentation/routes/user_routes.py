@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, Query
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotFoundException
@@ -113,42 +114,65 @@ async def create_user(
     current_user: User = Depends(require_permission("users:create")),
     db: AsyncSession = Depends(get_db),
 ):
-    """Create a staff user with roles. Requires users:create."""
+    """Create a staff user with specific roles. Requires users:create."""
+    from uuid import uuid4
+
+    from sqlalchemy import text
+
+    from app.core.security import hash_password
+    from app.modules.auth.infrastructure.models import (
+        RoleModel,
+        UserModel,
+        UserRoleModel,
+    )
+
     user_repo = SQLAlchemyUserRepository(db)
-    role_repo = SQLAlchemyRoleRepository(db)
 
-    # Register the user (assigns 'paciente' by default)
-    use_case = RegisterUserUseCase(user_repo=user_repo, role_repo=role_repo)
-    user = await use_case.execute(
-        RegisterDTO(
-            email=body.email,
-            full_name=body.full_name,
-            password=body.password,
-            phone=body.phone,
-        )
-    )
+    # Check duplicate email
+    existing = await user_repo.get_by_email(body.email)
+    if existing:
+        from app.core.exceptions import ConflictException
+        raise ConflictException("Ya existe un usuario con ese email")
 
-    # Assign additional roles
-    assign_uc = AssignRoleUseCase(
-        user_repo=user_repo,
-        role_repo=role_repo,
-        permission_cache=permission_cache,
+    # Create user directly
+    user_id = str(uuid4())
+    user_model = UserModel(
+        id=user_id,
+        email=body.email,
+        full_name=body.full_name,
+        hashed_password=hash_password(body.password),
+        phone=body.phone,
+        user_status="ACTIVE",
+        created_by=current_user.id,
     )
+    db.add(user_model)
+    await db.flush()
+
+    # Assign ALL requested roles (not just paciente)
+    assigned_roles = []
     for role_name in body.roles:
-        if role_name != "paciente":  # paciente already assigned by register
-            try:
-                await assign_uc.execute(
-                    dto=AssignRoleDTO(user_id=user.id, role_name=role_name),
-                    assigned_by=current_user.id,
-                )
-            except Exception:
-                pass  # Role might not exist or already assigned
+        result = await db.execute(
+            select(RoleModel).where(RoleModel.name == role_name)
+        )
+        role = result.scalar_one_or_none()
+        if role:
+            ur = UserRoleModel(
+                id=str(uuid4()),
+                fk_user_id=user_id,
+                fk_role_id=role.id,
+                created_by=current_user.id,
+            )
+            db.add(ur)
+            assigned_roles.append(role_name)
 
-    # Reload roles
-    user.roles = await user_repo.get_user_roles(user.id)
+    await db.flush()
+
+    # Build response
+    user_entity = user_repo._to_entity(user_model)
+    user_entity.roles = assigned_roles
 
     return created(
-        data=_to_response(user),
+        data=_to_response(user_entity),
         message="Usuario creado exitosamente",
     )
 
