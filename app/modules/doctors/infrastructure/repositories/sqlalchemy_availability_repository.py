@@ -68,6 +68,13 @@ class SQLAlchemyAvailabilityRepository(AvailabilityRepository):
         return self._to_entity(model) if model else None
 
     async def create(self, data: dict, created_by: str) -> DoctorAvailability:
+        from datetime import time as time_type
+        for field in ("start_time", "end_time"):
+            val = data.get(field)
+            if isinstance(val, str):
+                parts = val.split(":")
+                data[field] = time_type(int(parts[0]), int(parts[1]))
+
         model = DoctorAvailabilityModel(
             id=str(uuid4()),
             created_by=created_by,
@@ -81,6 +88,13 @@ class SQLAlchemyAvailabilityRepository(AvailabilityRepository):
     async def update(
         self, doctor_id: str, block_id: str, data: dict, updated_by: str
     ) -> None:
+        from datetime import time as time_type
+        for field in ("start_time", "end_time"):
+            val = data.get(field)
+            if isinstance(val, str):
+                parts = val.split(":")
+                data[field] = time_type(int(parts[0]), int(parts[1]))
+
         data["updated_by"] = updated_by
         data["updated_at"] = datetime.now(timezone.utc)
         await self._session.execute(
