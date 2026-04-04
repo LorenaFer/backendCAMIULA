@@ -359,6 +359,11 @@ class PrescriptionModel(Base, SoftDeleteMixin, AuditMixin):
 
     # 5-8. status + audit → proporcionados por los mixins
 
+    # Relationships
+    items_rel: Mapped[list["PrescriptionItemModel"]] = relationship(
+        back_populates="prescription", lazy="selectin"
+    )
+
 
 class PrescriptionItemModel(Base, SoftDeleteMixin, AuditMixin):
     """Ítem de una receta médica (medicamento prescrito)."""
@@ -396,6 +401,10 @@ class PrescriptionItemModel(Base, SoftDeleteMixin, AuditMixin):
     )
 
     # 5-8. status + audit → proporcionados por los mixins
+
+    # Relationships
+    prescription: Mapped["PrescriptionModel"] = relationship(back_populates="items_rel")
+    medication: Mapped["MedicationModel"] = relationship(lazy="joined")
 
 
 # ─────────────────────────────────────────────────────────────
