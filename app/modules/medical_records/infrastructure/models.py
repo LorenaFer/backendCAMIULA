@@ -62,6 +62,47 @@ class MedicalRecordModel(Base, SoftDeleteMixin, AuditMixin):
 
 
 # -----------------------------------------------------------------
+# MEDICAL ORDERS (exam requests)
+# -----------------------------------------------------------------
+
+
+class MedicalOrderModel(Base, SoftDeleteMixin, AuditMixin):
+    """Lab exam or study requested during a consultation."""
+
+    __tablename__ = "medical_orders"
+
+    # 1. Identity
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid4())
+    )
+
+    # 2. Relations (logical FKs)
+    fk_appointment_id: Mapped[str] = mapped_column(
+        String(36), nullable=False, index=True
+    )
+    fk_patient_id: Mapped[str] = mapped_column(
+        String(36), nullable=False, index=True
+    )
+    fk_doctor_id: Mapped[str] = mapped_column(
+        String(36), nullable=False
+    )
+
+    # 3. Domain
+    order_type: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="lab_exam"
+    )
+    exam_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    notes: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+
+    # 4. Business status
+    order_status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="requested"
+    )
+
+    # 5-8. status + audit via mixins
+
+
+# -----------------------------------------------------------------
 # FORM SCHEMAS
 # -----------------------------------------------------------------
 
