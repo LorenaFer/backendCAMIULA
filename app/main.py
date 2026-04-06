@@ -27,7 +27,7 @@ OPENAPI_TAGS = [
     {"name": "Health", "description": "Server health check"},
     {"name": "Auth", "description": "Authentication: login, register, JWT tokens"},
     {"name": "Users", "description": "User management: CRUD, roles, permissions (RBAC)"},
-    {"name": "Patients", "description": "Patient registration, search by cedula/NHM, demographics"},
+    {"name": "Patients", "description": "Patient registration, search by dni/NHM, demographics"},
     {"name": "Doctors", "description": "Doctor catalog with embedded specialty"},
     {"name": "Specialties", "description": "Medical specialty CRUD (used by doctors)"},
     {"name": "Availability", "description": "Doctor time blocks and day-off exceptions"},
@@ -130,7 +130,7 @@ def create_app() -> FastAPI:
             "alert_status": "active", "alert_level": "critical",
             "movement_type": "entry", "prescription_id": "<prescription_uuid>",
             "q": "perez", "nhm": "1234",
-            "cedula": "V-12345678", "es_nuevo": "false",
+            "dni": "V-12345678", "es_nuevo": "false",
             "specialty_id": "<specialty_uuid>",
             "exclude_cancelled": "true",
         }

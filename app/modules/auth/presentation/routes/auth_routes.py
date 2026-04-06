@@ -88,10 +88,10 @@ async def patient_login(
     body: PatientLoginRequest,
     db: AsyncSession = Depends(get_db),
 ):
-    """Authenticate patient by cedula or NHM (no password required)."""
-    if body.query_type == "cedula":
+    """Authenticate patient by dni or NHM (no password required)."""
+    if body.query_type == "dni":
         stmt = select(PatientModel).where(
-            PatientModel.cedula == body.query,
+            PatientModel.dni == body.query,
             PatientModel.deleted_at.is_(None),
         )
     else:

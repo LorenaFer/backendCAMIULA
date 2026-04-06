@@ -28,7 +28,7 @@ class SQLAlchemyAppointmentRepository(AppointmentRepository):
     def _to_entity(
         model: AppointmentModel,
         patient_name: Optional[str] = None,
-        patient_cedula: Optional[str] = None,
+        patient_dni: Optional[str] = None,
         doctor_name: Optional[str] = None,
         specialty_name: Optional[str] = None,
         patient_university_relation: Optional[str] = None,
@@ -58,7 +58,7 @@ class SQLAlchemyAppointmentRepository(AppointmentRepository):
             ),
             created_by=model.created_by,
             patient_name=patient_name,
-            patient_cedula=patient_cedula,
+            patient_dni=patient_dni,
             doctor_name=doctor_name,
             specialty_name=specialty_name,
             patient_university_relation=patient_university_relation,
@@ -77,7 +77,7 @@ class SQLAlchemyAppointmentRepository(AppointmentRepository):
                 (PatientModel.first_name + " " + PatientModel.last_name).label(
                     "patient_name"
                 ),
-                PatientModel.cedula.label("patient_cedula"),
+                PatientModel.dni.label("patient_dni"),
                 (DoctorModel.first_name + " " + DoctorModel.last_name).label(
                     "doctor_name"
                 ),
@@ -106,7 +106,7 @@ class SQLAlchemyAppointmentRepository(AppointmentRepository):
         return self._to_entity(
             model,
             patient_name=row.patient_name if hasattr(row, "patient_name") else None,
-            patient_cedula=row.patient_cedula if hasattr(row, "patient_cedula") else None,
+            patient_dni=row.patient_dni if hasattr(row, "patient_dni") else None,
             doctor_name=row.doctor_name if hasattr(row, "doctor_name") else None,
             specialty_name=row.specialty_name if hasattr(row, "specialty_name") else None,
             patient_university_relation=(
@@ -157,7 +157,7 @@ class SQLAlchemyAppointmentRepository(AppointmentRepository):
                 or_(
                     PatientModel.first_name.ilike(pattern),
                     PatientModel.last_name.ilike(pattern),
-                    PatientModel.cedula.ilike(pattern),
+                    PatientModel.dni.ilike(pattern),
                     (PatientModel.first_name + " " + PatientModel.last_name).ilike(pattern),
                 )
             )

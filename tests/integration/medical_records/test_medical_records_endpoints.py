@@ -51,11 +51,11 @@ async def _create_appointment(client, token: str) -> dict:
     """Create a real patient + appointment for medical record tests."""
     headers = _auth_headers(token)
     # Create patient
-    cedula = f"V-MR-{uuid.uuid4().hex[:8]}"
+    dni = f"V-MR-{uuid.uuid4().hex[:8]}"
     pat_resp = await client.post(
         "/api/patients",
         json={
-            "cedula": cedula,
+            "dni": dni,
             "first_name": "MRTest",
             "last_name": "Patient",
             "university_relation": "estudiante",

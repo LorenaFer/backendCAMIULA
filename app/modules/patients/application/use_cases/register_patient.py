@@ -18,23 +18,23 @@ class RegisterPatient:
         self._repo = repo
 
     async def execute(self, dto: RegisterPatientDTO, created_by: str) -> Patient:
-        existing = await self._repo.find_by_cedula(dto.cedula)
+        existing = await self._repo.find_by_dni(dto.dni)
         if existing:
             raise ConflictException(
-                f"Ya existe un paciente registrado con la cedula '{dto.cedula}'."
+                f"Ya existe un paciente registrado con la dni '{dto.dni}'."
             )
 
         # If family member, validate holder exists
         holder_id = dto.fk_holder_patient_id
         if dto.university_relation in _FAMILY_CODES:
-            if not dto.holder_cedula:
+            if not dto.holder_dni:
                 raise NotFoundException(
-                    "Se requiere la cedula del titular para familiares."
+                    "Se requiere la dni del titular para familiares."
                 )
-            holder = await self._repo.find_by_cedula(dto.holder_cedula)
+            holder = await self._repo.find_by_dni(dto.holder_dni)
             if not holder:
                 raise NotFoundException(
-                    f"Titular con cedula '{dto.holder_cedula}' no encontrado."
+                    f"Titular con dni '{dto.holder_dni}' no encontrado."
                 )
             holder_id = holder.id
 
@@ -79,7 +79,7 @@ class RegisterPatient:
         nhm = await self._repo.get_next_nhm()
 
         data = {
-            "cedula": dto.cedula,
+            "dni": dto.dni,
             "nhm": nhm,
             "first_name": dto.first_name,
             "last_name": dto.last_name,

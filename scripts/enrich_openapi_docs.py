@@ -35,7 +35,7 @@ DESCRIPTIONS = {
         "Returns the created user profile with assigned roles."
     ),
     ("auth_routes.py", "/patient/login"): (
-        "Authenticate a patient by cedula or NHM without password. "
+        "Authenticate a patient by dni or NHM without password. "
         "Used by the patient portal for quick access. "
         "Returns patient basic data if found, or `found: false` if not."
     ),
@@ -77,7 +77,7 @@ DESCRIPTIONS = {
     ),
     ("patients_router.py", "full"): (
         "Retrieve complete patient data including medical_data (JSONB) and emergency_contact. "
-        "Accepts one of three identifiers: `id` (UUID), `cedula`, or `nhm`. "
+        "Accepts one of three identifiers: `id` (UUID), `dni`, or `nhm`. "
         "Returns null if not found."
     ),
     ("patients_router.py", "max-nhm"): (
@@ -86,14 +86,14 @@ DESCRIPTIONS = {
     ),
     ("patients_router.py", "list_or_search"): (
         "Search and list patients with multiple strategies. "
-        "Priority: `nhm` (exact match) > `cedula` (exact match) > `search` (text search) > list all. "
-        "Text search queries cedula, first_name, last_name, and NHM. "
+        "Priority: `nhm` (exact match) > `dni` (exact match) > `search` (text search) > list all. "
+        "Text search queries dni, first_name, last_name, and NHM. "
         "Returns paginated results sorted by last_name."
     ),
     ("patients_router.py", "create_patient"): (
         "Register a new patient with auto-generated NHM (Hospital Medical Number). "
         "NHM assignment uses `pg_advisory_xact_lock` for concurrency safety. "
-        "The cedula must be unique. Returns the created patient with assigned NHM."
+        "The dni must be unique. Returns the created patient with assigned NHM."
     ),
     ("patients_router.py", "get_patient_by"): (
         "Retrieve a patient by their UUID. Returns 404 if not found."
@@ -193,7 +193,7 @@ DESCRIPTIONS = {
         "(1) Doctor month view: `doctor_id` + `mes=YYYY-MM`, "
         "(2) Doctor day view: `doctor_id` + `fecha`, "
         "(3) General list with search, pagination, and filters. "
-        "The `q` parameter searches across patient name and cedula."
+        "The `q` parameter searches across patient name and dni."
     ),
     ("appointments_router.py", "create_appointment"): (
         "Create a new appointment. Validates no double-booking exists for "

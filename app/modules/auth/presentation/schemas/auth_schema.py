@@ -80,10 +80,10 @@ class AssignRoleRequest(BaseModel):
 
 
 class PatientLoginRequest(BaseModel):
-    """Authenticate patient by cedula or NHM (no password required)."""
+    """Authenticate patient by dni or NHM (no password required)."""
 
-    query: str = Field(min_length=1, max_length=30, description="Cedula number or NHM value", example="V-12345678")
-    query_type: str = Field(pattern="^(cedula|nhm)$", description="Lookup type: 'cedula' or 'nhm'", example="cedula")
+    query: str = Field(min_length=1, max_length=30, description="Dni number or NHM value", example="V-12345678")
+    query_type: str = Field(pattern="^(dni|nhm)$", description="Lookup type: 'dni' or 'nhm'", example="dni")
 
 
 class PatientLoginData(BaseModel):

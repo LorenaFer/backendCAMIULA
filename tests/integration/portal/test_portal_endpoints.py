@@ -41,7 +41,7 @@ async def _get_token() -> str:
         return resp.json()["data"]["access_token"]
 
 
-def _unique_cedula() -> str:
+def _unique_dni() -> str:
     return f"V-PORTAL-{uuid.uuid4().hex[:8]}"
 
 
@@ -68,11 +68,11 @@ async def client():
 @pytest_asyncio.fixture
 async def created_patient(client, token):
     """Create a patient and return its data dict."""
-    cedula = _unique_cedula()
+    dni = _unique_dni()
     resp = await client.post(
         "/api/patients",
         json={
-            "cedula": cedula,
+            "dni": dni,
             "first_name": "Portal",
             "last_name": "TestPatient",
             "university_relation": "estudiante",
@@ -88,14 +88,14 @@ async def created_patient(client, token):
 # ---------------------------------------------------------------------------
 
 
-class TestPatientLoginByCedula:
+class TestPatientLoginByDni:
     @pytest.mark.asyncio
-    async def test_patient_found_by_cedula(self, client, created_patient):
+    async def test_patient_found_by_dni(self, client, created_patient):
         resp = await client.post(
             "/api/auth/patient/login",
             json={
-                "query": created_patient["cedula"],
-                "query_type": "cedula",
+                "query": created_patient["dni"],
+                "query_type": "dni",
             },
         )
         assert resp.status_code == 200
@@ -111,12 +111,12 @@ class TestPatientLoginByCedula:
         assert "is_new" in patient
 
     @pytest.mark.asyncio
-    async def test_patient_not_found_by_cedula(self, client):
+    async def test_patient_not_found_by_dni(self, client):
         resp = await client.post(
             "/api/auth/patient/login",
             json={
                 "query": "V-NONEXISTENT-999",
-                "query_type": "cedula",
+                "query_type": "dni",
             },
         )
         assert resp.status_code == 200
@@ -174,7 +174,7 @@ class TestPatientLoginValidation:
             "/api/auth/patient/login",
             json={
                 "query": "",
-                "query_type": "cedula",
+                "query_type": "dni",
             },
         )
         assert resp.status_code == 422
@@ -189,7 +189,7 @@ class TestPatientLoginNoAuthRequired:
                 "/api/auth/patient/login",
                 json={
                     "query": "V-NO-AUTH-TEST",
-                    "query_type": "cedula",
+                    "query_type": "dni",
                 },
             )
         assert resp.status_code == 200
@@ -207,14 +207,14 @@ class TestFullPortalFlow:
     async def test_register_then_portal_login(self):
         """Register a patient via staff endpoint, then login via portal."""
         token = await _get_token()
-        cedula = _unique_cedula()
+        dni = _unique_dni()
 
         async with _client() as c:
             # 1. Staff registers the patient
             reg_resp = await c.post(
                 "/api/patients",
                 json={
-                    "cedula": cedula,
+                    "dni": dni,
                     "first_name": "FlowTest",
                     "last_name": "Patient",
                     "university_relation": "profesor",
@@ -227,7 +227,7 @@ class TestFullPortalFlow:
             # 2. Patient logs in via portal (no password)
             login_resp = await c.post(
                 "/api/auth/patient/login",
-                json={"query": cedula, "query_type": "cedula"},
+                json={"query": dni, "query_type": "dni"},
             )
             assert login_resp.status_code == 200
             login_body = login_resp.json()

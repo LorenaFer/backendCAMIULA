@@ -109,9 +109,9 @@ class TestBulkPatientInsert:
 
             sql = text(
                 "INSERT INTO patients "
-                "(id, nhm, cedula, first_name, last_name, university_relation, "
+                "(id, nhm, dni, first_name, last_name, university_relation, "
                 "is_new, patient_status, status, medical_data, created_at, created_by) "
-                "VALUES (:id, :nhm, :cedula, :first_name, :last_name, :univ, "
+                "VALUES (:id, :nhm, :dni, :first_name, :last_name, :univ, "
                 "true, 'active', 'A', '{}', NOW(), 'stress-test') "
                 "ON CONFLICT DO NOTHING"
             )
@@ -125,7 +125,7 @@ class TestBulkPatientInsert:
                     rows.append({
                         "id": str(uuid.uuid4()),
                         "nhm": idx,
-                        "cedula": f"V-STRESS-{idx:07d}",
+                        "dni": f"V-STRESS-{idx:07d}",
                         "first_name": f"Nombre{idx}",
                         "last_name": f"Apellido{idx % 1000:04d}",
                         "univ": relations[idx % 4],
@@ -163,20 +163,20 @@ class TestBulkPatientInsert:
             assert len(rows) == 20
 
     @pytest.mark.asyncio
-    async def test_search_by_cedula_indexed(self):
-        """Search by cedula (indexed) over 100k+ rows < 50ms."""
+    async def test_search_by_dni_indexed(self):
+        """Search by dni (indexed) over 100k+ rows < 50ms."""
         async with async_session_factory() as session:
             start = time.perf_counter()
             result = await session.execute(
                 text(
                     "SELECT * FROM patients "
-                    "WHERE cedula = 'V-STRESS-0050000' AND status = 'A'"
+                    "WHERE dni = 'V-STRESS-0050000' AND status = 'A'"
                 )
             )
             row = result.fetchone()
             elapsed = time.perf_counter() - start
 
-            print(f"\n  Indexed cedula search: {elapsed*1000:.1f}ms")
+            print(f"\n  Indexed dni search: {elapsed*1000:.1f}ms")
             assert elapsed < BUDGET_SEARCH_INDEXED, (
                 f"Indexed search took {elapsed*1000:.0f}ms, budget is {BUDGET_SEARCH_INDEXED*1000:.0f}ms"
             )
@@ -413,7 +413,7 @@ class TestConcurrentNhmGeneration:
                 resp = await c.post(
                     "/api/patients",
                     json={
-                        "cedula": f"V-CONC-{uuid.uuid4().hex[:8]}",
+                        "dni": f"V-CONC-{uuid.uuid4().hex[:8]}",
                         "first_name": f"Concurrent{idx}",
                         "last_name": "Test",
                         "university_relation": "estudiante",
@@ -470,14 +470,14 @@ class TestQueryPlanValidation:
     """Verify critical queries use indices (not sequential scans)."""
 
     @pytest.mark.asyncio
-    async def test_patient_cedula_uses_index(self):
+    async def test_patient_dni_uses_index(self):
         async with async_session_factory() as session:
             plan = await _explain_analyze(
                 session,
-                "SELECT * FROM patients WHERE cedula = 'V-STRESS-0050000' AND status = 'A'"
+                "SELECT * FROM patients WHERE dni = 'V-STRESS-0050000' AND status = 'A'"
             )
             print(f"\n{plan}")
-            assert "Index" in plan, "Patient cedula query missing index usage"
+            assert "Index" in plan, "Patient dni query missing index usage"
 
     @pytest.mark.asyncio
     async def test_appointment_date_doctor_uses_index(self):

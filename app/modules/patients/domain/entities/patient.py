@@ -7,7 +7,7 @@ from typing import Optional
 @dataclass
 class Patient:
     id: str
-    cedula: str
+    dni: str
     nhm: int
     first_name: str
     last_name: str

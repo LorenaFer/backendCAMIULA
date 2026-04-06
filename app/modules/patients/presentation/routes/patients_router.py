@@ -16,7 +16,7 @@ from app.modules.patients.application.use_cases.register_patient import (
     RegisterPatient,
 )
 from app.modules.patients.application.use_cases.search_patient import (
-    SearchPatientByCedula,
+    SearchPatientByDni,
     SearchPatientByNhm,
 )
 from app.modules.patients.domain.repositories.patient_repository import (
@@ -55,21 +55,21 @@ async def patient_demographics(
     return ok(data=data, message="Patient demographics retrieved successfully")
 
 
-@router.get("/full", summary="Get full patient by id, cedula or NHM")
+@router.get("/full", summary="Get full patient by id, dni or NHM")
 async def get_patient_full(
     id: Optional[str] = Query(None, description="Patient UUID"),
-    cedula: Optional[str] = Query(None, description="Patient cedula"),
+    dni: Optional[str] = Query(None, description="Patient dni"),
     nhm: Optional[int] = Query(None, description="Patient NHM"),
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
-    """Retrieve complete patient data including medical_data (JSONB) and emergency_contact. Accepts one of three identifiers: `id` (UUID), `cedula`, or `nhm`. Returns null if not found."""
+    """Retrieve complete patient data including medical_data (JSONB) and emergency_contact. Accepts one of three identifiers: `id` (UUID), `dni`, or `nhm`. Returns null if not found."""
     repo = get_patient_repo(session)
     patient = None
     if id:
         patient = await repo.find_by_id(id)
-    elif cedula:
-        patient = await SearchPatientByCedula(repo).execute(cedula)
+    elif dni:
+        patient = await SearchPatientByDni(repo).execute(dni)
     elif nhm is not None:
         patient = await SearchPatientByNhm(repo).execute(nhm)
 
@@ -93,17 +93,17 @@ async def get_max_nhm(
     )
 
 
-@router.get("", summary="List patients or search by NHM/cedula/text")
+@router.get("", summary="List patients or search by NHM/dni/text")
 async def list_or_search_patients(
     nhm: Optional[int] = Query(None, description="Search by NHM"),
-    cedula: Optional[str] = Query(None, description="Search by cedula"),
-    search: Optional[str] = Query(None, description="Search by cedula, name or NHM"),
+    dni: Optional[str] = Query(None, description="Search by dni"),
+    search: Optional[str] = Query(None, description="Search by dni, name or NHM"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=10000),
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
-    """Search and list patients with multiple strategies. Priority: nhm (exact) > cedula (exact) > search (text) > list all. Text search queries cedula, first_name, last_name, and NHM. Paginated, sorted by last_name."""
+    """Search and list patients with multiple strategies. Priority: nhm (exact) > dni (exact) > search (text) > list all. Text search queries dni, first_name, last_name, and NHM. Paginated, sorted by last_name."""
     repo = get_patient_repo(session)
 
     # Search by NHM -> returns PatientPublic | null
@@ -114,9 +114,9 @@ async def list_or_search_patients(
             message="Paciente encontrado" if patient else "Paciente no encontrado",
         )
 
-    # Search by cedula -> returns PatientPublic | null
-    if cedula:
-        patient = await SearchPatientByCedula(repo).execute(cedula)
+    # Search by dni -> returns PatientPublic | null
+    if dni:
+        patient = await SearchPatientByDni(repo).execute(dni)
         return ok(
             data=PatientPublicResponse(**patient.__dict__) if patient else None,
             message="Paciente encontrado" if patient else "Paciente no encontrado",
@@ -152,7 +152,7 @@ async def create_patient(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    """Register a new patient with auto-generated NHM. NHM assignment uses pg_advisory_xact_lock for concurrency safety. The cedula must be unique."""
+    """Register a new patient with auto-generated NHM. NHM assignment uses pg_advisory_xact_lock for concurrency safety. The dni must be unique."""
     repo = get_patient_repo(session)
     dto = CreatePatientDTO(**body.model_dump())
     patient = await CreatePatient(repo).execute(dto, created_by=user_id)

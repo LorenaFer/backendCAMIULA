@@ -17,10 +17,10 @@ ROOT = Path(__file__).resolve().parent.parent
 
 DOCS = {
     "patient_demographics": "Returns patient distribution statistics: count by university relation type (estudiante, personal, docente, familia, externo), count by sex, and first-time vs returning patient counts. Used by the dashboard.",
-    "get_patient_full": "Retrieve complete patient data including medical_data (JSONB) and emergency_contact. Accepts one of three identifiers: `id` (UUID), `cedula`, or `nhm`. Returns null if not found.",
+    "get_patient_full": "Retrieve complete patient data including medical_data (JSONB) and emergency_contact. Accepts one of three identifiers: `id` (UUID), `dni`, or `nhm`. Returns null if not found.",
     "get_max_nhm": "Returns the highest NHM (Hospital Medical Number) currently registered. Used by the registration form to display the next available NHM.",
-    "list_or_search_patients": "Search and list patients with multiple strategies. Priority: nhm (exact) > cedula (exact) > search (text) > list all. Text search queries cedula, first_name, last_name, and NHM. Paginated, sorted by last_name.",
-    "create_patient": "Register a new patient with auto-generated NHM. NHM assignment uses pg_advisory_xact_lock for concurrency safety. The cedula must be unique.",
+    "list_or_search_patients": "Search and list patients with multiple strategies. Priority: nhm (exact) > dni (exact) > search (text) > list all. Text search queries dni, first_name, last_name, and NHM. Paginated, sorted by last_name.",
+    "create_patient": "Register a new patient with auto-generated NHM. NHM assignment uses pg_advisory_xact_lock for concurrency safety. The dni must be unique.",
     "get_patient_by_id": "Retrieve a patient by their UUID. Returns 404 if not found.",
     "register_patient": "Self-registration endpoint for the ULA patient portal. No authentication required. Accepts extended fields (country, state, city, blood_type, emergency contact) that the backend composes into JSONB fields. Returns minimal data for security.",
     "get_my_profile": "Retrieve the authenticated user's profile including roles and permissions.",

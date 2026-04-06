@@ -11,7 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field
 class PatientCreate(BaseModel):
     """Register a new patient (admin/staff)."""
 
-    cedula: str = Field(..., max_length=20, description="National ID (unique)", example="V-12345678")
+    dni: str = Field(..., max_length=20, description="National ID (unique)", example="V-12345678")
     first_name: str = Field(..., max_length=100, description="First name", example="Juan")
     last_name: str = Field(..., max_length=100, description="Last name", example="Perez Garcia")
     university_relation: str = Field(..., max_length=20, description="Relation with ULA: estudiante, personal, docente, familia, externo", example="estudiante")
@@ -34,7 +34,7 @@ class PatientCreate(BaseModel):
 
     model_config = ConfigDict(json_schema_extra={
         "example": {
-            "cedula": "V-12345678", "first_name": "Juan", "last_name": "Perez Garcia",
+            "dni": "V-12345678", "first_name": "Juan", "last_name": "Perez Garcia",
             "university_relation": "estudiante", "sex": "M", "birth_date": "1998-05-15",
             "phone": "0414-1234567", "medical_data": {"blood_type": "O+"},
         }
@@ -44,7 +44,7 @@ class PatientCreate(BaseModel):
 class PatientRegister(BaseModel):
     """Extended registration from ULA patient portal (public, no auth required)."""
 
-    cedula: str = Field(..., max_length=20, description="National ID", example="V-12345678")
+    dni: str = Field(..., max_length=20, description="National ID", example="V-12345678")
     first_name: str = Field(..., max_length=100, description="First name", example="Maria")
     last_name: str = Field(..., max_length=100, description="Last name", example="Garcia")
     university_relation: str = Field(..., max_length=20, description="Relation with ULA", example="estudiante")
@@ -62,7 +62,7 @@ class PatientRegister(BaseModel):
     profession: Optional[str] = Field(None, max_length=100, example="Estudiante")
     current_occupation: Optional[str] = Field(None, max_length=100, example="Estudiante")
     family_relationship: Optional[str] = Field(None, max_length=20, description="Relationship to holder patient", example="hijo")
-    holder_cedula: Optional[str] = Field(None, max_length=20, description="Cedula of the holder patient (resolved to fk_holder_patient_id)", example="V-98765432")
+    holder_dni: Optional[str] = Field(None, max_length=20, description="Dni of the holder patient (resolved to fk_holder_patient_id)", example="V-98765432")
     home_address: Optional[str] = Field(None, max_length=300, example="Av. Universidad, Merida")
     work_address: Optional[str] = Field(None, max_length=300)
     emergency_name: Optional[str] = Field(None, max_length=200, description="Emergency contact name (stored in emergency_contact JSONB)", example="Pedro Garcia")
@@ -83,7 +83,7 @@ class PatientResponse(BaseModel):
 
     id: str = Field(description="Patient UUID", example="a1b2c3d4-e5f6-7890-abcd-1234567890ab")
     nhm: int = Field(description="Hospital Medical Number (auto-generated)", example=1234)
-    cedula: str = Field(description="National ID", example="V-12345678")
+    dni: str = Field(description="National ID", example="V-12345678")
     first_name: str = Field(description="First name", example="Juan")
     last_name: str = Field(description="Last name", example="Perez Garcia")
     sex: Optional[str] = Field(None, description="Sex: M or F", example="M")

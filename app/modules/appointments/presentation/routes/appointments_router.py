@@ -177,7 +177,7 @@ async def list_appointments(
     doctor_id: Optional[str] = Query(None),
     specialty_id: Optional[str] = Query(None),
     status_filter: Optional[str] = Query(None),
-    q: Optional[str] = Query(None, description="Search patient name/cedula"),
+    q: Optional[str] = Query(None, description="Search patient name/dni"),
     fk_patient_id: Optional[str] = Query(None, description="Filter by patient ID"),
     month_str: Optional[str] = Query(None, description="YYYY-MM for month view"),
     exclude_cancelled: bool = Query(False),

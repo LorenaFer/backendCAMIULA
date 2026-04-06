@@ -42,17 +42,17 @@ def _auth_headers(token: str) -> dict:
     return {"Authorization": f"Bearer {token}"}
 
 
-def _unique_cedula() -> str:
+def _unique_dni() -> str:
     return f"V-APPT-{uuid.uuid4().hex[:8]}"
 
 
 async def _create_patient(client, token: str) -> str:
     """Create a patient and return its ID."""
-    cedula = _unique_cedula()
+    dni = _unique_dni()
     resp = await client.post(
         "/api/patients",
         json={
-            "cedula": cedula,
+            "dni": dni,
             "first_name": "TestPaciente",
             "last_name": "ApptTest",
             "university_relation": "estudiante",

@@ -54,7 +54,7 @@ class AppointmentResponse(BaseModel):
     observations: Optional[str] = Field(None, description="Notes")
     appointment_status: str = Field(description="Current status: pendiente, confirmada, atendida, cancelada, no_asistio", example="pendiente")
     patient_name: Optional[str] = Field(None, description="Patient full name (resolved via JOIN)", example="Juan Perez")
-    patient_cedula: Optional[str] = Field(None, description="Patient national ID", example="V-12345678")
+    patient_dni: Optional[str] = Field(None, description="Patient national ID", example="V-12345678")
     doctor_name: Optional[str] = Field(None, description="Doctor full name", example="Dr. Carlos Mendez")
     specialty_name: Optional[str] = Field(None, description="Specialty name", example="Medicina General")
     patient_university_relation: Optional[str] = Field(None, description="Patient relation with ULA", example="estudiante")
