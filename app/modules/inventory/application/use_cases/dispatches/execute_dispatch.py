@@ -42,7 +42,7 @@ async def execute_dispatch(
     # ── 1. Cargar y validar receta ────────────────────────────────────────────
     prescription = await prescription_repo.find_by_id(fk_prescription_id)
     if not prescription:
-        raise NotFoundException("Receta no encontrada")
+        raise NotFoundException("Prescription not found")
 
     if prescription.prescription_status in ("dispensed", "cancelled"):
         raise ForbiddenException(
@@ -73,8 +73,8 @@ async def execute_dispatch(
 
         if total_available < remaining:
             raise InsufficientStockException(
-                f"Stock insuficiente para '{item.fk_medication_id}': "
-                f"disponible {total_available}, requerido {remaining}"
+                f"Insufficient stock for '{item.fk_medication_id}': "
+                f"available {total_available}, required {remaining}"
             )
 
         # ── Verificar límite mensual ──────────────────────────────────────────
@@ -102,8 +102,8 @@ async def execute_dispatch(
                 )
                 raise ForbiddenException(
                     f"Límite mensual excedido para el medicamento: "
-                    f"{monthly_used} usados + {remaining} solicitados "
-                    f"> {effective_limit} permitidos",
+                    f"{monthly_used} used + {remaining} requested "
+                    f"> {effective_limit} allowed",
                     code="LIMIT_EXCEEDED",
                 )
 

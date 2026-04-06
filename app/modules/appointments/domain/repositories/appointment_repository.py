@@ -21,10 +21,10 @@ class AppointmentRepository(ABC):
         self,
         page: int,
         page_size: int,
-        fecha: Optional[str] = None,
+        date_str: Optional[str] = None,
         doctor_id: Optional[str] = None,
-        especialidad_id: Optional[str] = None,
-        estado: Optional[str] = None,
+        specialty_id: Optional[str] = None,
+        status_filter: Optional[str] = None,
         q: Optional[str] = None,
     ) -> Tuple[List[Appointment], int]:
         """Paginated list with patient+doctor data."""
@@ -44,14 +44,14 @@ class AppointmentRepository(ABC):
     async def find_by_doctor_and_date(
         self,
         doctor_id: str,
-        fecha: str,
+        date_str: str,
         exclude_cancelled: bool = True,
     ) -> List[Appointment]:
         ...
 
     @abstractmethod
     async def check_double_booking(
-        self, doctor_id: str, fecha: str, start_time: str
+        self, doctor_id: str, date_str: str, start_time: str
     ) -> bool:
         """Returns True if a non-cancelled appointment exists for the slot."""
         ...
@@ -68,16 +68,16 @@ class AppointmentRepository(ABC):
     @abstractmethod
     async def get_stats(
         self,
-        fecha: Optional[str] = None,
+        date_str: Optional[str] = None,
         doctor_id: Optional[str] = None,
-        especialidad_id: Optional[str] = None,
-        estado: Optional[str] = None,
+        specialty_id: Optional[str] = None,
+        status_filter: Optional[str] = None,
     ) -> Dict[str, Any]:
         ...
 
     @abstractmethod
     async def find_non_cancelled_by_doctor_and_date(
-        self, doctor_id: str, fecha: str
+        self, doctor_id: str, date_str: str
     ) -> List[Appointment]:
         """Existing non-cancelled appointments for slot computation."""
         ...

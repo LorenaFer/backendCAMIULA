@@ -7,7 +7,7 @@ from app.modules.auth.domain.repositories.user_repository import UserRepository
 
 
 class LoginUserUseCase:
-    """Autentica un usuario con email y password (LocalAuthProvider).
+    """Authenticate a user with email and password (LocalAuthProvider).
 
     Para Auth0, el frontend maneja el login y envía el JWT directamente.
 

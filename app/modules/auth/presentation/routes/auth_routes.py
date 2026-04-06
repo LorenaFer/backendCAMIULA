@@ -5,12 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.auth.application.dtos.auth_dto import LoginDTO, RegisterDTO
 from app.modules.auth.application.use_cases.login_user import LoginUserUseCase
 from app.modules.auth.application.use_cases.register_user import RegisterUserUseCase
-from app.modules.auth.infrastructure.repositories.sqlalchemy_role_repository import (
-    SQLAlchemyRoleRepository,
-)
-from app.modules.auth.infrastructure.repositories.sqlalchemy_user_repository import (
-    SQLAlchemyUserRepository,
-)
+from app.modules.auth.presentation.dependencies import get_user_repo, get_role_repo
 from app.modules.auth.presentation.schemas.auth_schema import (
     LoginRequest,
     PatientLoginData,
@@ -33,9 +28,9 @@ async def login(
     body: LoginRequest,
     db: AsyncSession = Depends(get_db),
 ):
-    """Autenticar usuario con email y password (proveedor local)."""
+    """Authenticate user with email and password (local provider)."""
     use_case = LoginUserUseCase(
-        user_repo=SQLAlchemyUserRepository(db),
+        user_repo=get_user_repo(db),
     )
     result = await use_case.execute(
         LoginDTO(email=body.email, password=body.password)
@@ -46,7 +41,7 @@ async def login(
             token_type=result.token_type,
             expires_in=result.expires_in,
         ).model_dump(),
-        message="Login exitoso",
+        message="Login successful",
     )
 
 
@@ -59,10 +54,10 @@ async def register(
     body: RegisterRequest,
     db: AsyncSession = Depends(get_db),
 ):
-    """Registrar nuevo usuario. Se asigna rol 'paciente' por defecto."""
+    """Register a new user. Assigns the 'paciente' role by default."""
     use_case = RegisterUserUseCase(
-        user_repo=SQLAlchemyUserRepository(db),
-        role_repo=SQLAlchemyRoleRepository(db),
+        user_repo=get_user_repo(db),
+        role_repo=get_role_repo(db),
     )
     user = await use_case.execute(
         RegisterDTO(
@@ -81,7 +76,7 @@ async def register(
             user_status=user.user_status,
             roles=user.roles,
         ).model_dump(),
-        message="Usuario registrado exitosamente",
+        message="User registered successfully",
     )
 
 
@@ -93,10 +88,10 @@ async def patient_login(
     body: PatientLoginRequest,
     db: AsyncSession = Depends(get_db),
 ):
-    """Authenticate patient by cedula or NHM (no password required)."""
-    if body.query_type == "cedula":
+    """Authenticate patient by dni or NHM (no password required)."""
+    if body.query_type == "dni":
         stmt = select(PatientModel).where(
-            PatientModel.cedula == body.query,
+            PatientModel.dni == body.query,
             PatientModel.deleted_at.is_(None),
         )
     else:

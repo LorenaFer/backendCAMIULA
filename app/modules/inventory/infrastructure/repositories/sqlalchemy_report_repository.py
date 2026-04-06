@@ -391,7 +391,7 @@ class SQLAlchemyReportRepository:
 
     async def get_expiration_report(self, threshold_days: int) -> ExpirationReportDTO:
         """
-        Retorna lotes disponibles cuya expiration_date <= hoy + threshold_days.
+        Retorna lotes availables cuya expiration_date <= hoy + threshold_days.
         Enriquece cada lote con datos del medicamento (campo `medication`).
         """
         today = date.today()

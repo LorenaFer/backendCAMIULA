@@ -6,7 +6,7 @@ from typing import Optional
 
 @dataclass
 class CreatePatientDTO:
-    cedula: str
+    dni: str
     first_name: str
     last_name: str
     university_relation: str
@@ -36,7 +36,7 @@ class RegisterPatientDTO(CreatePatientDTO):
     - country, state_geo, city -> birth_place
     - emergency_* -> emergency_contact
     - allergies, medical_alerts -> medical_data
-    - holder_cedula -> fk_holder_patient_id (lookup)
+    - holder_dni -> fk_holder_patient_id (lookup)
     """
 
     country: Optional[str] = None
@@ -49,5 +49,5 @@ class RegisterPatientDTO(CreatePatientDTO):
     emergency_address: Optional[str] = None
     allergies: Optional[str] = None
     medical_alerts: Optional[str] = None
-    holder_cedula: Optional[str] = None
+    holder_dni: Optional[str] = None
     email: Optional[str] = None

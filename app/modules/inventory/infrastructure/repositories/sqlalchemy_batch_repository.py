@@ -83,7 +83,7 @@ class SQLAlchemyBatchRepository(BatchRepository):
 
     async def find_available_fefo(self, medication_id: str) -> list[Batch]:
         """
-        Lotes disponibles ordenados FEFO (First Expired, First Out).
+        Lotes availables ordenados FEFO (First Expired, First Out).
 
         Usa SELECT FOR UPDATE para serializar el acceso concurrente y
         garantizar que dos despachos simultáneos no lean el mismo stock

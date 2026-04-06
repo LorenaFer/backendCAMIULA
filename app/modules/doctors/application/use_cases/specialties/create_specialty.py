@@ -17,7 +17,7 @@ class CreateSpecialty:
         existing = await self._repo.find_by_name(dto.name)
         if existing:
             raise ConflictException(
-                f"Ya existe una especialidad con el nombre '{dto.name}'."
+                f"A specialty with the name '{dto.name}'."
             )
         data = {"name": dto.name}
         return await self._repo.create(data, created_by)

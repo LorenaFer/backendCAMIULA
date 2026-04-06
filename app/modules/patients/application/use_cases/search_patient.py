@@ -1,4 +1,4 @@
-"""Use case: search patient by NHM or cedula (public version)."""
+"""Use case: search patient by NHM or dni (public version)."""
 
 from typing import Optional
 
@@ -16,9 +16,9 @@ class SearchPatientByNhm:
         return await self._repo.find_by_nhm(nhm)
 
 
-class SearchPatientByCedula:
+class SearchPatientByDni:
     def __init__(self, repo: PatientRepository) -> None:
         self._repo = repo
 
-    async def execute(self, cedula: str) -> Optional[Patient]:
-        return await self._repo.find_by_cedula(cedula)
+    async def execute(self, dni: str) -> Optional[Patient]:
+        return await self._repo.find_by_dni(dni)

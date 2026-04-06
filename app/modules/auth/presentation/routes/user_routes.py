@@ -10,12 +10,7 @@ from app.modules.auth.application.use_cases.get_user_profile import (
 )
 from app.modules.auth.application.use_cases.list_users import ListUsersUseCase
 from app.modules.auth.domain.entities.user import User
-from app.modules.auth.infrastructure.repositories.sqlalchemy_role_repository import (
-    SQLAlchemyRoleRepository,
-)
-from app.modules.auth.infrastructure.repositories.sqlalchemy_user_repository import (
-    SQLAlchemyUserRepository,
-)
+from app.modules.auth.presentation.dependencies import get_user_repo, get_role_repo
 from app.modules.auth.application.dtos.auth_dto import RegisterDTO
 from app.modules.auth.application.use_cases.register_user import RegisterUserUseCase
 from app.modules.auth.presentation.schemas.auth_schema import (
@@ -51,8 +46,8 @@ def _to_response(user: User) -> dict:
 async def get_my_profile(
     user: User = Depends(require_permission("profile:read")),
 ):
-    """Obtener perfil del usuario autenticado."""
-    return ok(data=_to_response(user), message="Perfil obtenido")
+    """Retrieve the authenticated user profile."""
+    return ok(data=_to_response(user), message="Profile retrieved")
 
 
 @router.put("/me", response_model=StandardResponse[UserResponse])
@@ -61,8 +56,8 @@ async def update_my_profile(
     user: User = Depends(require_permission("profile:update")),
     db: AsyncSession = Depends(get_db),
 ):
-    """Actualizar perfil propio."""
-    repo = SQLAlchemyUserRepository(db)
+    """Update own profile."""
+    repo = get_user_repo(db)
 
     if body.full_name is not None:
         user.full_name = body.full_name
@@ -71,7 +66,7 @@ async def update_my_profile(
 
     updated = await repo.update(user)
     updated.roles = user.roles
-    return ok(data=_to_response(updated), message="Perfil actualizado")
+    return ok(data=_to_response(updated), message="Profile updated")
 
 
 @router.get("", response_model=StandardResponse[PaginatedData[UserResponse]])
@@ -85,7 +80,7 @@ async def list_users(
     db: AsyncSession = Depends(get_db),
 ):
     """List users with pagination, search and role filters."""
-    repo = SQLAlchemyUserRepository(db)
+    repo = get_user_repo(db)
     users, total = await repo.list_paginated(
         page,
         page_size,
@@ -104,7 +99,7 @@ async def list_users(
         total=total,
         page=page,
         page_size=page_size,
-        message="Listado de usuarios",
+        message="Users retrieved",
     )
 
 
@@ -126,13 +121,13 @@ async def create_user(
         UserRoleModel,
     )
 
-    user_repo = SQLAlchemyUserRepository(db)
+    user_repo = get_user_repo(db)
 
     # Check duplicate email
     existing = await user_repo.get_by_email(body.email)
     if existing:
         from app.core.exceptions import ConflictException
-        raise ConflictException("Ya existe un usuario con ese email")
+        raise ConflictException("A user with this email already exists")
 
     # Create user directly
     user_id = str(uuid4())
@@ -205,7 +200,7 @@ async def create_user(
 
     return created(
         data=_to_response(user_entity),
-        message="Usuario creado exitosamente",
+        message="User created successfully",
     )
 
 
@@ -215,10 +210,10 @@ async def get_user(
     _: User = Depends(require_permission("users:read")),
     db: AsyncSession = Depends(get_db),
 ):
-    """Obtener un usuario por ID. Requiere users:read."""
-    use_case = GetUserProfileUseCase(user_repo=SQLAlchemyUserRepository(db))
+    """Retrieve a user by ID. Requires users:read permission."""
+    use_case = GetUserProfileUseCase(user_repo=get_user_repo(db))
     user = await use_case.execute(user_id)
-    return ok(data=_to_response(user), message="Usuario obtenido")
+    return ok(data=_to_response(user), message="User retrieved")
 
 
 @router.post(
@@ -232,17 +227,17 @@ async def assign_role(
     current_user: User = Depends(require_permission("roles:assign")),
     db: AsyncSession = Depends(get_db),
 ):
-    """Asignar un rol a un usuario. Requiere roles:assign."""
+    """Assign a role to a user. Requires roles:assign permission."""
     use_case = AssignRoleUseCase(
-        user_repo=SQLAlchemyUserRepository(db),
-        role_repo=SQLAlchemyRoleRepository(db),
+        user_repo=get_user_repo(db),
+        role_repo=get_role_repo(db),
         permission_cache=permission_cache,
     )
     await use_case.execute(
         dto=AssignRoleDTO(user_id=user_id, role_name=body.role_name),
         assigned_by=current_user.id,
     )
-    return ok(message=f"Rol '{body.role_name}' asignado exitosamente")
+    return ok(message=f"Role '{body.role_name}' assigned successfully")
 
 
 @router.delete(
@@ -255,11 +250,11 @@ async def remove_role(
     current_user: User = Depends(require_permission("roles:assign")),
     db: AsyncSession = Depends(get_db),
 ):
-    """Remover un rol de un usuario. Requiere roles:assign."""
-    role_repo = SQLAlchemyRoleRepository(db)
+    """Remove a role from a user. Requires roles:assign permission."""
+    role_repo = get_role_repo(db)
     role = await role_repo.get_by_name(role_name)
     if role is None:
-        raise NotFoundException(f"Rol '{role_name}' no encontrado")
+        raise NotFoundException(f"Role '{role_name}' not found")
 
     await role_repo.remove_role_from_user(
         user_id=user_id,
@@ -267,4 +262,4 @@ async def remove_role(
         removed_by=current_user.id,
     )
     permission_cache.invalidate(user_id)
-    return ok(message=f"Rol '{role_name}' removido exitosamente")
+    return ok(message=f"Role '{role_name}' removed successfully")

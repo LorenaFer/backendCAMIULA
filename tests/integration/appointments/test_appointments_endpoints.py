@@ -42,17 +42,17 @@ def _auth_headers(token: str) -> dict:
     return {"Authorization": f"Bearer {token}"}
 
 
-def _unique_cedula() -> str:
+def _unique_dni() -> str:
     return f"V-APPT-{uuid.uuid4().hex[:8]}"
 
 
 async def _create_patient(client, token: str) -> str:
     """Create a patient and return its ID."""
-    cedula = _unique_cedula()
+    dni = _unique_dni()
     resp = await client.post(
         "/api/patients",
         json={
-            "cedula": cedula,
+            "dni": dni,
             "first_name": "TestPaciente",
             "last_name": "ApptTest",
             "university_relation": "estudiante",
@@ -167,7 +167,7 @@ class TestCreateAppointment:
             BASE, json=payload, headers=_auth_headers(token)
         )
         assert resp2.status_code == 409
-        assert "ya existe" in resp2.json()["message"].lower()
+        assert "already exists" in resp2.json()["message"].lower()
 
     @pytest.mark.asyncio
     async def test_create_appointment_missing_fields(self, client, token):
@@ -346,7 +346,7 @@ class TestCheckSlot:
     async def test_check_slot_free(self, client, token):
         fake_doctor = str(uuid.uuid4())
         resp = await client.get(
-            f"{BASE}/check-slot?doctor_id={fake_doctor}&fecha=2026-12-01&hora_inicio=10:00",
+            f"{BASE}/check-slot?doctor_id={fake_doctor}&date_str=2026-12-01&hora_inicio=10:00",
             headers=_auth_headers(token),
         )
         assert resp.status_code == 200
@@ -360,7 +360,7 @@ class TestAvailableSlots:
     async def test_available_slots_no_availability(self, client, token):
         fake_doctor = str(uuid.uuid4())
         resp = await client.get(
-            f"{BASE}/available-slots?doctor_id={fake_doctor}&fecha=2026-12-01&es_nuevo=false",
+            f"{BASE}/available-slots?doctor_id={fake_doctor}&date_str=2026-12-01&es_nuevo=false",
             headers=_auth_headers(token),
         )
         assert resp.status_code == 200

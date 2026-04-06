@@ -28,7 +28,7 @@ class PatientModel(Base, SoftDeleteMixin, AuditMixin):
     nhm: Mapped[int] = mapped_column(
         Integer, nullable=False, unique=True, index=True
     )
-    cedula: Mapped[str] = mapped_column(
+    dni: Mapped[str] = mapped_column(
         String(20), nullable=False, unique=True, index=True
     )
     first_name: Mapped[str] = mapped_column(String(100), nullable=False)

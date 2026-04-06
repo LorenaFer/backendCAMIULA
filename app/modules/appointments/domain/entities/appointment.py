@@ -23,7 +23,7 @@ class Appointment:
     created_by: Optional[str] = None
     # Embedded cross-module data (populated by joins)
     patient_name: Optional[str] = None
-    patient_cedula: Optional[str] = None
+    patient_dni: Optional[str] = None
     doctor_name: Optional[str] = None
     specialty_name: Optional[str] = None
     patient_university_relation: Optional[str] = None

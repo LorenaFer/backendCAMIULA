@@ -31,7 +31,7 @@ class MedicationRepository(ABC):
 
     @abstractmethod
     async def find_options(self) -> list[Medication]:
-        """Lista simplificada para selects: id, code, generic_name, pharmaceutical_form, unit_measure, current_stock."""
+        """Simplified list for dropdowns: id, code, generic_name, pharmaceutical_form, unit_measure, current_stock."""
         ...
 
     @abstractmethod
@@ -48,5 +48,5 @@ class MedicationRepository(ABC):
 
     @abstractmethod
     async def get_current_stock(self, medication_id: str) -> int:
-        """Suma de quantity_available en lotes activos y disponibles."""
+        """Suma de quantity_available en lotes activos y availables."""
         ...

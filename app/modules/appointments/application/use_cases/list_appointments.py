@@ -16,20 +16,20 @@ class ListAppointments:
         self,
         page: int,
         page_size: int,
-        fecha: Optional[str] = None,
+        date_str: Optional[str] = None,
         doctor_id: Optional[str] = None,
-        especialidad_id: Optional[str] = None,
-        estado: Optional[str] = None,
+        specialty_id: Optional[str] = None,
+        status_filter: Optional[str] = None,
         q: Optional[str] = None,
         fk_patient_id: Optional[str] = None,
     ) -> Tuple[List[Appointment], int]:
         return await self._repo.find_all(
             page=page,
             page_size=page_size,
-            fecha=fecha,
+            date_str=date_str,
             doctor_id=doctor_id,
-            especialidad_id=especialidad_id,
-            estado=estado,
+            specialty_id=specialty_id,
+            status_filter=status_filter,
             q=q,
             fk_patient_id=fk_patient_id,
         )
@@ -61,11 +61,11 @@ class ListDoctorDayAppointments:
     async def execute(
         self,
         doctor_id: str,
-        fecha: str,
+        date_str: str,
         exclude_cancelled: bool = True,
     ) -> List[Appointment]:
         return await self._repo.find_by_doctor_and_date(
             doctor_id=doctor_id,
-            fecha=fecha,
+            date_str=date_str,
             exclude_cancelled=exclude_cancelled,
         )

@@ -45,7 +45,7 @@ class ValidateTokenUseCase:
             )
 
         if user is None:
-            raise UnauthorizedException("Usuario no encontrado")
+            raise UnauthorizedException("Usuario not found")
 
         if user.user_status == "SUSPENDED":
             raise UnauthorizedException("Usuario suspendido")

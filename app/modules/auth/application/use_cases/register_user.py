@@ -11,7 +11,7 @@ from app.modules.auth.domain.repositories.user_repository import UserRepository
 
 
 class RegisterUserUseCase:
-    """Registra un nuevo usuario y le asigna el rol 'paciente' por defecto.
+    """Register a new user and assign the 'paciente' role by default.
 
     Complejidad: O(log n) — check email + INSERT + assign role.
     """
@@ -29,7 +29,7 @@ class RegisterUserUseCase:
     ) -> User:
         existing = await self._user_repo.get_by_email(dto.email)
         if existing is not None:
-            raise ConflictException("Ya existe un usuario con ese email")
+            raise ConflictException("A user with this email already exists")
 
         user = User(
             email=dto.email,
