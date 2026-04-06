@@ -123,8 +123,12 @@ async def get_available_slots(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
+    from app.modules.appointments.presentation.dependencies import get_availability_reader
+    from app.modules.doctors.domain.repositories.availability_reader import AvailabilityReader
+
     repo = SQLAlchemyAppointmentRepository(session)
-    slots = await AvailableSlots(repo, session).execute(
+    reader = get_availability_reader(session)
+    slots = await AvailableSlots(repo, reader).execute(
         doctor_id=doctor_id, fecha=fecha, es_nuevo=es_nuevo
     )
     data = [SlotResponse(**s) for s in slots]
@@ -139,7 +143,10 @@ async def get_available_dates(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
-    dates = await AvailableDates(session).execute(
+    from app.modules.appointments.presentation.dependencies import get_availability_reader
+
+    reader = get_availability_reader(session)
+    dates = await AvailableDates(reader).execute(
         doctor_id=doctor_id, year=year, month=month
     )
     return ok(data=dates, message="Fechas disponibles obtenidas")
