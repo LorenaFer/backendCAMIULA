@@ -27,11 +27,13 @@ from app.modules.inventory.infrastructure.models import (  # noqa: F401
     DispatchItemModel,
     DispatchLimitModel,
     DispatchModel,
+    InventoryMovementModel,
     MedicationModel,
     PrescriptionItemModel,
     PrescriptionModel,
     PurchaseOrderItemModel,
     PurchaseOrderModel,
+    StockAlertModel,
     SupplierModel,
 )
 from app.modules.doctors.infrastructure.models import (  # noqa: F401

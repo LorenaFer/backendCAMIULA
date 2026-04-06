@@ -17,6 +17,9 @@ from app.modules.inventory.application.use_cases.purchase_orders.receive_purchas
 from app.modules.inventory.infrastructure.repositories.sqlalchemy_batch_repository import (
     SQLAlchemyBatchRepository,
 )
+from app.modules.inventory.infrastructure.repositories.sqlalchemy_movement_repository import (
+    SQLAlchemyMovementRepository,
+)
 from app.modules.inventory.infrastructure.repositories.sqlalchemy_medication_repository import (
     SQLAlchemyMedicationRepository,
 )
@@ -145,4 +148,27 @@ async def receive_purchase_order(
     await ReceivePurchaseOrder(order_repo, batch_repo, medication_repo).execute(
         dto, received_by=user_id
     )
+
+    # Record entry movements for traceability
+    from datetime import datetime, timezone
+    movement_repo = SQLAlchemyMovementRepository(session)
+    for item in body.items:
+        # Resolve medication_id from the purchase order item
+        po_item_row = await order_repo.find_item_by_id(item.purchase_order_item_id)
+        if po_item_row:
+            med_id = po_item_row.fk_medication_id
+            balance = await movement_repo.get_current_balance(med_id)
+            await movement_repo.record_movement(
+                fk_medication_id=med_id,
+                movement_type="entry",
+                quantity=item.quantity_received,
+                balance_after=balance,
+                movement_date=datetime.now(timezone.utc),
+                created_by=user_id,
+                fk_purchase_order_id=order_id,
+                reference=f"PO receive {order_id[:8]}",
+                lot_number=item.lot_number,
+                unit_cost=item.unit_cost,
+            )
+
     return ok(message="Reception registered successfully.")

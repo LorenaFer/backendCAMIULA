@@ -21,6 +21,9 @@ from app.modules.inventory.infrastructure.repositories.sqlalchemy_batch_reposito
 from app.modules.inventory.infrastructure.repositories.sqlalchemy_dispatch_repository import (
     SQLAlchemyDispatchRepository,
 )
+from app.modules.inventory.infrastructure.repositories.sqlalchemy_movement_repository import (
+    SQLAlchemyMovementRepository,
+)
 from app.modules.inventory.infrastructure.repositories.sqlalchemy_limit_repository import (
     SQLAlchemyLimitRepository,
 )
@@ -124,6 +127,25 @@ async def create_dispatch(
         dispatch_repo=SQLAlchemyDispatchRepository(session),
         limit_repo=SQLAlchemyLimitRepository(session),
     )
+
+    # Record exit movements for traceability
+    from datetime import datetime, timezone
+    movement_repo = SQLAlchemyMovementRepository(session)
+    for item in dispatch.items:
+        balance = await movement_repo.get_current_balance(item.fk_medication_id)
+        await movement_repo.record_movement(
+            fk_medication_id=item.fk_medication_id,
+            movement_type="exit",
+            quantity=-item.quantity_dispatched,
+            balance_after=balance,
+            movement_date=datetime.now(timezone.utc),
+            created_by=user_id,
+            fk_batch_id=item.fk_batch_id,
+            fk_dispatch_id=dispatch.id,
+            reference=f"Dispatch {dispatch.id[:8]}",
+            notes=body.notes,
+        )
+
     return created(
         data=DispatchResponse(**dispatch.__dict__),
         message="Despacho ejecutado exitosamente",

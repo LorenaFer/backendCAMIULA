@@ -82,6 +82,25 @@ class DispatchStatus(str, enum.Enum):
     CANCELLED = "cancelled"
 
 
+class MovementType(str, enum.Enum):
+    ENTRY = "entry"
+    EXIT = "exit"
+    ADJUSTMENT = "adjustment"
+    EXPIRATION = "expiration"
+
+
+class AlertLevel(str, enum.Enum):
+    LOW = "low"
+    CRITICAL = "critical"
+    EXPIRED = "expired"
+
+
+class AlertStatus(str, enum.Enum):
+    ACTIVE = "active"
+    RESOLVED = "resolved"
+    ACKNOWLEDGED = "acknowledged"
+
+
 class LimitAppliesTo(str, enum.Enum):
     ALL = "all"
     STUDENT = "student"
@@ -547,5 +566,111 @@ class DispatchExceptionModel(Base, SoftDeleteMixin, AuditMixin):
     valid_until: Mapped[date] = mapped_column(Date, nullable=False)
     reason: Mapped[str] = mapped_column(String(500), nullable=False)
     authorized_by: Mapped[Optional[str]] = mapped_column(String(200))
+
+    # 5-8. status + audit → proporcionados por los mixins
+
+
+# ─────────────────────────────────────────────────────────────
+# PILAR 4 — INVENTORY MOVEMENTS (TRAZABILIDAD)
+# ─────────────────────────────────────────────────────────────
+
+
+class InventoryMovementModel(Base, SoftDeleteMixin, AuditMixin):
+    """Registro de cada movimiento de inventario para trazabilidad completa.
+
+    Cada entrada/salida/ajuste/expiración queda registrada con su tipo,
+    cantidad, referencia al origen (lote, despacho, orden de compra) y
+    el balance resultante tras el movimiento.
+    """
+
+    __tablename__ = "inventory_movements"
+
+    # 1. Identidad
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=lambda: str(uuid4()),
+    )
+
+    # 2. Relaciones
+    fk_medication_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("medications.id"), nullable=False, index=True
+    )
+    fk_batch_id: Mapped[Optional[str]] = mapped_column(
+        String(36), ForeignKey("batches.id"), index=True
+    )
+    fk_dispatch_id: Mapped[Optional[str]] = mapped_column(
+        String(36), ForeignKey("dispatches.id"), index=True
+    )
+    fk_purchase_order_id: Mapped[Optional[str]] = mapped_column(
+        String(36), ForeignKey("purchase_orders.id"), index=True
+    )
+
+    # 3. Dominio
+    movement_type: Mapped[str] = mapped_column(
+        String(20), nullable=False, index=True
+    )
+    quantity: Mapped[int] = mapped_column(Integer, nullable=False)
+    balance_after: Mapped[int] = mapped_column(Integer, nullable=False)
+    reference: Mapped[Optional[str]] = mapped_column(String(200))
+    lot_number: Mapped[Optional[str]] = mapped_column(String(100))
+    unit_cost: Mapped[Optional[float]] = mapped_column(Numeric(10, 2))
+    notes: Mapped[Optional[str]] = mapped_column(String(500))
+    movement_date: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+
+    # 5-8. status + audit → proporcionados por los mixins
+
+
+# ─────────────────────────────────────────────────────────────
+# PILAR 4 — STOCK ALERTS (ALERTAS PERSISTIDAS)
+# ─────────────────────────────────────────────────────────────
+
+
+class StockAlertModel(Base, SoftDeleteMixin, AuditMixin):
+    """Alerta de stock persistida para historial y notificaciones.
+
+    Cada vez que un medicamento cruza un umbral (low, critical, expired),
+    se genera un registro. Las alertas se resuelven automáticamente cuando
+    el stock se repone por encima del umbral.
+    """
+
+    __tablename__ = "stock_alerts"
+
+    # 1. Identidad
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=lambda: str(uuid4()),
+    )
+
+    # 2. Relaciones
+    fk_medication_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("medications.id"), nullable=False, index=True
+    )
+
+    # 3. Dominio
+    alert_level: Mapped[str] = mapped_column(
+        String(20), nullable=False, index=True
+    )
+    current_stock: Mapped[int] = mapped_column(Integer, nullable=False)
+    threshold: Mapped[int] = mapped_column(Integer, nullable=False)
+    message: Mapped[str] = mapped_column(String(500), nullable=False)
+    detected_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    resolved_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True)
+    )
+    resolved_by: Mapped[Optional[str]] = mapped_column(String(36))
+
+    # 4. Estado de negocio
+    alert_status: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default=AlertStatus.ACTIVE,
+        index=True,
+    )
 
     # 5-8. status + audit → proporcionados por los mixins
