@@ -7,7 +7,7 @@ from app.modules.auth.domain.repositories.user_repository import UserRepository
 
 
 class AssignRoleUseCase:
-    """Asigna un rol a un usuario.
+    """Assign a role to a user.
 
     Complejidad: O(log n) — verify user + verify role + INSERT junction.
     """
@@ -25,11 +25,11 @@ class AssignRoleUseCase:
     async def execute(self, dto: AssignRoleDTO, assigned_by: str) -> None:
         user = await self._user_repo.get_by_id(dto.user_id)
         if user is None:
-            raise NotFoundException("Usuario no encontrado")
+            raise NotFoundException("Usuario not found")
 
         role = await self._role_repo.get_by_name(dto.role_name)
         if role is None:
-            raise NotFoundException(f"Rol '{dto.role_name}' no encontrado")
+            raise NotFoundException(f"Rol '{dto.role_name}' not found")
 
         existing_roles = await self._user_repo.get_user_roles(dto.user_id)
         if dto.role_name in existing_roles:

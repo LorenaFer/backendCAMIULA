@@ -1,4 +1,4 @@
-"""Rutas FastAPI para el recurso Despacho (Dispatch)."""
+"""FastAPI routes for the Dispatch resource."""
 
 from typing import Optional
 
@@ -139,7 +139,7 @@ async def create_dispatch(
 
     return created(
         data=DispatchResponse(**dispatch.__dict__),
-        message="Despacho ejecutado exitosamente",
+        message="Dispatch executed successfully",
     )
 
 
@@ -147,7 +147,7 @@ async def create_dispatch(
 # Consultas
 # ──────────────────────────────────────────────────────────
 
-@router.get("/by-prescription/{prescription_id}", summary="Despachos de una receta")
+@router.get("/by-prescription/{prescription_id}", summary="Dispatches for a prescription")
 async def get_by_prescription(
     prescription_id: str,
     session: AsyncSession = Depends(get_db),
@@ -157,10 +157,10 @@ async def get_by_prescription(
     repo = get_dispatch_repo(session)
     dispatches = await repo.find_by_prescription(prescription_id)
     data = [DispatchResponse(**d.__dict__) for d in dispatches]
-    return ok(data=data, message="Despachos obtenidos exitosamente")
+    return ok(data=data, message="Dispatches retrieved successfully")
 
 
-@router.get("/by-patient/{patient_id}", summary="Historial de despachos de un paciente")
+@router.get("/by-patient/{patient_id}", summary="Dispatch history for a patient")
 async def get_by_patient(
     patient_id: str,
     prescription_number: Optional[str] = Query(None),
@@ -184,10 +184,10 @@ async def get_by_patient(
         page_size=page_size,
     )
     data = [DispatchResponse(**d.__dict__) for d in dispatches]
-    return paginated(data, total, page, page_size, "Historial de despachos obtenido")
+    return paginated(data, total, page, page_size, "Dispatch history retrieved")
 
 
-@router.get("/{id}", summary="Detalle de un despacho")
+@router.get("/{id}", summary="Dispatch detail")
 async def get_dispatch(
     id: str,
     session: AsyncSession = Depends(get_db),
@@ -197,10 +197,10 @@ async def get_dispatch(
     repo = get_dispatch_repo(session)
     dispatch = await repo.find_by_id(id)
     if not dispatch:
-        raise NotFoundException("Despacho no encontrado")
+        raise NotFoundException("Dispatch not found")
     return ok(
         data=DispatchResponse(**dispatch.__dict__),
-        message="Despacho obtenido exitosamente",
+        message="Dispatch retrieved successfully",
     )
 
 
@@ -208,7 +208,7 @@ async def get_dispatch(
 # Cancelación
 # ──────────────────────────────────────────────────────────
 
-@router.post("/{id}/cancel", summary="Cancelar un despacho y revertir stock")
+@router.post("/{id}/cancel", summary="Cancel a dispatch and revert stock")
 async def cancel_dispatch_endpoint(
     id: str,
     session: AsyncSession = Depends(get_db),
@@ -222,4 +222,4 @@ async def cancel_dispatch_endpoint(
         batch_repo=get_batch_repo(session),
         prescription_repo=get_prescription_repo(session),
     )
-    return ok(message="Despacho cancelado y stock revertido exitosamente")
+    return ok(message="Dispatch cancelled and stock reverted successfully")

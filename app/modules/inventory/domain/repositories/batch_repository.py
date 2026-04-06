@@ -25,7 +25,7 @@ class BatchRepository(ABC):
 
     @abstractmethod
     async def find_available_fefo(self, medication_id: str) -> list[Batch]:
-        """Lotes disponibles ordenados por expiration_date ASC (FEFO) con SELECT FOR UPDATE."""
+        """Lotes availables ordenados por expiration_date ASC (FEFO) con SELECT FOR UPDATE."""
         ...
 
     @abstractmethod

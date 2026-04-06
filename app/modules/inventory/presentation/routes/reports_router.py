@@ -82,7 +82,7 @@ def _enrich_batch_to_schema(b) -> EnrichedBatchResponse:
     "/stock",
     summary="Reporte completo de stock por medicamento",
     description=(
-        "Consolida el inventario disponible por medicamento. "
+        "Consolida el inventario available por medicamento. "
         "Solo incluye lotes con batch_status='available' y expiration_date >= hoy. "
         "Calcula stock_alert: 'ok' (>50), 'low' (≤50), 'critical' (≤10), 'expired' (0). "
         "Auto-generates stock alerts for medications crossing thresholds."
@@ -108,7 +108,7 @@ async def get_stock_report(
             critical_count=report.critical_count,
             expired_count=report.expired_count,
         ),
-        message="Reporte de stock generado exitosamente",
+        message="Stock report generated successfully",
     )
 
 
@@ -121,7 +121,7 @@ async def get_stock_report(
     summary="KPIs ejecutivos del inventario",
     description=(
         "Resumen para el panel de control: total de SKUs activos, "
-        "conteo por nivel de alerta y unidades disponibles totales."
+        "conteo por nivel de alerta y unidades availables totales."
     ),
 )
 async def get_inventory_summary(
@@ -133,7 +133,7 @@ async def get_inventory_summary(
     summary = await repo.get_inventory_summary()
     return ok(
         data=InventorySummaryResponse(**summary.__dict__),
-        message="Resumen de inventario generado exitosamente",
+        message="Inventory summary generated successfully",
     )
 
 
@@ -175,7 +175,7 @@ async def get_low_stock(
     "/expiration",
     summary="Lotes próximos a vencer",
     description=(
-        "Devuelve los lotes disponibles cuya expiration_date está dentro del "
+        "Devuelve los lotes availables cuya expiration_date está dentro del "
         "horizonte indicado en threshold_days (por defecto 90 días). "
         "Cada lote incluye datos del medicamento en el campo 'medication'."
     ),
@@ -281,7 +281,7 @@ async def get_consumption_report(
             period=report.period,
             items=[i.__dict__ for i in report.items],
         ),
-        message=f"Consumo del período {period} generado exitosamente",
+        message=f"Consumo del período {period} generated successfully",
     )
 
 
@@ -383,7 +383,7 @@ async def get_inventory_movements(
                 pages=pages,
             ),
         ),
-        message=f"{result.total} movimientos encontrados",
+        message=f"{result.total} movements found",
     )
 
 
@@ -429,7 +429,7 @@ async def get_stock_alerts(
             active_count=result.active_count,
             resolved_count=result.resolved_count,
         ),
-        message=f"{result.total} alertas encontradas ({result.active_count} activas)",
+        message=f"{result.total} alerts found ({result.active_count} active)",
     )
 
 
@@ -452,13 +452,13 @@ async def generate_stock_alerts(
     await session.commit()
     return ok(
         data={"new_alerts": new_count},
-        message=f"{new_count} nuevas alertas generadas",
+        message=f"{new_count} new alerts generated",
     )
 
 
 @router.patch(
     "/stock-alerts/{alert_id}/acknowledge",
-    summary="Marcar alerta como reconocida",
+    summary="Acknowledge alert",
 )
 async def acknowledge_alert(
     alert_id: str,
@@ -477,7 +477,7 @@ async def acknowledge_alert(
 
 @router.patch(
     "/stock-alerts/{alert_id}/resolve",
-    summary="Resolver alerta manualmente",
+    summary="Resolve alert manually",
 )
 async def resolve_alert(
     alert_id: str,

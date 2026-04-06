@@ -6,7 +6,7 @@ from app.modules.auth.domain.repositories.user_repository import UserRepository
 
 
 class GetUserProfileUseCase:
-    """Obtiene el perfil de un usuario con sus roles.
+    """Retrieve a user profile with their roles.
 
     Complejidad: O(log n) — lookup por ID indexado.
     """
@@ -17,7 +17,7 @@ class GetUserProfileUseCase:
     async def execute(self, user_id: str) -> User:
         user = await self._user_repo.get_by_id(user_id)
         if user is None:
-            raise NotFoundException("Usuario no encontrado")
+            raise NotFoundException("Usuario not found")
 
         user.roles = await self._user_repo.get_user_roles(user_id)
         return user

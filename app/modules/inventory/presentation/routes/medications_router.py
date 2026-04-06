@@ -1,4 +1,4 @@
-"""Rutas FastAPI para el recurso Medicamento."""
+"""FastAPI routes for the Medication resource."""
 
 from typing import Optional
 
@@ -39,7 +39,7 @@ from app.shared.schemas.responses import created, ok, paginated
 router = APIRouter(prefix="/medications", tags=["Inventory — Medications"])
 
 
-@router.get("", summary="Listar medicamentos")
+@router.get("", summary="List medications")
 async def list_medications(
     search: Optional[str] = Query(None, description="Búsqueda por nombre genérico"),
     status: Optional[str] = Query(None, description="Filtrar por medication_status"),
@@ -61,10 +61,10 @@ async def list_medications(
         page_size=page_size,
     )
     data = [MedicationResponse(**m.__dict__) for m in items]
-    return paginated(data, total, page, page_size, "Medicamentos obtenidos exitosamente")
+    return paginated(data, total, page, page_size, "Medications retrieved successfully")
 
 
-@router.get("/options", summary="Lista simplificada para selects")
+@router.get("/options", summary="Simplified list for dropdowns")
 async def get_medication_options(
     search: Optional[str] = Query(None, description="Filtrar por nombre genérico"),
     limit: int = Query(100, ge=1, le=500, description="Máximo de resultados"),
@@ -75,10 +75,10 @@ async def get_medication_options(
     repo = get_medication_repo(session)
     options = await repo.find_options(search=search, limit=limit)
     data = [MedicationOptionResponse(**m.__dict__) for m in options]
-    return ok(data=data, message="Opciones de medicamentos obtenidas")
+    return ok(data=data, message="Medication options retrieved")
 
 
-@router.get("/{id}", summary="Detalle de medicamento con stock actual")
+@router.get("/{id}", summary="Medication detail with current stock")
 async def get_medication(
     id: str,
     session: AsyncSession = Depends(get_db),
@@ -88,14 +88,14 @@ async def get_medication(
     repo = get_medication_repo(session)
     medication = await GetMedicationById(repo).execute(id)
     if not medication:
-        raise NotFoundException("Medicamento no encontrado.")
+        raise NotFoundException("Medication not found.")
     return ok(
         data=MedicationResponse(**medication.__dict__),
-        message="Medicamento obtenido exitosamente",
+        message="Medication retrieved successfully",
     )
 
 
-@router.post("", summary="Registrar nuevo medicamento", status_code=201)
+@router.post("", summary="Create a new medication", status_code=201)
 async def create_medication(
     body: MedicationCreate,
     session: AsyncSession = Depends(get_db),
@@ -107,11 +107,11 @@ async def create_medication(
     medication = await CreateMedication(repo).execute(dto, created_by=user_id)
     return created(
         data=MedicationResponse(**medication.__dict__),
-        message="Medicamento registrado exitosamente",
+        message="Medication created successfully",
     )
 
 
-@router.patch("/{id}", summary="Actualizar medicamento")
+@router.patch("/{id}", summary="Update medication")
 async def update_medication(
     id: str,
     body: MedicationUpdate,
@@ -124,11 +124,11 @@ async def update_medication(
     medication = await UpdateMedication(repo).execute(id, dto, updated_by=user_id)
     return ok(
         data=MedicationResponse(**medication.__dict__),
-        message="Medicamento actualizado exitosamente",
+        message="Medication updated successfully",
     )
 
 
-@router.delete("/{id}", summary="Eliminar medicamento (soft-delete)")
+@router.delete("/{id}", summary="Delete medication (soft-delete)")
 async def delete_medication(
     id: str,
     session: AsyncSession = Depends(get_db),
@@ -137,4 +137,4 @@ async def delete_medication(
     """Soft-delete a medication from the catalog."""
     repo = get_medication_repo(session)
     await SoftDeleteMedication(repo).execute(id, deleted_by=user_id)
-    return ok(message="Medicamento eliminado exitosamente")
+    return ok(message="Medication deleted successfully")

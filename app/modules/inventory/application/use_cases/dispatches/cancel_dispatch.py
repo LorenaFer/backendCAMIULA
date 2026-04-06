@@ -25,7 +25,7 @@ async def cancel_dispatch(
     # ── 1. Cargar despacho ────────────────────────────────────────────────────
     dispatch = await dispatch_repo.find_by_id(dispatch_id)
     if not dispatch:
-        raise NotFoundException("Despacho no encontrado")
+        raise NotFoundException("Dispatch not found")
 
     if dispatch.dispatch_status == "cancelled":
         raise ForbiddenException(

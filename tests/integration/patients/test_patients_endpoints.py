@@ -112,7 +112,7 @@ class TestCreatePatient:
             headers=_auth_headers(token),
         )
         assert resp.status_code == 409
-        assert "ya existe" in resp.json()["message"].lower()
+        assert "already exists" in resp.json()["message"].lower()
 
     @pytest.mark.asyncio
     async def test_create_patient_missing_fields(self, client, token):

@@ -95,7 +95,7 @@ async def get_stats(
         specialty_id=specialty_id,
         status_filter=status_filter,
     )
-    return ok(data=CitasStats(**stats), message="Estadisticas obtenidas exitosamente")
+    return ok(data=CitasStats(**stats), message="Statistics retrieved successfully")
 
 
 @router.get("/check-slot", summary="Check if a slot is occupied")
@@ -113,7 +113,7 @@ async def check_slot(
     )
     return ok(
         data=CheckSlotResponse(occupied=occupied),
-        message="Disponibilidad verificada",
+        message="Availability verified",
     )
 
 
@@ -135,7 +135,7 @@ async def get_available_slots(
         doctor_id=doctor_id, date_str=date_str, es_nuevo=es_nuevo
     )
     data = [SlotResponse(**s) for s in slots]
-    return ok(data=data, message="Slots disponibles obtenidos")
+    return ok(data=data, message="Available slots retrieved")
 
 
 @router.get("/available-dates", summary="Dates with availability in a month")
@@ -153,7 +153,7 @@ async def get_available_dates(
     dates = await AvailableDates(reader).execute(
         doctor_id=doctor_id, year=year, month=month
     )
-    return ok(data=dates, message="Fechas disponibles obtenidas")
+    return ok(data=dates, message="Available dates retrieved")
 
 
 @router.get("/{appointment_id}", summary="Get appointment detail")
@@ -167,7 +167,7 @@ async def get_appointment(
     appointment = await GetAppointment(repo).execute(appointment_id)
     return ok(
         data=AppointmentResponse(**appointment.__dict__),
-        message="Cita obtenida exitosamente",
+        message="Appointment retrieved successfully",
     )
 
 
@@ -200,7 +200,7 @@ async def list_appointments(
             exclude_cancelled=exclude_cancelled,
         )
         data = [AppointmentResponse(**a.__dict__) for a in items]
-        return ok(data=data, message="Citas del month_str obtenidas exitosamente")
+        return ok(data=data, message="Month appointments retrieved successfully")
 
     # Doctor day view: GET /appointments?doctor_id=X&fecha=X&exclude_cancelled=true
     if doctor_id and date_str and exclude_cancelled:
@@ -210,7 +210,7 @@ async def list_appointments(
             exclude_cancelled=exclude_cancelled,
         )
         data = [AppointmentResponse(**a.__dict__) for a in items]
-        return ok(data=data, message="Citas del dia obtenidas exitosamente")
+        return ok(data=data, message="Day appointments retrieved successfully")
 
     # General paginated list
     items, total = await ListAppointments(repo).execute(
@@ -224,7 +224,7 @@ async def list_appointments(
         fk_patient_id=fk_patient_id,
     )
     data = [AppointmentResponse(**a.__dict__) for a in items]
-    return paginated(data, total, page, page_size, "Citas obtenidas exitosamente")
+    return paginated(data, total, page, page_size, "Appointments retrieved successfully")
 
 
 @router.post("", summary="Create appointment", status_code=201)
@@ -239,7 +239,7 @@ async def create_appointment(
     appointment = await CreateAppointment(repo).execute(dto, created_by=user_id)
     return created(
         data=AppointmentResponse(**appointment.__dict__),
-        message="Cita creada exitosamente",
+        message="Appointment created successfully",
     )
 
 
@@ -259,5 +259,5 @@ async def update_appointment_status(
     )
     return ok(
         data=AppointmentResponse(**appointment.__dict__),
-        message="Estado de cita actualizado exitosamente",
+        message="Appointment status updated successfully",
     )

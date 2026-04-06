@@ -72,7 +72,7 @@ async def get_availability(
     repo = get_availability_repo(session)
     items = await GetAvailability(repo).execute(doctor_id, day_of_week=dow)
     data = [AvailabilityResponse(**a.__dict__) for a in items]
-    return ok(data=data, message="Disponibilidad obtenida exitosamente")
+    return ok(data=data, message="Availability retrieved successfully")
 
 
 @router.post(
@@ -95,7 +95,7 @@ async def create_availability(
     block = await CreateAvailability(repo).execute(dto, created_by=user_id)
     return created(
         data=AvailabilityResponse(**block.__dict__),
-        message="Bloque de disponibilidad creado exitosamente",
+        message="Availability block created successfully",
     )
 
 
@@ -149,4 +149,4 @@ async def get_exceptions(
     repo = get_exception_repo(session)
     items = await GetExceptions(repo).execute(doctor_id, exception_date=date)
     data = [ExceptionResponse(**e.__dict__) for e in items]
-    return ok(data=data, message="Excepciones obtenidas exitosamente")
+    return ok(data=data, message="Exceptions retrieved successfully")

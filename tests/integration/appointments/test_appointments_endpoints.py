@@ -167,7 +167,7 @@ class TestCreateAppointment:
             BASE, json=payload, headers=_auth_headers(token)
         )
         assert resp2.status_code == 409
-        assert "ya existe" in resp2.json()["message"].lower()
+        assert "already exists" in resp2.json()["message"].lower()
 
     @pytest.mark.asyncio
     async def test_create_appointment_missing_fields(self, client, token):

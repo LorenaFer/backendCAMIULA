@@ -57,7 +57,7 @@ class ReceivePurchaseOrder:
         # ── 1. Validar que la orden existe y su estado es receptible ──────
         order = await self._order_repo.find_by_id(dto.order_id)
         if not order:
-            raise NotFoundException("Orden de compra no encontrada.")
+            raise NotFoundException("Purchase order not found.")
 
         if order.order_status not in _RECEIVABLE_STATUSES:
             raise ForbiddenException(
@@ -76,7 +76,7 @@ class ReceivePurchaseOrder:
         for received_item in dto.items:
             if received_item.quantity_received <= 0:
                 raise ForbiddenException(
-                    "La cantidad recibida debe ser mayor a cero.",
+                    "Received quantity must be greater than zero.",
                     code="INVALID_QUANTITY",
                 )
             if received_item.purchase_order_item_id not in valid_item_ids:
@@ -94,7 +94,7 @@ class ReceivePurchaseOrder:
         for mid in med_ids:
             if not await self._medication_repo.find_by_id(mid):
                 raise NotFoundException(
-                    f"Medicamento con ID '{mid}' no encontrado en el catálogo."
+                    f"Medication with ID '{mid}' not found en el catálogo."
                 )
 
         # ── 2b. Procesar cada ítem recibido ───────────────────────────────
@@ -103,7 +103,7 @@ class ReceivePurchaseOrder:
             po_item = items_by_id[received_item.purchase_order_item_id]
 
             # Crear nuevo lote vinculado al medicamento existente.
-            # quantity_available = quantity_received: el lote entra disponible
+            # quantity_available = quantity_received: el lote entra available
             # en su totalidad; el stock del catálogo se recalcula desde los
             # lotes activos, por lo que esto constituye el incremento de stock.
             await self._batch_repo.create(

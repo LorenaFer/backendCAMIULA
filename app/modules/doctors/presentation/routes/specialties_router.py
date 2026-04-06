@@ -42,7 +42,7 @@ async def list_specialties(
     repo = get_specialty_repo(session)
     items = await GetSpecialties(repo).execute()
     data = [SpecialtyResponse(**s.__dict__) for s in items]
-    return ok(data=data, message="Especialidades obtenidas exitosamente")
+    return ok(data=data, message="Specialties retrieved successfully")
 
 
 @router.post("", summary="Create specialty", status_code=201)
@@ -57,7 +57,7 @@ async def create_specialty(
     specialty = await CreateSpecialty(repo).execute(dto, created_by=user_id)
     return created(
         data=SpecialtyResponse(**specialty.__dict__),
-        message="Especialidad creada exitosamente",
+        message="Specialty created successfully",
     )
 
 
@@ -74,7 +74,7 @@ async def update_specialty(
     specialty = await UpdateSpecialty(repo).execute(id, dto, updated_by=user_id)
     return ok(
         data=SpecialtyResponse(**specialty.__dict__),
-        message="Especialidad actualizada exitosamente",
+        message="Specialty updated successfully",
     )
 
 
@@ -89,5 +89,5 @@ async def toggle_specialty(
     specialty = await ToggleSpecialty(repo).execute(id, updated_by=user_id)
     return ok(
         data=SpecialtyResponse(**specialty.__dict__),
-        message="Estado de especialidad actualizado exitosamente",
+        message="Specialty status updated successfully",
     )

@@ -21,7 +21,7 @@ class RegisterPatient:
         existing = await self._repo.find_by_dni(dto.dni)
         if existing:
             raise ConflictException(
-                f"Ya existe un paciente registrado con la dni '{dto.dni}'."
+                f"A patient with this DNI already exists '{dto.dni}'."
             )
 
         # If family member, validate holder exists
@@ -29,12 +29,12 @@ class RegisterPatient:
         if dto.university_relation in _FAMILY_CODES:
             if not dto.holder_dni:
                 raise NotFoundException(
-                    "Se requiere la dni del titular para familiares."
+                    "Holder DNI is required for family members."
                 )
             holder = await self._repo.find_by_dni(dto.holder_dni)
             if not holder:
                 raise NotFoundException(
-                    f"Titular con dni '{dto.holder_dni}' no encontrado."
+                    f"Holder with DNI '{dto.holder_dni}' not found."
                 )
             holder_id = holder.id
 

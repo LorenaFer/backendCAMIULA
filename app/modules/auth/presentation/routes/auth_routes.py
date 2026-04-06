@@ -28,7 +28,7 @@ async def login(
     body: LoginRequest,
     db: AsyncSession = Depends(get_db),
 ):
-    """Autenticar usuario con email y password (proveedor local)."""
+    """Authenticate user with email and password (local provider)."""
     use_case = LoginUserUseCase(
         user_repo=get_user_repo(db),
     )
@@ -41,7 +41,7 @@ async def login(
             token_type=result.token_type,
             expires_in=result.expires_in,
         ).model_dump(),
-        message="Login exitoso",
+        message="Login successful",
     )
 
 
@@ -54,7 +54,7 @@ async def register(
     body: RegisterRequest,
     db: AsyncSession = Depends(get_db),
 ):
-    """Registrar nuevo usuario. Se asigna rol 'paciente' por defecto."""
+    """Register a new user. Assigns the 'paciente' role by default."""
     use_case = RegisterUserUseCase(
         user_repo=get_user_repo(db),
         role_repo=get_role_repo(db),
@@ -76,7 +76,7 @@ async def register(
             user_status=user.user_status,
             roles=user.roles,
         ).model_dump(),
-        message="Usuario registrado exitosamente",
+        message="User registered successfully",
     )
 
 

@@ -15,5 +15,5 @@ class ToggleSpecialty:
     async def execute(self, id: str, updated_by: str) -> Specialty:
         existing = await self._repo.find_by_id(id)
         if not existing:
-            raise NotFoundException("Especialidad no encontrada.")
+            raise NotFoundException("Specialty not found.")
         return await self._repo.toggle_status(id, updated_by)

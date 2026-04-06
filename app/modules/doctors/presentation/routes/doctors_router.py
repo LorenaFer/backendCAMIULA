@@ -31,7 +31,7 @@ async def get_doctor_options(
     repo = get_doctor_repo(session)
     items = await GetDoctorOptions(repo).execute()
     data = [DoctorOptionResponse(**d.__dict__) for d in items]
-    return ok(data=data, message="Opciones de doctores obtenidas")
+    return ok(data=data, message="Doctor options retrieved")
 
 
 @router.get("", summary="List active doctors with specialty")
@@ -43,4 +43,4 @@ async def list_doctors(
     repo = get_doctor_repo(session)
     items = await GetDoctors(repo).execute()
     data = [DoctorResponse(**d.__dict__) for d in items]
-    return ok(data=data, message="Doctores obtenidos exitosamente")
+    return ok(data=data, message="Doctors retrieved successfully")

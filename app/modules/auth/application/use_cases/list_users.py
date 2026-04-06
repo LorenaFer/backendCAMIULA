@@ -7,7 +7,7 @@ from app.modules.auth.domain.repositories.user_repository import UserRepository
 
 
 class ListUsersUseCase:
-    """Lista usuarios con paginación.
+    """List users with paginatión.
 
     Complejidad: O(log n + k) — COUNT indexado + SELECT LIMIT k.
     """

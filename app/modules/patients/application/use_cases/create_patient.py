@@ -16,7 +16,7 @@ class CreatePatient:
         existing = await self._repo.find_by_dni(dto.dni)
         if existing:
             raise ConflictException(
-                f"Ya existe un paciente registrado con la dni '{dto.dni}'."
+                f"A patient with this DNI already exists '{dto.dni}'."
             )
 
         nhm = await self._repo.get_next_nhm()

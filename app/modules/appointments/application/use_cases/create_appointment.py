@@ -23,7 +23,7 @@ class CreateAppointment:
         )
         if is_booked:
             raise ConflictException(
-                "Ya existe una cita para este doctor en la misma date_str y hora."
+                "An appointment already exists for this doctor at the same date and time."
             )
 
         data = {

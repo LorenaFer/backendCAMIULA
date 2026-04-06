@@ -75,7 +75,7 @@ async def get_patient_full(
 
     return ok(
         data=PatientResponse(**patient.__dict__) if patient else None,
-        message="Paciente obtenido exitosamente" if patient else "Paciente no encontrado",
+        message="Patient retrieved successfully" if patient else "Patient not found",
     )
 
 
@@ -111,7 +111,7 @@ async def list_or_search_patients(
         patient = await SearchPatientByNhm(repo).execute(nhm)
         return ok(
             data=PatientPublicResponse(**patient.__dict__) if patient else None,
-            message="Paciente encontrado" if patient else "Paciente no encontrado",
+            message="Paciente encontrado" if patient else "Patient not found",
         )
 
     # Search by dni -> returns PatientPublic | null
@@ -119,13 +119,13 @@ async def list_or_search_patients(
         patient = await SearchPatientByDni(repo).execute(dni)
         return ok(
             data=PatientPublicResponse(**patient.__dict__) if patient else None,
-            message="Paciente encontrado" if patient else "Paciente no encontrado",
+            message="Paciente encontrado" if patient else "Patient not found",
         )
 
     # Paginated list with optional text search
     items, total = await repo.find_all(page, page_size, search=search)
     data = [PatientResponse(**p.__dict__) for p in items]
-    return paginated(data, total, page, page_size, "Pacientes obtenidos exitosamente")
+    return paginated(data, total, page, page_size, "Patients retrieved successfully")
 
 
 @router.get("/{patient_id}", summary="Get patient by ID")
@@ -139,10 +139,10 @@ async def get_patient_by_id(
     patient = await repo.find_by_id(patient_id)
     if not patient:
         from app.core.exceptions import NotFoundException
-        raise NotFoundException("Paciente no encontrado")
+        raise NotFoundException("Patient not found")
     return ok(
         data=PatientResponse(**patient.__dict__),
-        message="Paciente obtenido exitosamente",
+        message="Patient retrieved successfully",
     )
 
 
@@ -158,7 +158,7 @@ async def create_patient(
     patient = await CreatePatient(repo).execute(dto, created_by=user_id)
     return created(
         data=PatientResponse(**patient.__dict__),
-        message="Paciente creado exitosamente",
+        message="Patient created successfully",
     )
 
 
@@ -174,5 +174,5 @@ async def register_patient(
     patient = await RegisterPatient(repo).execute(dto, created_by=user_id)
     return created(
         data=PatientPublicResponse(**patient.__dict__),
-        message="Paciente registrado exitosamente",
+        message="Patient registered successfully",
     )

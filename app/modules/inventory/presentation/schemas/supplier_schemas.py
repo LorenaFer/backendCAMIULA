@@ -13,10 +13,10 @@ class SupplierCreate(BaseModel):
     phone: Optional[str] = Field(None, max_length=20, description="Phone number", example="0212-1234567")
     email: Optional[str] = Field(None, max_length=200, description="Contact email", example="ventas@dfn.com.ve")
     contact_name: Optional[str] = Field(None, max_length=200, description="Contact person name", example="Roberto Diaz")
-    payment_terms: Optional[str] = Field(None, max_length=500, description="Payment terms/conditions", example="Net 30 dias")
+    payment_terms: Optional[str] = Field(None, max_length=500, description="Payment terms/conditions", example="Net 30 days")
 
     model_config = ConfigDict(json_schema_extra={
-        "example": {"name": "Distribuidora Farmaceutica Nacional", "rif": "J-12345678-9", "phone": "0212-1234567", "email": "ventas@dfn.com.ve", "contact_name": "Roberto Diaz", "payment_terms": "Net 30 dias"}
+        "example": {"name": "Distribuidora Farmaceutica Nacional", "rif": "J-12345678-9", "phone": "0212-1234567", "email": "ventas@dfn.com.ve", "contact_name": "Roberto Diaz", "payment_terms": "Net 30 days"}
     })
 
 
@@ -42,7 +42,7 @@ class SupplierResponse(BaseModel):
     phone: Optional[str] = Field(None, description="Phone", example="0212-1234567")
     email: Optional[str] = Field(None, description="Email", example="ventas@dfn.com.ve")
     contact_name: Optional[str] = Field(None, description="Contact person", example="Roberto Diaz")
-    payment_terms: Optional[str] = Field(None, description="Payment terms", example="Net 30 dias")
+    payment_terms: Optional[str] = Field(None, description="Payment terms", example="Net 30 days")
     supplier_status: str = Field(description="Status: active or inactive", example="active")
     created_at: Optional[str] = Field(None, description="Creation timestamp", example="2026-01-01T00:00:00+00:00")
 

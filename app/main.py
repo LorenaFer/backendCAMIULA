@@ -328,7 +328,7 @@ def create_app() -> FastAPI:
                                 "schema": error_schema,
                                 "example": {
                                     "status": "error",
-                                    "message": "Error de validacion",
+                                    "message": "Validation error",
                                     "data": [{"field": "email", "message": "Invalid email format"}],
                                 },
                             }
@@ -355,19 +355,19 @@ def create_app() -> FastAPI:
                 if "401" not in responses:
                     responses["401"] = {
                         "description": "Unauthorized — missing or invalid JWT token",
-                        **_error_example("Token invalido o expirado"),
+                        **_error_example("Invalid or expired token"),
                     }
 
                 if method in ("get",) and "{" in path_str and "404" not in responses:
                     responses["404"] = {
                         "description": "Not found — the requested resource does not exist",
-                        **_error_example("Recurso no encontrado"),
+                        **_error_example("Recurso not found"),
                     }
 
                 if method in ("post",) and "409" not in responses:
                     responses["409"] = {
                         "description": "Conflict — a resource with this identifier already exists",
-                        **_error_example("Ya existe un recurso con ese identificador"),
+                        **_error_example("A resource with this identifier already exists"),
                     }
 
                 # Add code samples (x-codeSamples) for ReDoc
@@ -382,7 +382,7 @@ def create_app() -> FastAPI:
     @app.get("/api/health", tags=["Health"], response_model=StandardResponse[None])
     async def health_check():
         """Returns server status. Use to verify the API is running."""
-        return ok(message="Servidor funcionando correctamente")
+        return ok(message="Server is running")
 
     # Module routers
     from app.modules.auth.router import router as auth_router

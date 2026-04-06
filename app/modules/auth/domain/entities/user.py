@@ -18,7 +18,7 @@ class User:
     permissions: Set[str] = field(default_factory=set)
 
     def get_external_sub(self, provider: str) -> Optional[str]:
-        """Obtiene el sub de un proveedor externo específico."""
+        """Gets the sub from a specific external providífico."""
         if self.external_auth and provider in self.external_auth:
             return self.external_auth[provider].get("sub")
         return None
