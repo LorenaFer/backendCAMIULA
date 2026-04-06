@@ -29,30 +29,11 @@ from app.modules.patients.infrastructure.models import PatientModel
 from app.shared.database.mixins import RecordStatus
 
 
-def _parse_date(value: Optional[str]) -> date:
-    """Return a ``date`` from an ISO string or today's date."""
-    if value:
-        return date.fromisoformat(value)
-    return date.today()
-
-
-def _period_range(fecha: date, periodo: str) -> Tuple[date, date]:
-    """Return (start, end) inclusive date range for the given period."""
-    if periodo == "week":
-        start = fecha - timedelta(days=fecha.weekday())
-        end = start + timedelta(days=6)
-    elif periodo == "month":
-        start = fecha.replace(day=1)
-        next_month = (fecha.replace(day=28) + timedelta(days=4)).replace(day=1)
-        end = next_month - timedelta(days=1)
-    elif periodo == "year":
-        start = fecha.replace(month=1, day=1)
-        end = fecha.replace(month=12, day=31)
-    else:
-        # default: single day
-        start = fecha
-        end = fecha
-    return start, end
+# Pure functions re-exported from domain layer for backward compatibility
+from app.modules.dashboard.domain.date_utils import (  # noqa: F401
+    parse_date as _parse_date,
+    period_range as _period_range,
+)
 
 
 _ACTIVE = RecordStatus.ACTIVE.value
