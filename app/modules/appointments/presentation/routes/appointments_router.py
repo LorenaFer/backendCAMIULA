@@ -59,6 +59,7 @@ async def get_heatmap(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
+    """Appointment frequency heatmap: count per day-of-week and hour. Filter by date range."""
     from datetime import date as _date
 
     from app.modules.dashboard.infrastructure.dashboard_query_service import (
@@ -86,6 +87,7 @@ async def get_stats(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
+    """Aggregated appointment statistics: counts by status, specialty, doctor, patient type, daily trend, and peak hours."""
     repo = get_appointment_repo(session)
     stats = await GetAppointmentStats(repo).execute(
         fecha=fecha,
@@ -104,6 +106,7 @@ async def check_slot(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
+    """Check if a specific time slot is already occupied. Returns occupied: true/false."""
     repo = get_appointment_repo(session)
     occupied = await CheckSlot(repo).execute(
         doctor_id=doctor_id, fecha=fecha, hora_inicio=hora_inicio
@@ -122,6 +125,7 @@ async def get_available_slots(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
+    """Compute available time slots for a doctor on a date. Considers availability blocks, exceptions, and existing appointments. Duration: 60min for new patients, 30min for returning."""
     from app.modules.appointments.presentation.dependencies import get_availability_reader
     from app.modules.doctors.domain.repositories.availability_reader import AvailabilityReader
 
@@ -142,6 +146,7 @@ async def get_available_dates(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
+    """List dates with availability in a given month. Excludes weekends, past dates, days without blocks, and days with exceptions."""
     from app.modules.appointments.presentation.dependencies import get_availability_reader
 
     reader = get_availability_reader(session)
@@ -157,6 +162,7 @@ async def get_appointment(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
+    """Retrieve full appointment details including patient name, doctor name, and specialty."""
     repo = get_appointment_repo(session)
     appointment = await GetAppointment(repo).execute(appointment_id)
     return ok(
@@ -180,6 +186,7 @@ async def list_appointments(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
+    """List appointments with multiple view modes: doctor month view, doctor day view, or general list with search and pagination."""
     repo = get_appointment_repo(session)
 
     # Doctor month view: GET /appointments?doctor_id=X&mes=YYYY-MM&excluir_canceladas=true
@@ -226,6 +233,7 @@ async def create_appointment(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
+    """Create a new appointment. Validates no double-booking using SELECT FOR UPDATE."""
     repo = get_appointment_repo(session)
     dto = CreateAppointmentDTO(**body.model_dump())
     appointment = await CreateAppointment(repo).execute(dto, created_by=user_id)
@@ -242,6 +250,7 @@ async def update_appointment_status(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
+    """Transition an appointment through the state machine. Valid: pendiente -> confirmada/cancelada/atendida/no_asistio, confirmada -> atendida/cancelada/no_asistio."""
     repo = get_appointment_repo(session)
     appointment = await UpdateAppointmentStatus(repo).execute(
         appointment_id=appointment_id,

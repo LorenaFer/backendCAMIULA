@@ -29,6 +29,7 @@ async def list_batches(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """List inventory batches with filters: medication_id, batch_status, expiring_before. Ordered by expiration date (FEFO)."""
     repo = get_batch_repo(session)
     items, total = await repo.find_all(
         medication_id=medication_id,
@@ -47,6 +48,7 @@ async def get_batch(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Retrieve a batch by UUID with lot details."""
     repo = get_batch_repo(session)
     batch = await repo.find_by_id(id)
     if not batch:

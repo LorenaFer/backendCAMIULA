@@ -29,6 +29,7 @@ async def list_suppliers(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """List all suppliers with pagination including RIF, contact info, and payment terms."""
     repo = get_supplier_repo(session)
     items, total = await repo.find_all(
         search=search,
@@ -45,6 +46,7 @@ async def get_supplier_options(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Active suppliers for dropdown selects. Returns id, name, and RIF only."""
     repo = get_supplier_repo(session)
     options = await repo.find_options()
     data = [SupplierOptionResponse(**s.__dict__) for s in options]
@@ -57,6 +59,7 @@ async def get_supplier(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Retrieve a supplier by UUID."""
     repo = get_supplier_repo(session)
     supplier = await repo.find_by_id(id)
     if not supplier:
@@ -73,6 +76,7 @@ async def create_supplier(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Register a new supplier. The RIF must be unique."""
     repo = get_supplier_repo(session)
 
     existing = await repo.find_by_rif(body.rif)
@@ -94,6 +98,7 @@ async def update_supplier(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Update supplier information."""
     repo = get_supplier_repo(session)
 
     existing = await repo.find_by_id(id)

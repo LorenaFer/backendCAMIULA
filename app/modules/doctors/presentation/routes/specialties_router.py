@@ -38,6 +38,7 @@ async def list_specialties(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
+    """List all medical specialties. Returns id, name, and active status."""
     repo = get_specialty_repo(session)
     items = await GetSpecialties(repo).execute()
     data = [SpecialtyResponse(**s.__dict__) for s in items]
@@ -50,6 +51,7 @@ async def create_specialty(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Create a new medical specialty. The name must be unique."""
     repo = get_specialty_repo(session)
     dto = CreateSpecialtyDTO(**body.model_dump())
     specialty = await CreateSpecialty(repo).execute(dto, created_by=user_id)
@@ -66,6 +68,7 @@ async def update_specialty(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Update an existing specialty's name or description."""
     repo = get_specialty_repo(session)
     dto = UpdateSpecialtyDTO(**body.model_dump(exclude_none=True))
     specialty = await UpdateSpecialty(repo).execute(id, dto, updated_by=user_id)
@@ -81,6 +84,7 @@ async def toggle_specialty(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Toggle a specialty's active/inactive status."""
     repo = get_specialty_repo(session)
     specialty = await ToggleSpecialty(repo).execute(id, updated_by=user_id)
     return ok(

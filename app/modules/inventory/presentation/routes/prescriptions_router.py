@@ -29,6 +29,7 @@ async def list_prescriptions(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
+    """Search prescriptions by appointment_id, prescription_number, or patient_id. Includes item details with medication info."""
     repo = get_prescription_repo(session)
 
     # Single-result lookups
@@ -66,6 +67,7 @@ async def get_prescription(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
+    """Retrieve a prescription with all items and medication details."""
     repo = get_prescription_repo(session)
     prescription = await repo.find_by_id(id)
     if not prescription:
@@ -82,6 +84,7 @@ async def create_prescription(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Create a new prescription. prescription_number is auto-generated. fk_doctor_id resolved from appointment if not provided."""
     repo = get_prescription_repo(session)
 
     # Resolve fk_doctor_id from appointment if not provided

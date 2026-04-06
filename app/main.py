@@ -126,6 +126,7 @@ def create_app() -> FastAPI:
     # Health
     @app.get("/api/health", tags=["Health"], response_model=StandardResponse[None])
     async def health_check():
+        """Returns server status. Use to verify the API is running."""
         return ok(message="Servidor funcionando correctamente")
 
     # Module routers

@@ -48,6 +48,7 @@ async def availability_summary(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
+    """Aggregated availability summary grouped by specialty. Used by the dashboard."""
     from app.modules.dashboard.infrastructure.dashboard_query_service import (
         DashboardQueryService,
     )
@@ -67,6 +68,7 @@ async def get_availability(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
+    """Get time blocks when a doctor is available on a specific day of the week. day_of_week: 1=Monday, 7=Sunday."""
     repo = get_availability_repo(session)
     items = await GetAvailability(repo).execute(doctor_id, day_of_week=dow)
     data = [AvailabilityResponse(**a.__dict__) for a in items]
@@ -84,6 +86,7 @@ async def create_availability(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Create a new availability time block for a doctor. Specify day_of_week (1-7), start_time, end_time (HH:MM), and slot_duration."""
     repo = get_availability_repo(session)
     dto = CreateAvailabilityDTO(
         fk_doctor_id=doctor_id,
@@ -108,6 +111,7 @@ async def update_availability(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Update an existing availability block's time range or slot duration."""
     repo = get_availability_repo(session)
     dto = UpdateAvailabilityDTO(**body.model_dump(exclude_none=True))
     await UpdateAvailability(repo).execute(doctor_id, block_id, dto, updated_by=user_id)
@@ -125,6 +129,7 @@ async def delete_availability(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Remove an availability block (hard delete, not soft-delete)."""
     repo = get_availability_repo(session)
     await DeleteAvailability(repo).execute(doctor_id, block_id, deleted_by=user_id)
     return Response(status_code=204)
@@ -140,6 +145,7 @@ async def get_exceptions(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
+    """Check if a doctor has a day-off exception on a specific date."""
     repo = get_exception_repo(session)
     items = await GetExceptions(repo).execute(doctor_id, exception_date=date)
     data = [ExceptionResponse(**e.__dict__) for e in items]

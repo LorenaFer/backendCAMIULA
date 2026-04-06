@@ -50,6 +50,7 @@ async def list_medications(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
+    """List medications with current stock levels computed from active batches. Supports search, status filter, therapeutic_class, and category_id."""
     repo = get_medication_repo(session)
     items, total = await GetMedications(repo).execute(
         search=search,
@@ -70,6 +71,7 @@ async def get_medication_options(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
+    """Simplified medication list for dropdown selects. Only active medications."""
     repo = get_medication_repo(session)
     options = await repo.find_options(search=search, limit=limit)
     data = [MedicationOptionResponse(**m.__dict__) for m in options]
@@ -82,6 +84,7 @@ async def get_medication(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
+    """Retrieve a medication's full details including real-time stock level and category."""
     repo = get_medication_repo(session)
     medication = await GetMedicationById(repo).execute(id)
     if not medication:
@@ -98,6 +101,7 @@ async def create_medication(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Register a new medication. The code must be unique. Optionally assign a category."""
     repo = get_medication_repo(session)
     dto = CreateMedicationDTO(**body.model_dump())
     medication = await CreateMedication(repo).execute(dto, created_by=user_id)
@@ -114,6 +118,7 @@ async def update_medication(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Update medication catalog fields (PATCH semantics)."""
     repo = get_medication_repo(session)
     dto = UpdateMedicationDTO(**body.model_dump(exclude_none=True))
     medication = await UpdateMedication(repo).execute(id, dto, updated_by=user_id)
@@ -129,6 +134,7 @@ async def delete_medication(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Soft-delete a medication from the catalog."""
     repo = get_medication_repo(session)
     await SoftDeleteMedication(repo).execute(id, deleted_by=user_id)
     return ok(message="Medicamento eliminado exitosamente")

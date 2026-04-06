@@ -45,6 +45,7 @@ async def patient_demographics(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Returns patient distribution statistics: count by university relation type (estudiante, personal, docente, familia, externo), count by sex, and first-time vs returning patient counts. Used by the dashboard."""
     from app.modules.dashboard.infrastructure.dashboard_query_service import (
         DashboardQueryService,
     )
@@ -62,6 +63,7 @@ async def get_patient_full(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
+    """Retrieve complete patient data including medical_data (JSONB) and emergency_contact. Accepts one of three identifiers: `id` (UUID), `cedula`, or `nhm`. Returns null if not found."""
     repo = get_patient_repo(session)
     patient = None
     if id:
@@ -82,6 +84,7 @@ async def get_max_nhm(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Returns the highest NHM (Hospital Medical Number) currently registered. Used by the registration form to display the next available NHM."""
     repo = get_patient_repo(session)
     max_nhm = await GetMaxNhm(repo).execute()
     return ok(
@@ -100,6 +103,7 @@ async def list_or_search_patients(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
+    """Search and list patients with multiple strategies. Priority: nhm (exact) > cedula (exact) > search (text) > list all. Text search queries cedula, first_name, last_name, and NHM. Paginated, sorted by last_name."""
     repo = get_patient_repo(session)
 
     # Search by NHM -> returns PatientPublic | null
@@ -130,6 +134,7 @@ async def get_patient_by_id(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
+    """Retrieve a patient by their UUID. Returns 404 if not found."""
     repo = get_patient_repo(session)
     patient = await repo.find_by_id(patient_id)
     if not patient:
@@ -147,6 +152,7 @@ async def create_patient(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Register a new patient with auto-generated NHM. NHM assignment uses pg_advisory_xact_lock for concurrency safety. The cedula must be unique."""
     repo = get_patient_repo(session)
     dto = CreatePatientDTO(**body.model_dump())
     patient = await CreatePatient(repo).execute(dto, created_by=user_id)
@@ -162,6 +168,7 @@ async def register_patient(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
+    """Self-registration endpoint for the ULA patient portal. No authentication required. Accepts extended fields (country, state, city, blood_type, emergency contact) that the backend composes into JSONB fields. Returns minimal data for security."""
     repo = get_patient_repo(session)
     dto = RegisterPatientDTO(**body.model_dump())
     patient = await RegisterPatient(repo).execute(dto, created_by=user_id)

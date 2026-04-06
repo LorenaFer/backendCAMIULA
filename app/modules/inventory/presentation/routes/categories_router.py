@@ -41,6 +41,7 @@ async def list_categories(
     repo: CategoryRepository = Depends(get_category_repo),
     _user_id: str = Depends(get_optional_user_id),
 ):
+    """List medication categories (antibiotic, analgesic, medical supplies, etc.). Supports text search."""
     items, total = await repo.find_all(search=search, page=page, page_size=page_size)
     data = [_to_response(c) for c in items]
     return paginated(data, total, page, page_size, "Categories retrieved")
@@ -52,6 +53,7 @@ async def get_category(
     repo: CategoryRepository = Depends(get_category_repo),
     _user_id: str = Depends(get_optional_user_id),
 ):
+    """Retrieve a medication category by UUID."""
     entity = await repo.find_by_id(category_id)
     if not entity:
         raise NotFoundException("Category not found")
@@ -64,6 +66,7 @@ async def create_category(
     repo: CategoryRepository = Depends(get_category_repo),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Create a new medication category. The name must be unique."""
     existing = await repo.find_by_name(body.name)
     if existing:
         raise ConflictException(f"Category '{body.name}' already exists")
@@ -82,6 +85,7 @@ async def update_category(
     repo: CategoryRepository = Depends(get_category_repo),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Update a medication category's name or description."""
     existing = await repo.find_by_id(category_id)
     if not existing:
         raise NotFoundException("Category not found")
@@ -100,6 +104,7 @@ async def delete_category(
     repo: CategoryRepository = Depends(get_category_repo),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Soft-delete a medication category."""
     deleted = await repo.soft_delete(id=category_id, deleted_by=user_id)
     if not deleted:
         raise NotFoundException("Category not found")

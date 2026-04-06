@@ -27,6 +27,7 @@ async def get_doctor_options(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
+    """Lightweight doctor list optimized for dropdown selects. Returns id, name, specialty, and computed working days."""
     repo = get_doctor_repo(session)
     items = await GetDoctorOptions(repo).execute()
     data = [DoctorOptionResponse(**d.__dict__) for d in items]
@@ -38,6 +39,7 @@ async def list_doctors(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
+    """List all active doctors with their embedded specialty information."""
     repo = get_doctor_repo(session)
     items = await GetDoctors(repo).execute()
     data = [DoctorResponse(**d.__dict__) for d in items]

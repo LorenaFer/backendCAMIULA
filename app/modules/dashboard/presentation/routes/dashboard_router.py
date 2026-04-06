@@ -31,6 +31,7 @@ async def get_dashboard(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Consolidated dashboard: KPIs, charts, trends. Aggregates cross-module data. Filterable by fecha and periodo."""
     svc = get_dashboard_service(session)
     ref = _parse_date(fecha)
     start, end = _period_range(ref, periodo or "day")

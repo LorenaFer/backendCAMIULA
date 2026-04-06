@@ -92,6 +92,7 @@ async def get_stock_report(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Consolidated stock report. Calculates stock_alert: ok (>50), low (<=50), critical (<=10), expired (0). Auto-generates stock alerts."""
     repo = get_report_repo(session)
     report = await repo.get_stock_report()
 
@@ -127,6 +128,7 @@ async def get_inventory_summary(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Executive KPIs: total active SKUs, counts by alert level, total available units."""
     repo = get_report_repo(session)
     summary = await repo.get_inventory_summary()
     return ok(
@@ -152,6 +154,7 @@ async def get_low_stock(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Medications with stock_alert in low, critical, or expired. Ordered by criticality."""
     repo = get_report_repo(session)
     report = await repo.get_low_stock_report()
     return ok(
@@ -184,6 +187,7 @@ async def get_expiration_report(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Batches expiring within threshold_days (default 90). Includes medication details."""
     repo = get_report_repo(session)
     report = await repo.get_expiration_report(threshold_days)
     return ok(
@@ -213,6 +217,7 @@ async def get_expiring_soon(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Batches expiring soon grouped into 30/60/90 day horizons."""
     repo = get_report_repo(session)
     report_90 = await repo.get_expiration_report(threshold_days=90)
 
@@ -268,6 +273,7 @@ async def get_consumption_report(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Monthly consumption by medication for a period (YYYY-MM)."""
     repo = get_report_repo(session)
     report = await repo.get_consumption_report(period)
     return ok(
@@ -305,6 +311,7 @@ async def get_movements(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Kardex: paginated entries + exits for a medication. Supports date range filters."""
     repo = get_report_repo(session)
     report = await repo.get_movements(
         medication_id=medication_id,
@@ -355,6 +362,7 @@ async def get_inventory_movements(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """All persisted inventory movements (entries, exits, adjustments, expirations)."""
     repo = get_movement_repo(session)
     result = await repo.get_movements(
         medication_id=medication_id,
@@ -405,6 +413,7 @@ async def get_stock_alerts(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Persisted stock alerts with filters: status, level, medication_id."""
     repo = get_movement_repo(session)
     result = await repo.get_alerts(
         alert_status=alert_status,
@@ -437,6 +446,7 @@ async def generate_stock_alerts(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Scan medications and generate alerts for those crossing stock thresholds. Auto-resolves when stock recovers."""
     repo = get_movement_repo(session)
     new_count = await repo.generate_alerts(created_by=user_id)
     await session.commit()
@@ -455,6 +465,7 @@ async def acknowledge_alert(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Mark a stock alert as acknowledged."""
     repo = get_movement_repo(session)
     success = await repo.acknowledge_alert(alert_id, user_id)
     if not success:
@@ -473,6 +484,7 @@ async def resolve_alert(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Manually resolve a stock alert."""
     repo = get_movement_repo(session)
     success = await repo.resolve_alert(alert_id, user_id)
     if not success:

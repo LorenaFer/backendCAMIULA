@@ -50,6 +50,7 @@ async def list_dispatches(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
+    """List pharmacy dispatches with filters: patient_id, prescription_number, status, date range."""
     repo = get_dispatch_repo(session)
     items, total = await repo.find_all(
         patient_id=patient_id,
@@ -79,6 +80,7 @@ async def validate_dispatch(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Pre-validate a dispatch. Checks stock (FEFO), monthly limits, and returns a detailed allocation plan."""
     result = await validate_and_prepare_dispatch(
         prescription_id=prescription_id,
         patient_type=patient_type,
@@ -104,6 +106,7 @@ async def create_dispatch(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Execute a pharmacy dispatch using FEFO. Atomic: validates, allocates stock, checks limits, creates records, updates batches, records movements."""
     dispatch = await execute_dispatch(
         fk_prescription_id=body.fk_prescription_id,
         fk_pharmacist_id=user_id,
@@ -150,6 +153,7 @@ async def get_by_prescription(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """List all dispatches associated with a prescription."""
     repo = get_dispatch_repo(session)
     dispatches = await repo.find_by_prescription(prescription_id)
     data = [DispatchResponse(**d.__dict__) for d in dispatches]
@@ -168,6 +172,7 @@ async def get_by_patient(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Paginated dispatch history for a patient."""
     repo = get_dispatch_repo(session)
     dispatches, total = await repo.find_by_patient(
         fk_patient_id=patient_id,
@@ -188,6 +193,7 @@ async def get_dispatch(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Retrieve a dispatch with item details and batch allocation."""
     repo = get_dispatch_repo(session)
     dispatch = await repo.find_by_id(id)
     if not dispatch:
@@ -208,6 +214,7 @@ async def cancel_dispatch_endpoint(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Cancel a dispatch and revert stock to original batches."""
     await cancel_dispatch(
         dispatch_id=id,
         cancelled_by=user_id,

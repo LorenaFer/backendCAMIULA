@@ -42,6 +42,7 @@ async def top_diagnostics(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
+    """Top N most frequent diagnoses in a period. Extracts CIE-10 codes from medical record evaluations (JSONB)."""
     from datetime import date as _date
 
     from app.modules.dashboard.infrastructure.dashboard_query_service import (
@@ -67,6 +68,7 @@ async def find_by_appointment(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
+    """Retrieve the medical record associated with a specific appointment."""
     repo = get_medical_record_repo(session)
     record = await FindByAppointment(repo).execute(appointment_id)
     if not record:
@@ -85,6 +87,7 @@ async def patient_history(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
+    """Patient's recent medical history. Returns the last N consultations with doctor, specialty, and evaluation data."""
     repo = get_medical_record_repo(session)
     history = await PatientHistory(repo).execute(patient_id, limit, exclude)
     data = [PatientHistoryItem(**item) for item in history]
@@ -113,6 +116,7 @@ async def upsert_record(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Create or update a medical record for an appointment. The evaluation field accepts flexible JSONB data."""
     repo = get_medical_record_repo(session)
     dto = UpsertMedicalRecordDTO(**body.model_dump())
     record, was_created = await UpsertRecord(repo).execute(dto, user_id)
@@ -129,6 +133,7 @@ async def mark_prepared(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Mark a medical record as prepared by nursing staff."""
     repo = get_medical_record_repo(session)
     record = await MarkPrepared(repo).execute(record_id, body.prepared_by)
     return ok(
@@ -149,6 +154,7 @@ async def get_patient_orders(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
+    """List exam orders (lab tests, imaging) for a patient. Optionally filter by appointment_id."""
     from uuid import uuid4
 
     from sqlalchemy import select

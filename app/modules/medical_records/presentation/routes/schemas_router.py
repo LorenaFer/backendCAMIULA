@@ -29,6 +29,7 @@ async def list_schemas(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
+    """List all dynamic form schemas. Each schema defines form fields for medical record entry per specialty."""
     repo = get_form_schema_repo(session)
     schemas = await ListSchemas(repo).execute()
     data = [FormSchemaResponse(**s.__dict__) for s in schemas]
@@ -41,6 +42,7 @@ async def get_schema(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
+    """Retrieve a form schema by specialty UUID or normalized name."""
     repo = get_form_schema_repo(session)
     schema = await GetSchema(repo).execute(specialty_key)
     if not schema:
@@ -57,6 +59,7 @@ async def upsert_schema(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Create or update a form schema for a specialty."""
     repo = get_form_schema_repo(session)
     dto = UpsertFormSchemaDTO(**body.model_dump())
     schema, was_created = await UpsertSchema(repo).execute(dto, user_id)
@@ -72,6 +75,7 @@ async def delete_schema(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Soft-delete a form schema by specialty key name."""
     repo = get_form_schema_repo(session)
     await DeleteSchema(repo).execute(specialty_key, deleted_by=user_id)
     return ok(message="Form schema deleted successfully")

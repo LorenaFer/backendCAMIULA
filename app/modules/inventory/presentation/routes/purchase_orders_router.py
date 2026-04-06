@@ -36,6 +36,7 @@ async def list_purchase_orders(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
+    """List purchase orders with supplier info and item details. Ordered by creation date descending."""
     repo = get_purchase_order_repo(session)
     items, total = await repo.find_all(page, page_size)
     data = [PurchaseOrderResponse(**o.__dict__) for o in items]
@@ -48,6 +49,7 @@ async def get_purchase_order(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
+    """Retrieve a purchase order with items, supplier details, and traceability fields."""
     repo = get_purchase_order_repo(session)
     order = await repo.find_by_id(order_id)
     if not order:
@@ -61,6 +63,7 @@ async def create_purchase_order(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Create a purchase order in draft status. order_number is auto-generated."""
     repo = get_purchase_order_repo(session)
     order_number = await repo.get_next_order_number()
 
@@ -99,6 +102,7 @@ async def send_purchase_order(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Transition a purchase order from draft to sent. Records sent_at and sent_by."""
     repo = get_purchase_order_repo(session)
     order = await repo.find_by_id(order_id)
     if not order:
@@ -127,6 +131,7 @@ async def receive_purchase_order(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Register received items, creating batch records. Records inventory entry movements for traceability."""
     order_repo = get_purchase_order_repo(session)
     batch_repo = get_batch_repo(session)
     medication_repo = get_medication_repo(session)
