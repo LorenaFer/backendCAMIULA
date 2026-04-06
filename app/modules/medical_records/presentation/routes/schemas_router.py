@@ -11,9 +11,8 @@ from app.modules.medical_records.application.use_cases.delete_schema import Dele
 from app.modules.medical_records.application.use_cases.get_schema import GetSchema
 from app.modules.medical_records.application.use_cases.list_schemas import ListSchemas
 from app.modules.medical_records.application.use_cases.upsert_schema import UpsertSchema
-from app.modules.medical_records.infrastructure.repositories.sqlalchemy_form_schema_repository import (
-    SQLAlchemyFormSchemaRepository,
-)
+from app.modules.medical_records.domain.repositories.form_schema_repository import FormSchemaRepository
+from app.modules.medical_records.presentation.dependencies import get_form_schema_repo
 from app.modules.medical_records.presentation.schemas.form_schema_schemas import (
     FormSchemaResponse,
     FormSchemaUpsert,
@@ -30,7 +29,7 @@ async def list_schemas(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
-    repo = SQLAlchemyFormSchemaRepository(session)
+    repo = get_form_schema_repo(session)
     schemas = await ListSchemas(repo).execute()
     data = [FormSchemaResponse(**s.__dict__) for s in schemas]
     return ok(data=data, message="Form schemas retrieved successfully")
@@ -42,7 +41,7 @@ async def get_schema(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
-    repo = SQLAlchemyFormSchemaRepository(session)
+    repo = get_form_schema_repo(session)
     schema = await GetSchema(repo).execute(specialty_key)
     if not schema:
         raise NotFoundException("Form schema not found for this specialty.")
@@ -58,7 +57,7 @@ async def upsert_schema(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyFormSchemaRepository(session)
+    repo = get_form_schema_repo(session)
     dto = UpsertFormSchemaDTO(**body.model_dump())
     schema, was_created = await UpsertSchema(repo).execute(dto, user_id)
     response = FormSchemaResponse(**schema.__dict__)
@@ -73,6 +72,6 @@ async def delete_schema(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyFormSchemaRepository(session)
+    repo = get_form_schema_repo(session)
     await DeleteSchema(repo).execute(specialty_key, deleted_by=user_id)
     return ok(message="Form schema deleted successfully")

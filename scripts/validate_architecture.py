@@ -68,6 +68,13 @@ FORBIDDEN_IMPORTS = {
         "description": "Routes must not import directly from infrastructure (use dependencies.py)",
         "exempt_files": ["dependencies.py"],
     },
+    "presentation": {
+        "patterns": [
+            "app.modules.{module}.infrastructure",
+        ],
+        "description": "Presentation must not import from infrastructure (except dependencies.py)",
+        "exempt_files": ["dependencies.py"],
+    },
 }
 
 
@@ -185,15 +192,11 @@ def check_file(file_path: Path, report: Report) -> None:
             if import_str.startswith(resolved):
                 # Check cross-cutting exemption
                 if module_name in CROSS_CUTTING_MODULES and "infrastructure" in resolved:
-                    # Cross-cutting modules can import other modules' infra
-                    if "app.modules." in import_str:
-                        other_module = import_str.split("app.modules.")[1].split(".")[0]
-                        if other_module != module_name:
-                            report.exemptions.append(Exemption(
-                                file=f"{file_path}:{line_no}",
-                                reason=f"Cross-cutting module imports {other_module} infrastructure (ADR-003)",
-                            ))
-                            continue
+                    report.exemptions.append(Exemption(
+                        file=f"{file_path}:{line_no}",
+                        reason=f"Cross-cutting module '{module_name}' infra access (ADR-003)",
+                    ))
+                    continue
 
                 report.violations.append(Violation(
                     file=str(file_path),

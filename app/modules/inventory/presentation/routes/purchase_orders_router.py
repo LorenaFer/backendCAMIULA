@@ -14,17 +14,8 @@ from app.modules.inventory.application.dtos.purchase_order_dto import (
 from app.modules.inventory.application.use_cases.purchase_orders.receive_purchase_order import (
     ReceivePurchaseOrder,
 )
-from app.modules.inventory.infrastructure.repositories.sqlalchemy_batch_repository import (
-    SQLAlchemyBatchRepository,
-)
-from app.modules.inventory.infrastructure.repositories.sqlalchemy_movement_repository import (
-    SQLAlchemyMovementRepository,
-)
-from app.modules.inventory.infrastructure.repositories.sqlalchemy_medication_repository import (
-    SQLAlchemyMedicationRepository,
-)
-from app.modules.inventory.infrastructure.repositories.sqlalchemy_purchase_order_repository import (
-    SQLAlchemyPurchaseOrderRepository,
+from app.modules.inventory.presentation.dependencies import (
+    get_batch_repo, get_medication_repo, get_movement_repo, get_purchase_order_repo,
 )
 from app.modules.inventory.presentation.schemas.purchase_order_schemas import (
     PurchaseOrderCreate,
@@ -45,7 +36,7 @@ async def list_purchase_orders(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
-    repo = SQLAlchemyPurchaseOrderRepository(session)
+    repo = get_purchase_order_repo(session)
     items, total = await repo.find_all(page, page_size)
     data = [PurchaseOrderResponse(**o.__dict__) for o in items]
     return paginated(data, total, page, page_size, "Purchase orders retrieved")
@@ -57,7 +48,7 @@ async def get_purchase_order(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
-    repo = SQLAlchemyPurchaseOrderRepository(session)
+    repo = get_purchase_order_repo(session)
     order = await repo.find_by_id(order_id)
     if not order:
         raise NotFoundException("Purchase order not found.")
@@ -70,7 +61,7 @@ async def create_purchase_order(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyPurchaseOrderRepository(session)
+    repo = get_purchase_order_repo(session)
     order_number = await repo.get_next_order_number()
 
     data = body.model_dump()
@@ -108,7 +99,7 @@ async def send_purchase_order(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyPurchaseOrderRepository(session)
+    repo = get_purchase_order_repo(session)
     order = await repo.find_by_id(order_id)
     if not order:
         raise NotFoundException("Purchase order not found.")
@@ -136,9 +127,9 @@ async def receive_purchase_order(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    order_repo = SQLAlchemyPurchaseOrderRepository(session)
-    batch_repo = SQLAlchemyBatchRepository(session)
-    medication_repo = SQLAlchemyMedicationRepository(session)
+    order_repo = get_purchase_order_repo(session)
+    batch_repo = get_batch_repo(session)
+    medication_repo = get_medication_repo(session)
 
     dto = ReceivePurchaseOrderDTO(
         order_id=order_id,
@@ -151,7 +142,7 @@ async def receive_purchase_order(
 
     # Record entry movements for traceability
     from datetime import datetime, timezone
-    movement_repo = SQLAlchemyMovementRepository(session)
+    movement_repo = get_movement_repo(session)
     for item in body.items:
         # Resolve medication_id from the purchase order item
         po_item_row = await order_repo.find_item_by_id(item.purchase_order_item_id)

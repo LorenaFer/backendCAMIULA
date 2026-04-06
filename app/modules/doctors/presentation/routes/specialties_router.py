@@ -19,9 +19,8 @@ from app.modules.doctors.application.use_cases.specialties.toggle_specialty impo
 from app.modules.doctors.application.use_cases.specialties.update_specialty import (
     UpdateSpecialty,
 )
-from app.modules.doctors.infrastructure.repositories.sqlalchemy_specialty_repository import (
-    SQLAlchemySpecialtyRepository,
-)
+from app.modules.doctors.domain.repositories.specialty_repository import SpecialtyRepository
+from app.modules.doctors.presentation.dependencies import get_specialty_repo
 from app.modules.doctors.presentation.schemas.specialty_schemas import (
     SpecialtyCreate,
     SpecialtyResponse,
@@ -39,7 +38,7 @@ async def list_specialties(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
-    repo = SQLAlchemySpecialtyRepository(session)
+    repo = get_specialty_repo(session)
     items = await GetSpecialties(repo).execute()
     data = [SpecialtyResponse(**s.__dict__) for s in items]
     return ok(data=data, message="Especialidades obtenidas exitosamente")
@@ -51,7 +50,7 @@ async def create_specialty(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemySpecialtyRepository(session)
+    repo = get_specialty_repo(session)
     dto = CreateSpecialtyDTO(**body.model_dump())
     specialty = await CreateSpecialty(repo).execute(dto, created_by=user_id)
     return created(
@@ -67,7 +66,7 @@ async def update_specialty(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemySpecialtyRepository(session)
+    repo = get_specialty_repo(session)
     dto = UpdateSpecialtyDTO(**body.model_dump(exclude_none=True))
     specialty = await UpdateSpecialty(repo).execute(id, dto, updated_by=user_id)
     return ok(
@@ -82,7 +81,7 @@ async def toggle_specialty(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemySpecialtyRepository(session)
+    repo = get_specialty_repo(session)
     specialty = await ToggleSpecialty(repo).execute(id, updated_by=user_id)
     return ok(
         data=SpecialtyResponse(**specialty.__dict__),

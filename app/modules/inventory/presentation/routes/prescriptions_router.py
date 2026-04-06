@@ -7,9 +7,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotFoundException
-from app.modules.inventory.infrastructure.repositories.sqlalchemy_prescription_repository import (
-    SQLAlchemyPrescriptionRepository,
-)
+from app.modules.inventory.presentation.dependencies import get_prescription_repo
 from app.modules.inventory.presentation.schemas.prescription_schemas import (
     PrescriptionCreate,
     PrescriptionResponse,
@@ -31,7 +29,7 @@ async def list_prescriptions(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
-    repo = SQLAlchemyPrescriptionRepository(session)
+    repo = get_prescription_repo(session)
 
     # Single-result lookups
     if appointment_id:
@@ -68,7 +66,7 @@ async def get_prescription(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
-    repo = SQLAlchemyPrescriptionRepository(session)
+    repo = get_prescription_repo(session)
     prescription = await repo.find_by_id(id)
     if not prescription:
         raise NotFoundException("Prescription not found.")
@@ -84,7 +82,7 @@ async def create_prescription(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyPrescriptionRepository(session)
+    repo = get_prescription_repo(session)
 
     # Resolve fk_doctor_id from appointment if not provided
     if not body.fk_doctor_id and body.fk_appointment_id:

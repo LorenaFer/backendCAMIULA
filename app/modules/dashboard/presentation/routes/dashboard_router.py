@@ -6,8 +6,8 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.dashboard.presentation.dependencies import get_dashboard_service
 from app.modules.dashboard.infrastructure.dashboard_query_service import (
-    DashboardQueryService,
     _parse_date,
     _period_range,
 )
@@ -31,7 +31,7 @@ async def get_dashboard(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    svc = DashboardQueryService(session)
+    svc = get_dashboard_service(session)
     ref = _parse_date(fecha)
     start, end = _period_range(ref, periodo or "day")
 

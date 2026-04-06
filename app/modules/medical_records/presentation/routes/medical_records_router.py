@@ -18,9 +18,8 @@ from app.modules.medical_records.application.use_cases.patient_history import (
     PatientHistory,
 )
 from app.modules.medical_records.application.use_cases.upsert_record import UpsertRecord
-from app.modules.medical_records.infrastructure.repositories.sqlalchemy_medical_record_repository import (
-    SQLAlchemyMedicalRecordRepository,
-)
+from app.modules.medical_records.domain.repositories.medical_record_repository import MedicalRecordRepository
+from app.modules.medical_records.presentation.dependencies import get_medical_record_repo
 from app.modules.medical_records.presentation.schemas.medical_record_schemas import (
     MarkPreparedBody,
     MedicalRecordResponse,
@@ -68,7 +67,7 @@ async def find_by_appointment(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
-    repo = SQLAlchemyMedicalRecordRepository(session)
+    repo = get_medical_record_repo(session)
     record = await FindByAppointment(repo).execute(appointment_id)
     if not record:
         raise NotFoundException("Medical record not found for this appointment.")
@@ -86,7 +85,7 @@ async def patient_history(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
-    repo = SQLAlchemyMedicalRecordRepository(session)
+    repo = get_medical_record_repo(session)
     history = await PatientHistory(repo).execute(patient_id, limit, exclude)
     data = [PatientHistoryItem(**item) for item in history]
     return ok(data=data, message="Patient history retrieved successfully")
@@ -98,7 +97,7 @@ async def find_by_id(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
-    repo = SQLAlchemyMedicalRecordRepository(session)
+    repo = get_medical_record_repo(session)
     record = await FindById(repo).execute(record_id)
     if not record:
         raise NotFoundException("Medical record not found.")
@@ -114,7 +113,7 @@ async def upsert_record(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyMedicalRecordRepository(session)
+    repo = get_medical_record_repo(session)
     dto = UpsertMedicalRecordDTO(**body.model_dump())
     record, was_created = await UpsertRecord(repo).execute(dto, user_id)
     response = MedicalRecordResponse(**record.__dict__)
@@ -130,7 +129,7 @@ async def mark_prepared(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyMedicalRecordRepository(session)
+    repo = get_medical_record_repo(session)
     record = await MarkPrepared(repo).execute(record_id, body.prepared_by)
     return ok(
         data=MedicalRecordResponse(**record.__dict__),

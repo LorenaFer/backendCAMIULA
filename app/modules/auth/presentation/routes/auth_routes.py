@@ -5,12 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.auth.application.dtos.auth_dto import LoginDTO, RegisterDTO
 from app.modules.auth.application.use_cases.login_user import LoginUserUseCase
 from app.modules.auth.application.use_cases.register_user import RegisterUserUseCase
-from app.modules.auth.infrastructure.repositories.sqlalchemy_role_repository import (
-    SQLAlchemyRoleRepository,
-)
-from app.modules.auth.infrastructure.repositories.sqlalchemy_user_repository import (
-    SQLAlchemyUserRepository,
-)
+from app.modules.auth.presentation.dependencies import get_user_repo, get_role_repo
 from app.modules.auth.presentation.schemas.auth_schema import (
     LoginRequest,
     PatientLoginData,
@@ -35,7 +30,7 @@ async def login(
 ):
     """Autenticar usuario con email y password (proveedor local)."""
     use_case = LoginUserUseCase(
-        user_repo=SQLAlchemyUserRepository(db),
+        user_repo=get_user_repo(db),
     )
     result = await use_case.execute(
         LoginDTO(email=body.email, password=body.password)
@@ -61,8 +56,8 @@ async def register(
 ):
     """Registrar nuevo usuario. Se asigna rol 'paciente' por defecto."""
     use_case = RegisterUserUseCase(
-        user_repo=SQLAlchemyUserRepository(db),
-        role_repo=SQLAlchemyRoleRepository(db),
+        user_repo=get_user_repo(db),
+        role_repo=get_role_repo(db),
     )
     user = await use_case.execute(
         RegisterDTO(

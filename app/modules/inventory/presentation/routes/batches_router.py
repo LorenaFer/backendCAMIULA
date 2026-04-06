@@ -6,9 +6,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotFoundException
-from app.modules.inventory.infrastructure.repositories.sqlalchemy_batch_repository import (
-    SQLAlchemyBatchRepository,
-)
+from app.modules.inventory.presentation.dependencies import get_batch_repo
 from app.modules.inventory.presentation.schemas.batch_schemas import (
     BatchResponse,
 )
@@ -31,7 +29,7 @@ async def list_batches(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyBatchRepository(session)
+    repo = get_batch_repo(session)
     items, total = await repo.find_all(
         medication_id=medication_id,
         status=status,
@@ -49,7 +47,7 @@ async def get_batch(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyBatchRepository(session)
+    repo = get_batch_repo(session)
     batch = await repo.find_by_id(id)
     if not batch:
         raise NotFoundException("Batch not found.")

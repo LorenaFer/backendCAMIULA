@@ -32,9 +32,8 @@ from app.modules.appointments.application.use_cases.list_appointments import (
 from app.modules.appointments.application.use_cases.update_status import (
     UpdateAppointmentStatus,
 )
-from app.modules.appointments.infrastructure.repositories.sqlalchemy_appointment_repository import (
-    SQLAlchemyAppointmentRepository,
-)
+from app.modules.appointments.domain.repositories.appointment_repository import AppointmentRepository
+from app.modules.appointments.presentation.dependencies import get_appointment_repo
 from app.modules.appointments.presentation.schemas.appointment_schemas import (
     AppointmentCreate,
     AppointmentResponse,
@@ -87,7 +86,7 @@ async def get_stats(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
-    repo = SQLAlchemyAppointmentRepository(session)
+    repo = get_appointment_repo(session)
     stats = await GetAppointmentStats(repo).execute(
         fecha=fecha,
         doctor_id=doctor_id,
@@ -105,7 +104,7 @@ async def check_slot(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
-    repo = SQLAlchemyAppointmentRepository(session)
+    repo = get_appointment_repo(session)
     occupied = await CheckSlot(repo).execute(
         doctor_id=doctor_id, fecha=fecha, hora_inicio=hora_inicio
     )
@@ -126,7 +125,7 @@ async def get_available_slots(
     from app.modules.appointments.presentation.dependencies import get_availability_reader
     from app.modules.doctors.domain.repositories.availability_reader import AvailabilityReader
 
-    repo = SQLAlchemyAppointmentRepository(session)
+    repo = get_appointment_repo(session)
     reader = get_availability_reader(session)
     slots = await AvailableSlots(repo, reader).execute(
         doctor_id=doctor_id, fecha=fecha, es_nuevo=es_nuevo
@@ -158,7 +157,7 @@ async def get_appointment(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
-    repo = SQLAlchemyAppointmentRepository(session)
+    repo = get_appointment_repo(session)
     appointment = await GetAppointment(repo).execute(appointment_id)
     return ok(
         data=AppointmentResponse(**appointment.__dict__),
@@ -181,7 +180,7 @@ async def list_appointments(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
-    repo = SQLAlchemyAppointmentRepository(session)
+    repo = get_appointment_repo(session)
 
     # Doctor month view: GET /appointments?doctor_id=X&mes=YYYY-MM&excluir_canceladas=true
     if doctor_id and mes:
@@ -227,7 +226,7 @@ async def create_appointment(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
-    repo = SQLAlchemyAppointmentRepository(session)
+    repo = get_appointment_repo(session)
     dto = CreateAppointmentDTO(**body.model_dump())
     appointment = await CreateAppointment(repo).execute(dto, created_by=user_id)
     return created(
@@ -243,7 +242,7 @@ async def update_appointment_status(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
-    repo = SQLAlchemyAppointmentRepository(session)
+    repo = get_appointment_repo(session)
     appointment = await UpdateAppointmentStatus(repo).execute(
         appointment_id=appointment_id,
         new_status=body.new_status,

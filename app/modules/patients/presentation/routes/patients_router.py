@@ -19,9 +19,10 @@ from app.modules.patients.application.use_cases.search_patient import (
     SearchPatientByCedula,
     SearchPatientByNhm,
 )
-from app.modules.patients.infrastructure.repositories.sqlalchemy_patient_repository import (
-    SQLAlchemyPatientRepository,
+from app.modules.patients.domain.repositories.patient_repository import (
+    PatientRepository,
 )
+from app.modules.patients.presentation.dependencies import get_patient_repo
 from app.modules.patients.presentation.schemas.patient_schemas import (
     MaxNhmResponse,
     PatientCreate,
@@ -61,7 +62,7 @@ async def get_patient_full(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
-    repo = SQLAlchemyPatientRepository(session)
+    repo = get_patient_repo(session)
     patient = None
     if id:
         patient = await repo.find_by_id(id)
@@ -81,7 +82,7 @@ async def get_max_nhm(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyPatientRepository(session)
+    repo = get_patient_repo(session)
     max_nhm = await GetMaxNhm(repo).execute()
     return ok(
         data=MaxNhmResponse(max_nhm=max_nhm),
@@ -99,7 +100,7 @@ async def list_or_search_patients(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
-    repo = SQLAlchemyPatientRepository(session)
+    repo = get_patient_repo(session)
 
     # Search by NHM -> returns PatientPublic | null
     if nhm is not None:
@@ -129,7 +130,7 @@ async def get_patient_by_id(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
-    repo = SQLAlchemyPatientRepository(session)
+    repo = get_patient_repo(session)
     patient = await repo.find_by_id(patient_id)
     if not patient:
         from app.core.exceptions import NotFoundException
@@ -146,7 +147,7 @@ async def create_patient(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyPatientRepository(session)
+    repo = get_patient_repo(session)
     dto = CreatePatientDTO(**body.model_dump())
     patient = await CreatePatient(repo).execute(dto, created_by=user_id)
     return created(
@@ -161,7 +162,7 @@ async def register_patient(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
-    repo = SQLAlchemyPatientRepository(session)
+    repo = get_patient_repo(session)
     dto = RegisterPatientDTO(**body.model_dump())
     patient = await RegisterPatient(repo).execute(dto, created_by=user_id)
     return created(

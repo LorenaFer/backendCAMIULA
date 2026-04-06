@@ -6,9 +6,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import ConflictException, NotFoundException
-from app.modules.inventory.infrastructure.repositories.sqlalchemy_supplier_repository import (
-    SQLAlchemySupplierRepository,
-)
+from app.modules.inventory.presentation.dependencies import get_supplier_repo
 from app.modules.inventory.presentation.schemas.supplier_schemas import (
     SupplierCreate,
     SupplierOptionResponse,
@@ -31,7 +29,7 @@ async def list_suppliers(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemySupplierRepository(session)
+    repo = get_supplier_repo(session)
     items, total = await repo.find_all(
         search=search,
         status=status,
@@ -47,7 +45,7 @@ async def get_supplier_options(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemySupplierRepository(session)
+    repo = get_supplier_repo(session)
     options = await repo.find_options()
     data = [SupplierOptionResponse(**s.__dict__) for s in options]
     return ok(data=data, message="Supplier options retrieved successfully")
@@ -59,7 +57,7 @@ async def get_supplier(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemySupplierRepository(session)
+    repo = get_supplier_repo(session)
     supplier = await repo.find_by_id(id)
     if not supplier:
         raise NotFoundException("Supplier not found.")
@@ -75,7 +73,7 @@ async def create_supplier(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemySupplierRepository(session)
+    repo = get_supplier_repo(session)
 
     existing = await repo.find_by_rif(body.rif)
     if existing:
@@ -96,7 +94,7 @@ async def update_supplier(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemySupplierRepository(session)
+    repo = get_supplier_repo(session)
 
     existing = await repo.find_by_id(id)
     if not existing:

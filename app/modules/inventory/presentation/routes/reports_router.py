@@ -19,12 +19,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.inventory.infrastructure.repositories.sqlalchemy_movement_repository import (
-    SQLAlchemyMovementRepository,
-)
-from app.modules.inventory.infrastructure.repositories.sqlalchemy_report_repository import (
-    SQLAlchemyReportRepository,
-)
+from app.modules.inventory.presentation.dependencies import get_movement_repo, get_report_repo
 from app.modules.inventory.presentation.schemas.report_schemas import (
     ConsumptionReportResponse,
     EnrichedBatchResponse,
@@ -97,11 +92,11 @@ async def get_stock_report(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyReportRepository(session)
+    repo = get_report_repo(session)
     report = await repo.get_stock_report()
 
     # Auto-generate stock alerts on each stock report request
-    movement_repo = SQLAlchemyMovementRepository(session)
+    movement_repo = get_movement_repo(session)
     await movement_repo.generate_alerts(created_by=user_id)
 
     return ok(
@@ -132,7 +127,7 @@ async def get_inventory_summary(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyReportRepository(session)
+    repo = get_report_repo(session)
     summary = await repo.get_inventory_summary()
     return ok(
         data=InventorySummaryResponse(**summary.__dict__),
@@ -157,7 +152,7 @@ async def get_low_stock(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyReportRepository(session)
+    repo = get_report_repo(session)
     report = await repo.get_low_stock_report()
     return ok(
         data=LowStockReportResponse(
@@ -189,7 +184,7 @@ async def get_expiration_report(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyReportRepository(session)
+    repo = get_report_repo(session)
     report = await repo.get_expiration_report(threshold_days)
     return ok(
         data=ExpirationReportResponse(
@@ -218,7 +213,7 @@ async def get_expiring_soon(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyReportRepository(session)
+    repo = get_report_repo(session)
     report_90 = await repo.get_expiration_report(threshold_days=90)
 
     today = date.today()
@@ -273,7 +268,7 @@ async def get_consumption_report(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyReportRepository(session)
+    repo = get_report_repo(session)
     report = await repo.get_consumption_report(period)
     return ok(
         data=ConsumptionReportResponse(
@@ -310,7 +305,7 @@ async def get_movements(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyReportRepository(session)
+    repo = get_report_repo(session)
     report = await repo.get_movements(
         medication_id=medication_id,
         date_from=date_from,
@@ -360,7 +355,7 @@ async def get_inventory_movements(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyMovementRepository(session)
+    repo = get_movement_repo(session)
     result = await repo.get_movements(
         medication_id=medication_id,
         movement_type=movement_type,
@@ -410,7 +405,7 @@ async def get_stock_alerts(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyMovementRepository(session)
+    repo = get_movement_repo(session)
     result = await repo.get_alerts(
         alert_status=alert_status,
         alert_level=alert_level,
@@ -442,7 +437,7 @@ async def generate_stock_alerts(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyMovementRepository(session)
+    repo = get_movement_repo(session)
     new_count = await repo.generate_alerts(created_by=user_id)
     await session.commit()
     return ok(
@@ -460,7 +455,7 @@ async def acknowledge_alert(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyMovementRepository(session)
+    repo = get_movement_repo(session)
     success = await repo.acknowledge_alert(alert_id, user_id)
     if not success:
         from app.core.exceptions import AppException
@@ -478,7 +473,7 @@ async def resolve_alert(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyMovementRepository(session)
+    repo = get_movement_repo(session)
     success = await repo.resolve_alert(alert_id, user_id)
     if not success:
         from app.core.exceptions import AppException

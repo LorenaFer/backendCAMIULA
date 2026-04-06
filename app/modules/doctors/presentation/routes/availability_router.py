@@ -24,12 +24,9 @@ from app.modules.doctors.application.use_cases.availability.update_availability 
 from app.modules.doctors.application.use_cases.exceptions.get_exceptions import (
     GetExceptions,
 )
-from app.modules.doctors.infrastructure.repositories.sqlalchemy_availability_repository import (
-    SQLAlchemyAvailabilityRepository,
-)
-from app.modules.doctors.infrastructure.repositories.sqlalchemy_exception_repository import (
-    SQLAlchemyExceptionRepository,
-)
+from app.modules.doctors.domain.repositories.availability_repository import AvailabilityRepository
+from app.modules.doctors.domain.repositories.exception_repository import ExceptionRepository
+from app.modules.doctors.presentation.dependencies import get_availability_repo, get_exception_repo
 from app.modules.doctors.presentation.schemas.availability_schemas import (
     AvailabilityCreate,
     AvailabilityResponse,
@@ -70,7 +67,7 @@ async def get_availability(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
-    repo = SQLAlchemyAvailabilityRepository(session)
+    repo = get_availability_repo(session)
     items = await GetAvailability(repo).execute(doctor_id, day_of_week=dow)
     data = [AvailabilityResponse(**a.__dict__) for a in items]
     return ok(data=data, message="Disponibilidad obtenida exitosamente")
@@ -87,7 +84,7 @@ async def create_availability(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyAvailabilityRepository(session)
+    repo = get_availability_repo(session)
     dto = CreateAvailabilityDTO(
         fk_doctor_id=doctor_id,
         **body.model_dump(),
@@ -111,7 +108,7 @@ async def update_availability(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyAvailabilityRepository(session)
+    repo = get_availability_repo(session)
     dto = UpdateAvailabilityDTO(**body.model_dump(exclude_none=True))
     await UpdateAvailability(repo).execute(doctor_id, block_id, dto, updated_by=user_id)
     return Response(status_code=204)
@@ -128,7 +125,7 @@ async def delete_availability(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyAvailabilityRepository(session)
+    repo = get_availability_repo(session)
     await DeleteAvailability(repo).execute(doctor_id, block_id, deleted_by=user_id)
     return Response(status_code=204)
 
@@ -143,7 +140,7 @@ async def get_exceptions(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
-    repo = SQLAlchemyExceptionRepository(session)
+    repo = get_exception_repo(session)
     items = await GetExceptions(repo).execute(doctor_id, exception_date=date)
     data = [ExceptionResponse(**e.__dict__) for e in items]
     return ok(data=data, message="Excepciones obtenidas exitosamente")

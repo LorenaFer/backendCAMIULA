@@ -25,9 +25,7 @@ from app.modules.inventory.application.use_cases.medications.soft_delete_medicat
 from app.modules.inventory.application.use_cases.medications.update_medication import (
     UpdateMedication,
 )
-from app.modules.inventory.infrastructure.repositories.sqlalchemy_medication_repository import (
-    SQLAlchemyMedicationRepository,
-)
+from app.modules.inventory.presentation.dependencies import get_medication_repo
 from app.modules.inventory.presentation.schemas.medication_schemas import (
     MedicationCreate,
     MedicationOptionResponse,
@@ -52,7 +50,7 @@ async def list_medications(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
-    repo = SQLAlchemyMedicationRepository(session)
+    repo = get_medication_repo(session)
     items, total = await GetMedications(repo).execute(
         search=search,
         status=status,
@@ -72,7 +70,7 @@ async def get_medication_options(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
-    repo = SQLAlchemyMedicationRepository(session)
+    repo = get_medication_repo(session)
     options = await repo.find_options(search=search, limit=limit)
     data = [MedicationOptionResponse(**m.__dict__) for m in options]
     return ok(data=data, message="Opciones de medicamentos obtenidas")
@@ -84,7 +82,7 @@ async def get_medication(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
-    repo = SQLAlchemyMedicationRepository(session)
+    repo = get_medication_repo(session)
     medication = await GetMedicationById(repo).execute(id)
     if not medication:
         raise NotFoundException("Medicamento no encontrado.")
@@ -100,7 +98,7 @@ async def create_medication(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyMedicationRepository(session)
+    repo = get_medication_repo(session)
     dto = CreateMedicationDTO(**body.model_dump())
     medication = await CreateMedication(repo).execute(dto, created_by=user_id)
     return created(
@@ -116,7 +114,7 @@ async def update_medication(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyMedicationRepository(session)
+    repo = get_medication_repo(session)
     dto = UpdateMedicationDTO(**body.model_dump(exclude_none=True))
     medication = await UpdateMedication(repo).execute(id, dto, updated_by=user_id)
     return ok(
@@ -131,6 +129,6 @@ async def delete_medication(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyMedicationRepository(session)
+    repo = get_medication_repo(session)
     await SoftDeleteMedication(repo).execute(id, deleted_by=user_id)
     return ok(message="Medicamento eliminado exitosamente")
