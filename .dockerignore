@@ -9,7 +9,15 @@ __pycache__
 *.pyc
 .pytest_cache
 .benchmarks
-docs/reports/
+docs/
+prs/
 tests/
 scripts/test_*.sh
+scripts/seed_*.py
+scripts/export_postman.py
+scripts/new_module.py
+scripts/add_endpoint_docs.py
 *.pdf
+*.md
+!README.md
+.DS_Store
