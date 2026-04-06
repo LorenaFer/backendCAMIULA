@@ -92,8 +92,9 @@ def create_app() -> FastAPI:
     app.add_exception_handler(RequestValidationError, validation_exception_handler)
     app.add_exception_handler(Exception, generic_exception_handler)
 
-    # Sobreescribir el schema 422 default de FastAPI para que ReDoc/Swagger
-    # muestre nuestro envelope estándar en vez de {detail: [{loc, msg, type}]}
+    # Sobreescribir los schemas de OpenAPI para que ReDoc/Swagger
+    # muestre nuestro envelope estandar { status, message, data } en todas
+    # las respuestas, y el formato de error estandar en 422.
     def custom_openapi():
         if app.openapi_schema:
             return app.openapi_schema
@@ -102,22 +103,83 @@ def create_app() -> FastAPI:
         schema = get_openapi(
             title=app.title,
             version=app.version,
+            description=app.description,
             routes=app.routes,
+            tags=app.openapi_tags,
         )
-        # Reemplazar el schema 422 en todos los endpoints
+
+        # Schema del envelope estandar de error
         error_schema = ErrorResponse.model_json_schema(
             ref_template="#/components/schemas/{model}"
         )
-        for path in schema.get("paths", {}).values():
-            for method in path.values():
-                responses = method.get("responses", {})
+
+        # Schema del envelope estandar de exito
+        # { "status": "success", "message": "...", "data": <original_schema> }
+        def wrap_with_envelope(original_schema, description="Successful Response"):
+            return {
+                "description": description,
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "type": "object",
+                            "required": ["status", "message"],
+                            "properties": {
+                                "status": {
+                                    "type": "string",
+                                    "example": "success",
+                                    "description": "Always 'success' for 2xx responses",
+                                },
+                                "message": {
+                                    "type": "string",
+                                    "example": "Operation completed successfully",
+                                    "description": "Human-readable result message",
+                                },
+                                "data": original_schema or {"nullable": True},
+                            },
+                        }
+                    }
+                },
+            }
+
+        for path_str, path_methods in schema.get("paths", {}).items():
+            for method, details in path_methods.items():
+                if not isinstance(details, dict):
+                    continue
+                responses = details.get("responses", {})
+
+                # Wrap 200 responses with envelope
+                for code in ("200", "201"):
+                    if code in responses:
+                        resp = responses[code]
+                        content = resp.get("content", {})
+                        json_content = content.get("application/json", {})
+                        original_schema = json_content.get("schema")
+
+                        # Skip if already has our envelope:
+                        # 1. Inline schema with status+message properties
+                        # 2. $ref to StandardResponse_* (from response_model=)
+                        if original_schema and isinstance(original_schema, dict):
+                            # Check inline properties
+                            if ("properties" in original_schema and
+                                    "status" in original_schema.get("properties", {})):
+                                continue
+                            # Check $ref to StandardResponse
+                            ref = original_schema.get("$ref", "")
+                            if "StandardResponse" in ref:
+                                continue
+
+                        desc = resp.get("description", "Successful Response")
+                        responses[code] = wrap_with_envelope(original_schema, desc)
+
+                # Replace 422 with our error envelope
                 if "422" in responses:
                     responses["422"] = {
-                        "description": "Error de validación",
+                        "description": "Validation error",
                         "content": {
                             "application/json": {"schema": error_schema}
                         },
                     }
+
         app.openapi_schema = schema
         return schema
 
