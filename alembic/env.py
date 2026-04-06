@@ -28,6 +28,7 @@ from app.modules.inventory.infrastructure.models import (  # noqa: F401
     DispatchLimitModel,
     DispatchModel,
     InventoryMovementModel,
+    MedicationCategoryModel,
     MedicationModel,
     PrescriptionItemModel,
     PrescriptionModel,

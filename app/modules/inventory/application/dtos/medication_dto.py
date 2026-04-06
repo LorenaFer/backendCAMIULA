@@ -15,6 +15,7 @@ class CreateMedicationDTO:
     commercial_name: Optional[str] = None
     concentration: Optional[str] = None
     therapeutic_class: Optional[str] = None
+    fk_category_id: Optional[str] = None
 
 
 @dataclass
@@ -25,6 +26,7 @@ class UpdateMedicationDTO:
     concentration: Optional[str] = None
     unit_measure: Optional[str] = None
     therapeutic_class: Optional[str] = None
+    fk_category_id: Optional[str] = None
     controlled_substance: Optional[bool] = None
     requires_refrigeration: Optional[bool] = None
     medication_status: Optional[str] = None

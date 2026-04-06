@@ -46,6 +46,7 @@ async def list_medications(
     search: Optional[str] = Query(None, description="Búsqueda por nombre genérico"),
     status: Optional[str] = Query(None, description="Filtrar por medication_status"),
     therapeutic_class: Optional[str] = Query(None),
+    category_id: Optional[str] = Query(None, description="Filter by category UUID"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     session: AsyncSession = Depends(get_db),
@@ -56,6 +57,7 @@ async def list_medications(
         search=search,
         status=status,
         therapeutic_class=therapeutic_class,
+        category_id=category_id,
         page=page,
         page_size=page_size,
     )

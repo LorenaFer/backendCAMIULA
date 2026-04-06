@@ -16,6 +16,7 @@ class MedicationRepository(ABC):
         therapeutic_class: Optional[str],
         page: int,
         page_size: int,
+        category_id: Optional[str] = None,
     ) -> tuple[list[Medication], int]:
         """Retorna (items, total) para paginación."""
         ...

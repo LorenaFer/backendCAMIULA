@@ -146,6 +146,32 @@ class SupplierModel(Base, SoftDeleteMixin, AuditMixin):
 
 
 # ─────────────────────────────────────────────────────────────
+# PILAR 1 — MEDICATION CATEGORIES
+# ─────────────────────────────────────────────────────────────
+
+
+class MedicationCategoryModel(Base, SoftDeleteMixin, AuditMixin):
+    """Categoría de insumo médico: antibiótico, analgésico, material médico, etc."""
+
+    __tablename__ = "medication_categories"
+
+    # 1. Identidad
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=lambda: str(uuid4()),
+    )
+
+    # 3. Dominio
+    name: Mapped[str] = mapped_column(
+        String(100), nullable=False, unique=True, index=True
+    )
+    description: Mapped[Optional[str]] = mapped_column(String(500))
+
+    # 5-8. status + audit → proporcionados por los mixins
+
+
+# ─────────────────────────────────────────────────────────────
 # PILAR 1 — MEDICATIONS
 # ─────────────────────────────────────────────────────────────
 
@@ -160,6 +186,11 @@ class MedicationModel(Base, SoftDeleteMixin, AuditMixin):
         String(36),
         primary_key=True,
         default=lambda: str(uuid4()),
+    )
+
+    # 2. Relaciones
+    fk_category_id: Mapped[Optional[str]] = mapped_column(
+        String(36), ForeignKey("medication_categories.id"), index=True
     )
 
     # 3. Dominio
@@ -190,6 +221,9 @@ class MedicationModel(Base, SoftDeleteMixin, AuditMixin):
     )
 
     # 5-8. status + audit → proporcionados por los mixins
+
+    # Relationships
+    category: Mapped[Optional["MedicationCategoryModel"]] = relationship(lazy="joined")
 
 
 # ─────────────────────────────────────────────────────────────

@@ -9,6 +9,9 @@ Registrar en app/main.py:
 
 from fastapi import APIRouter
 
+from app.modules.inventory.presentation.routes.categories_router import (
+    router as categories_router,
+)
 from app.modules.inventory.presentation.routes.batches_router import (
     router as batches_router,
 )
@@ -37,6 +40,7 @@ from app.modules.inventory.presentation.routes.suppliers_router import (
 
 router = APIRouter(prefix="/inventory")
 
+router.include_router(categories_router)
 router.include_router(medications_router)
 router.include_router(suppliers_router)
 router.include_router(purchase_orders_router)

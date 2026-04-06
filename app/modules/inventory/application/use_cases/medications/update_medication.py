@@ -29,6 +29,7 @@ class UpdateMedication:
                 "concentration": dto.concentration,
                 "unit_measure": dto.unit_measure,
                 "therapeutic_class": dto.therapeutic_class,
+                "fk_category_id": dto.fk_category_id,
                 "controlled_substance": dto.controlled_substance,
                 "requires_refrigeration": dto.requires_refrigeration,
                 "medication_status": dto.medication_status,
