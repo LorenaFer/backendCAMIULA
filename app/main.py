@@ -92,10 +92,19 @@ def create_app() -> FastAPI:
     app.add_exception_handler(RequestValidationError, validation_exception_handler)
     app.add_exception_handler(Exception, generic_exception_handler)
 
-    def _add_code_samples(path: str, method: str, details: dict):
+    def _resolve_ref(ref_str: str, spec: dict) -> dict:
+        """Resolve a $ref string like '#/components/schemas/X' to the actual schema."""
+        if not ref_str or not ref_str.startswith("#/"):
+            return {}
+        parts = ref_str.lstrip("#/").split("/")
+        node = spec
+        for p in parts:
+            node = node.get(p, {})
+        return node
+
+    def _add_code_samples(path: str, method: str, details: dict, schema: dict = None):
         """Inject x-codeSamples for ReDoc display."""
-        full_url = "http://localhost:8000" + path
-        summary = details.get("summary", "")
+        import json as _json
         has_body = method in ("post", "put", "patch")
 
         # Build path with example values for path params
@@ -103,31 +112,70 @@ def create_app() -> FastAPI:
         for param in details.get("parameters", []):
             if param.get("in") == "path":
                 name = param["name"]
-                example_path = example_path.replace(
-                    "{" + name + "}", "<" + name + ">"
-                )
+                ex = param.get("schema", {}).get("example", f"<{name}>")
+                example_path = example_path.replace("{" + name + "}", str(ex))
 
         url = "http://localhost:8000" + example_path
 
-        # Determine query params for the example
+        # Collect query params — include ALL with examples, not just required
+        _PARAM_EXAMPLES = {
+            "page": "1", "page_size": "20", "search": "amoxicilina",
+            "fecha": "2026-04-15", "doctor_id": "<doctor_uuid>",
+            "medication_id": "<medication_uuid>", "patient_id": "<patient_uuid>",
+            "status": "active", "period": "2026-03", "year": "2026",
+            "month": "4", "week": "15", "threshold_days": "90",
+            "date_from": "2026-01-01", "date_to": "2026-12-31",
+            "alert_status": "active", "alert_level": "critical",
+            "movement_type": "entry", "prescription_id": "<prescription_uuid>",
+            "q": "perez", "mes": "2026-04", "nhm": "1234",
+            "cedula": "V-12345678", "es_nuevo": "false",
+        }
         query_parts = []
         for param in details.get("parameters", []):
-            if param.get("in") == "query" and param.get("required"):
-                name = param["name"]
-                ex = param.get("schema", {}).get("example", "value")
+            if param.get("in") != "query":
+                continue
+            name = param["name"]
+            ex = param.get("schema", {}).get("example")
+            if not ex:
+                ex = _PARAM_EXAMPLES.get(name)
+            if param.get("required"):
+                query_parts.append(f"{name}={ex or 'value'}")
+            elif ex:
                 query_parts.append(f"{name}={ex}")
+        # For GET with many optional params, show the 2-3 most useful
+        if not any(p.get("required") for p in details.get("parameters", []) if p.get("in") == "query"):
+            query_parts = query_parts[:3]
         qs = "?" + "&".join(query_parts) if query_parts else ""
 
-        # Get request body example
+        # Get request body example — resolve $ref if needed
         body_example = ""
         body_json_str = ""
-        rb = details.get("requestBody", {}).get("content", {}).get(
+        rb_schema = details.get("requestBody", {}).get("content", {}).get(
             "application/json", {}
         ).get("schema", {})
-        if rb and rb.get("example"):
-            import json as _json
-            body_example = _json.dumps(rb["example"], indent=2)
-            body_json_str = _json.dumps(rb["example"])
+
+        example_data = None
+        if rb_schema:
+            # Direct example on the schema
+            if rb_schema.get("example"):
+                example_data = rb_schema["example"]
+            # Resolve $ref to component schema
+            elif rb_schema.get("$ref"):
+                resolved = _resolve_ref(rb_schema["$ref"], schema)
+                if resolved.get("example"):
+                    example_data = resolved["example"]
+                elif resolved.get("properties"):
+                    # Build example from individual field examples
+                    example_data = {}
+                    for fname, fprop in resolved.get("properties", {}).items():
+                        if "example" in fprop:
+                            example_data[fname] = fprop["example"]
+                        elif fprop.get("default") is not None:
+                            example_data[fname] = fprop["default"]
+
+        if example_data:
+            body_example = _json.dumps(example_data, indent=2)
+            body_json_str = _json.dumps(example_data)
 
         # --- cURL ---
         curl_lines = [f'curl -X {method.upper()} "{url}{qs}"']
@@ -319,7 +367,7 @@ def create_app() -> FastAPI:
                     }
 
                 # Add code samples (x-codeSamples) for ReDoc
-                _add_code_samples(path_str, method, details)
+                _add_code_samples(path_str, method, details, schema=schema)
 
         app.openapi_schema = schema
         return schema
