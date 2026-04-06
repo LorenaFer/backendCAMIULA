@@ -114,6 +114,45 @@ class SQLAlchemyDispatchRepository(DispatchRepository):
             for m in models
         ]
 
+    async def find_all(
+        self,
+        patient_id: Optional[str] = None,
+        prescription_number: Optional[str] = None,
+        status: Optional[str] = None,
+        date_from: Optional[str] = None,
+        date_to: Optional[str] = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> tuple[list[Dispatch], int]:
+        q = select(DispatchModel).where(DispatchModel.status == RecordStatus.ACTIVE)
+        if patient_id:
+            q = q.where(DispatchModel.fk_patient_id == patient_id)
+        if prescription_number:
+            q = q.join(
+                PrescriptionModel,
+                DispatchModel.fk_prescription_id == PrescriptionModel.id,
+            ).where(PrescriptionModel.prescription_number.ilike(f"%{prescription_number}%"))
+        if status:
+            q = q.where(DispatchModel.dispatch_status == status)
+        if date_from:
+            q = q.where(DispatchModel.dispatch_date >= datetime.fromisoformat(date_from))
+        if date_to:
+            q = q.where(DispatchModel.dispatch_date <= datetime.fromisoformat(date_to))
+
+        total = (
+            await self._session.execute(select(func.count()).select_from(q.subquery()))
+        ).scalar_one()
+        offset = (page - 1) * page_size
+        result = await self._session.execute(
+            q.order_by(DispatchModel.dispatch_date.desc()).offset(offset).limit(page_size)
+        )
+        models = result.scalars().all()
+        items_by_dispatch = await self._load_items_batch([m.id for m in models])
+        return [
+            self._to_entity(m, items_by_dispatch.get(m.id, []))
+            for m in models
+        ], total
+
     async def find_by_patient(
         self,
         fk_patient_id: str,

@@ -19,6 +19,9 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.inventory.infrastructure.repositories.sqlalchemy_movement_repository import (
+    SQLAlchemyMovementRepository,
+)
 from app.modules.inventory.infrastructure.repositories.sqlalchemy_report_repository import (
     SQLAlchemyReportRepository,
 )
@@ -27,17 +30,21 @@ from app.modules.inventory.presentation.schemas.report_schemas import (
     EnrichedBatchResponse,
     ExpirationReportResponse,
     ExpiringSoonReportResponse,
+    InventoryMovementResponse,
+    InventoryMovementsListResponse,
     InventorySummaryResponse,
     LowStockReportResponse,
     MedicationOptionResponse,
     MovementItemResponse,
     MovementsReportResponse,
     PaginationMeta,
+    StockAlertResponse,
+    StockAlertsListResponse,
     StockItemResponse,
     StockReportResponse,
 )
 from app.shared.database.session import get_db
-from app.shared.middleware.auth import get_current_user_id
+from app.shared.middleware.auth import get_optional_user_id as get_current_user_id
 from app.shared.schemas.responses import ok
 
 router = APIRouter(prefix="/reports", tags=["Inventory — Reports"])
@@ -82,7 +89,8 @@ def _enrich_batch_to_schema(b) -> EnrichedBatchResponse:
     description=(
         "Consolida el inventario disponible por medicamento. "
         "Solo incluye lotes con batch_status='available' y expiration_date >= hoy. "
-        "Calcula stock_alert: 'ok' (>50), 'low' (≤50), 'critical' (≤10), 'expired' (0)."
+        "Calcula stock_alert: 'ok' (>50), 'low' (≤50), 'critical' (≤10), 'expired' (0). "
+        "Auto-generates stock alerts for medications crossing thresholds."
     ),
 )
 async def get_stock_report(
@@ -91,6 +99,11 @@ async def get_stock_report(
 ):
     repo = SQLAlchemyReportRepository(session)
     report = await repo.get_stock_report()
+
+    # Auto-generate stock alerts on each stock report request
+    movement_repo = SQLAlchemyMovementRepository(session)
+    await movement_repo.generate_alerts(created_by=user_id)
+
     return ok(
         data=StockReportResponse(
             generated_at=report.generated_at,
@@ -320,3 +333,155 @@ async def get_movements(
         ),
         message=f"Movimientos de {report.generic_name}",
     )
+
+
+# ──────────────────────────────────────────────────────────
+# Inventory Movements (trazabilidad persistida)
+# ──────────────────────────────────────────────────────────
+
+@router.get(
+    "/inventory-movements",
+    summary="Movimientos de inventario persistidos (trazabilidad)",
+    description=(
+        "Lista paginada de todos los movimientos de inventario registrados. "
+        "Cada entrada/salida/ajuste/expiración queda persistida con tipo, "
+        "cantidad, balance resultante y referencia al origen."
+    ),
+)
+async def get_inventory_movements(
+    medication_id: Optional[str] = Query(None, description="Filter by medication ID"),
+    movement_type: Optional[str] = Query(
+        None, description="Filter by type: entry, exit, adjustment, expiration"
+    ),
+    date_from: Optional[str] = Query(None, description="Start date ISO YYYY-MM-DD"),
+    date_to: Optional[str] = Query(None, description="End date ISO YYYY-MM-DD"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    session: AsyncSession = Depends(get_db),
+    user_id: str = Depends(get_current_user_id),
+):
+    repo = SQLAlchemyMovementRepository(session)
+    result = await repo.get_movements(
+        medication_id=medication_id,
+        movement_type=movement_type,
+        date_from=date_from,
+        date_to=date_to,
+        page=page,
+        page_size=page_size,
+    )
+    pages = -(-result.total // page_size) if page_size > 0 else 0
+    return ok(
+        data=InventoryMovementsListResponse(
+            items=[InventoryMovementResponse(**i.__dict__) for i in result.items],
+            pagination=PaginationMeta(
+                total=result.total,
+                page=page,
+                page_size=page_size,
+                pages=pages,
+            ),
+        ),
+        message=f"{result.total} movimientos encontrados",
+    )
+
+
+# ──────────────────────────────────────────────────────────
+# Stock Alerts (alertas persistidas)
+# ──────────────────────────────────────────────────────────
+
+@router.get(
+    "/stock-alerts",
+    summary="Alertas de stock persistidas",
+    description=(
+        "Lista paginada de alertas de stock. Cada alerta registra cuando un "
+        "medicamento cruza un umbral (low, critical, expired). Las alertas "
+        "se resuelven automáticamente al reponer stock o manualmente."
+    ),
+)
+async def get_stock_alerts(
+    alert_status: Optional[str] = Query(
+        None, description="Filter: active, resolved, acknowledged"
+    ),
+    alert_level: Optional[str] = Query(
+        None, description="Filter: low, critical, expired"
+    ),
+    medication_id: Optional[str] = Query(None, description="Filter by medication ID"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=100),
+    session: AsyncSession = Depends(get_db),
+    user_id: str = Depends(get_current_user_id),
+):
+    repo = SQLAlchemyMovementRepository(session)
+    result = await repo.get_alerts(
+        alert_status=alert_status,
+        alert_level=alert_level,
+        medication_id=medication_id,
+        page=page,
+        page_size=page_size,
+    )
+    return ok(
+        data=StockAlertsListResponse(
+            items=[StockAlertResponse(**i.__dict__) for i in result.items],
+            total=result.total,
+            active_count=result.active_count,
+            resolved_count=result.resolved_count,
+        ),
+        message=f"{result.total} alertas encontradas ({result.active_count} activas)",
+    )
+
+
+@router.post(
+    "/stock-alerts/generate",
+    summary="Generar alertas de stock",
+    description=(
+        "Escanea todos los medicamentos activos y genera alertas para aquellos "
+        "que han cruzado los umbrales de stock (low <= 50, critical <= 10, "
+        "expired = 0). Auto-resuelve alertas previas si el stock se recupera."
+    ),
+)
+async def generate_stock_alerts(
+    session: AsyncSession = Depends(get_db),
+    user_id: str = Depends(get_current_user_id),
+):
+    repo = SQLAlchemyMovementRepository(session)
+    new_count = await repo.generate_alerts(created_by=user_id)
+    await session.commit()
+    return ok(
+        data={"new_alerts": new_count},
+        message=f"{new_count} nuevas alertas generadas",
+    )
+
+
+@router.patch(
+    "/stock-alerts/{alert_id}/acknowledge",
+    summary="Marcar alerta como reconocida",
+)
+async def acknowledge_alert(
+    alert_id: str,
+    session: AsyncSession = Depends(get_db),
+    user_id: str = Depends(get_current_user_id),
+):
+    repo = SQLAlchemyMovementRepository(session)
+    success = await repo.acknowledge_alert(alert_id, user_id)
+    if not success:
+        from app.core.exceptions import AppException
+        raise AppException(status_code=404, message="Alert not found or already resolved")
+    await session.commit()
+    return ok(message="Alert acknowledged")
+
+
+@router.patch(
+    "/stock-alerts/{alert_id}/resolve",
+    summary="Resolver alerta manualmente",
+)
+async def resolve_alert(
+    alert_id: str,
+    session: AsyncSession = Depends(get_db),
+    user_id: str = Depends(get_current_user_id),
+):
+    repo = SQLAlchemyMovementRepository(session)
+    success = await repo.resolve_alert(alert_id, user_id)
+    if not success:
+        from app.core.exceptions import AppException
+        raise AppException(status_code=404, message="Alert not found or already resolved")
+    await session.commit()
+    return ok(message="Alert resolved")

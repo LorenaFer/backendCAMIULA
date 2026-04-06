@@ -22,9 +22,18 @@ class PrescriptionItemCreate(BaseModel):
 class PrescriptionCreate(BaseModel):
     fk_appointment_id: str
     fk_patient_id: str
-    fk_doctor_id: str
+    fk_doctor_id: Optional[str] = None
     notes: Optional[str] = Field(None, max_length=500)
     items: List[PrescriptionItemCreate] = Field(..., min_length=1)
+
+
+class MedicationEmbedResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    code: str
+    generic_name: str
+    pharmaceutical_form: str
+    unit_measure: str
 
 
 class PrescriptionItemResponse(BaseModel):
@@ -32,23 +41,23 @@ class PrescriptionItemResponse(BaseModel):
 
     id: str
     fk_medication_id: str
+    medication: Optional[MedicationEmbedResponse] = None
     quantity_prescribed: int
-    dosage_instructions: Optional[str]
-    duration_days: Optional[int]
+    dosage_instructions: Optional[str] = None
+    duration_days: Optional[int] = None
 
 
 class PrescriptionResponse(BaseModel):
-    """Espejo de la interfaz Prescription del frontend."""
-
     model_config = ConfigDict(from_attributes=True)
 
     id: str
     prescription_number: str
     fk_appointment_id: str
     fk_patient_id: str
-    fk_doctor_id: str
-    prescription_date: str
-    notes: Optional[str]
+    fk_doctor_id: Optional[str] = None
+    doctor_name: Optional[str] = None
+    prescription_date: Optional[str] = None
+    notes: Optional[str] = None
     prescription_status: str
-    items: List[PrescriptionItemResponse]
-    created_at: Optional[str]
+    items: List[PrescriptionItemResponse] = []
+    created_at: Optional[str] = None

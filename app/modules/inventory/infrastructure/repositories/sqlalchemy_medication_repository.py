@@ -47,6 +47,9 @@ class SQLAlchemyMedicationRepository(MedicationRepository):
 
     @staticmethod
     def _to_entity(model: MedicationModel, current_stock: int = 0) -> Medication:
+        cat_name = None
+        if hasattr(model, "category") and model.category is not None:
+            cat_name = model.category.name
         return Medication(
             id=model.id,
             code=model.code,
@@ -56,6 +59,8 @@ class SQLAlchemyMedicationRepository(MedicationRepository):
             concentration=model.concentration,
             unit_measure=model.unit_measure,
             therapeutic_class=model.therapeutic_class,
+            fk_category_id=model.fk_category_id,
+            category_name=cat_name,
             controlled_substance=model.controlled_substance,
             requires_refrigeration=model.requires_refrigeration,
             medication_status=model.medication_status,
@@ -75,6 +80,7 @@ class SQLAlchemyMedicationRepository(MedicationRepository):
         therapeutic_class: Optional[str],
         page: int,
         page_size: int,
+        category_id: Optional[str] = None,
     ) -> tuple[list[Medication], int]:
         stock_sq = _stock_subquery()
 
@@ -95,6 +101,8 @@ class SQLAlchemyMedicationRepository(MedicationRepository):
             base = base.where(MedicationModel.medication_status == status)
         if therapeutic_class:
             base = base.where(MedicationModel.therapeutic_class == therapeutic_class)
+        if category_id:
+            base = base.where(MedicationModel.fk_category_id == category_id)
 
         count_q = select(func.count()).select_from(base.subquery())
         total = (await self._session.execute(count_q)).scalar_one()
@@ -176,15 +184,16 @@ class SQLAlchemyMedicationRepository(MedicationRepository):
     # ──────────────────────────────────────────────────────────
 
     async def create(self, data: dict, created_by: str) -> Medication:
+        med_id = str(uuid4())
         model = MedicationModel(
-            id=str(uuid4()),
+            id=med_id,
             created_by=created_by,
             **data,
         )
         self._session.add(model)
         await self._session.flush()
-        await self._session.refresh(model)
-        return self._to_entity(model)
+        # Re-fetch with joined category relationship
+        return await self.find_by_id(med_id)
 
     async def update(self, id: str, data: dict, updated_by: str) -> Medication:
         data["updated_by"] = updated_by

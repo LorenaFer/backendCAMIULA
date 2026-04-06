@@ -7,7 +7,7 @@ No se retornan entidades de dominio; se retornan DTOs directamente.
 from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 
-from sqlalchemy import case, func, literal, or_, select, text, union_all
+from sqlalchemy import and_, case, func, literal, or_, select, text, union_all
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.inventory.application.dtos.report_dto import (
@@ -39,8 +39,23 @@ from app.shared.database.mixins import RecordStatus
 # SQL CASE WHEN expression that mirrors compute_stock_alert() from the DTOs.
 # Kept as a module-level helper so both get_stock_report and get_inventory_summary
 # can reuse it without duplicating the expression tree.
-def _stock_alert_case(total_available_col):
-    """Return a SQLAlchemy CASE expression for the stock alert level."""
+def _stock_alert_case(total_available_col, expired_batch_count_col=None):
+    """Return a SQLAlchemy CASE expression for the stock alert level.
+
+    Logic:
+    - has expired batches AND zero usable stock → 'expired'
+    - zero stock but no expired batches → 'critical' (out of stock, not expired)
+    - stock <= 10 → 'critical'
+    - stock <= 50 → 'low'
+    - else → 'ok'
+    """
+    if expired_batch_count_col is not None:
+        return case(
+            (and_(total_available_col == 0, expired_batch_count_col > 0), literal("expired")),
+            (total_available_col <= STOCK_THRESHOLD_CRITICAL, literal("critical")),
+            (total_available_col <= STOCK_THRESHOLD_LOW, literal("low")),
+            else_=literal("ok"),
+        )
     return case(
         (total_available_col == 0, literal("expired")),
         (total_available_col <= STOCK_THRESHOLD_CRITICAL, literal("critical")),
@@ -58,6 +73,22 @@ class SQLAlchemyReportRepository:
     # Stock consolidado
     # ──────────────────────────────────────────────────────────
 
+    async def _auto_expire_batches(self):
+        """Mark batches as 'expired' if expiration_date < today.
+
+        O(log n) — uses index on expiration_date. Runs once per report request.
+        """
+        today = date.today()
+        await self._session.execute(
+            text(
+                "UPDATE batches SET batch_status = 'expired' "
+                "WHERE batch_status = 'available' "
+                "AND expiration_date < :today "
+                "AND status = 'A'"
+            ),
+            {"today": today},
+        )
+
     async def get_stock_report(self) -> StockReportDTO:
         """
         Calcula stock vigente por medicamento en un solo query con GROUP BY.
@@ -66,8 +97,12 @@ class SQLAlchemyReportRepository:
         stock_alert, critical_count y expired_count se computan directamente
         en SQL mediante CASE WHEN — sin post-procesamiento en Python.
         """
+        # Auto-expire stale batches first
+        await self._auto_expire_batches()
+
         today = date.today()
 
+        # Subquery: usable (non-expired) batches
         usable_batches_sq = (
             select(
                 BatchModel.fk_medication_id,
@@ -87,12 +122,29 @@ class SQLAlchemyReportRepository:
             .subquery()
         )
 
+        # Subquery: count of expired batches per medication
+        expired_batches_sq = (
+            select(
+                BatchModel.fk_medication_id,
+                func.count(BatchModel.id).label("expired_count"),
+            )
+            .where(
+                BatchModel.status == RecordStatus.ACTIVE,
+                BatchModel.batch_status == "expired",
+            )
+            .group_by(BatchModel.fk_medication_id)
+            .subquery()
+        )
+
         total_available_col = func.coalesce(
             usable_batches_sq.c.total_available, 0
         )
-        stock_alert_expr = _stock_alert_case(total_available_col).label(
-            "stock_alert"
+        expired_count_col = func.coalesce(
+            expired_batches_sq.c.expired_count, 0
         )
+        stock_alert_expr = _stock_alert_case(
+            total_available_col, expired_count_col
+        ).label("stock_alert")
 
         rows = (
             await self._session.execute(
@@ -112,6 +164,10 @@ class SQLAlchemyReportRepository:
                 .outerjoin(
                     usable_batches_sq,
                     usable_batches_sq.c.fk_medication_id == MedicationModel.id,
+                )
+                .outerjoin(
+                    expired_batches_sq,
+                    expired_batches_sq.c.fk_medication_id == MedicationModel.id,
                 )
                 .where(
                     MedicationModel.status == RecordStatus.ACTIVE,

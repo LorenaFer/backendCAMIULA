@@ -32,6 +32,18 @@ class SQLAlchemyPrescriptionRepository(PrescriptionRepository):
 
     @staticmethod
     def _item_to_entity(m: PrescriptionItemModel) -> PrescriptionItem:
+        from app.modules.inventory.domain.entities.prescription import MedicationEmbed
+
+        med_embed = None
+        if hasattr(m, "medication") and m.medication:
+            med = m.medication
+            med_embed = MedicationEmbed(
+                id=med.id,
+                code=med.code,
+                generic_name=med.generic_name,
+                pharmaceutical_form=med.pharmaceutical_form,
+                unit_measure=med.unit_measure,
+            )
         return PrescriptionItem(
             id=m.id,
             fk_prescription_id=m.fk_prescription_id,
@@ -41,6 +53,28 @@ class SQLAlchemyPrescriptionRepository(PrescriptionRepository):
             item_status=m.item_status,
             dosage_instructions=m.dosage_instructions,
             duration_days=m.duration_days,
+            medication=med_embed,
+        )
+
+    def _model_to_entity(
+        self, model: PrescriptionModel, doctor_name: Optional[str] = None
+    ) -> Prescription:
+        items = [
+            self._item_to_entity(m) for m in (model.items_rel or [])
+        ]
+        return Prescription(
+            id=model.id,
+            fk_appointment_id=model.fk_appointment_id,
+            fk_patient_id=model.fk_patient_id,
+            fk_doctor_id=model.fk_doctor_id,
+            prescription_number=model.prescription_number,
+            prescription_date=model.prescription_date.isoformat() if model.prescription_date else None,
+            prescription_status=model.prescription_status,
+            notes=model.notes,
+            doctor_name=doctor_name,
+            items=items,
+            created_at=model.created_at.isoformat() if model.created_at else None,
+            created_by=model.created_by,
         )
 
     @staticmethod
@@ -53,13 +87,28 @@ class SQLAlchemyPrescriptionRepository(PrescriptionRepository):
             fk_patient_id=model.fk_patient_id,
             fk_doctor_id=model.fk_doctor_id,
             prescription_number=model.prescription_number,
-            prescription_date=model.prescription_date.isoformat(),
+            prescription_date=model.prescription_date.isoformat() if model.prescription_date else None,
             prescription_status=model.prescription_status,
             notes=model.notes,
             items=[SQLAlchemyPrescriptionRepository._item_to_entity(i) for i in items],
             created_at=model.created_at.isoformat() if model.created_at else None,
             created_by=model.created_by,
         )
+
+    async def _resolve_doctor_name(self, doctor_id: str) -> Optional[str]:
+        """Resolve doctor name from doctors table (cross-module)."""
+        from sqlalchemy import text
+        result = await self._session.execute(
+            text("SELECT first_name || ' ' || last_name FROM doctors WHERE fk_user_id = :uid OR id = :uid LIMIT 1"),
+            {"uid": doctor_id},
+        )
+        row = result.fetchone()
+        return row[0] if row else None
+
+    async def _enrich(self, model: PrescriptionModel) -> Prescription:
+        """Convert model to entity with medication JOINs and doctor name."""
+        doctor_name = await self._resolve_doctor_name(model.fk_doctor_id)
+        return self._model_to_entity(model, doctor_name=doctor_name)
 
     async def _load_items(self, prescription_id: str) -> list[PrescriptionItemModel]:
         result = await self._session.execute(
@@ -81,11 +130,10 @@ class SQLAlchemyPrescriptionRepository(PrescriptionRepository):
                 PrescriptionModel.status == RecordStatus.ACTIVE,
             )
         )
-        m = result.scalar_one_or_none()
+        m = result.unique().scalar_one_or_none()
         if not m:
             return None
-        items = await self._load_items(id)
-        return self._to_entity(m, items)
+        return await self._enrich(m)
 
     async def find_by_appointment(self, fk_appointment_id: str) -> Optional[Prescription]:
         result = await self._session.execute(
@@ -94,11 +142,10 @@ class SQLAlchemyPrescriptionRepository(PrescriptionRepository):
                 PrescriptionModel.status == RecordStatus.ACTIVE,
             )
         )
-        m = result.scalar_one_or_none()
+        m = result.unique().scalar_one_or_none()
         if not m:
             return None
-        items = await self._load_items(m.id)
-        return self._to_entity(m, items)
+        return await self._enrich(m)
 
     async def find_by_patient(
         self, fk_patient_id: str, page: int, page_size: int
@@ -117,9 +164,8 @@ class SQLAlchemyPrescriptionRepository(PrescriptionRepository):
             .limit(page_size)
         )
         prescriptions = []
-        for m in result.scalars().all():
-            items = await self._load_items(m.id)
-            prescriptions.append(self._to_entity(m, items))
+        for m in result.unique().scalars().all():
+            prescriptions.append(await self._enrich(m))
         return prescriptions, total
 
     async def find_by_number(self, prescription_number: str) -> Optional[Prescription]:
@@ -150,6 +196,11 @@ class SQLAlchemyPrescriptionRepository(PrescriptionRepository):
     # ──────────────────────────────────────────────────────────
 
     async def create(self, data: dict, created_by: str) -> Prescription:
+        # Convert prescription_date string to date object for asyncpg
+        if isinstance(data.get("prescription_date"), str):
+            from datetime import date as date_type
+            data["prescription_date"] = date_type.fromisoformat(data["prescription_date"])
+
         items_data: list[dict] = data.pop("items", [])
         prescription_id = str(uuid4())
 
@@ -169,7 +220,8 @@ class SQLAlchemyPrescriptionRepository(PrescriptionRepository):
             item_models.append(im)
 
         await self._session.flush()
-        return self._to_entity(model, item_models)
+        # Re-fetch with eager-loaded relationships
+        return await self.find_by_id(prescription_id)
 
     async def update_status(self, id: str, new_status: str, updated_by: str) -> None:
         await self._session.execute(

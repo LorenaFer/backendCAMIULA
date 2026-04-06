@@ -20,11 +20,13 @@ class GetMedications:
         therapeutic_class: Optional[str],
         page: int,
         page_size: int,
+        category_id: Optional[str] = None,
     ) -> tuple[list[Medication], int]:
         return await self._repo.find_all(
             search=search,
             status=status,
             therapeutic_class=therapeutic_class,
+            category_id=category_id,
             page=page,
             page_size=page_size,
         )

@@ -94,13 +94,33 @@ def create_app() -> FastAPI:
 
     app.include_router(auth_router, prefix="/api")
 
-    # TODO: Register additional module routers as they are developed
-    # from app.modules.patients.router import router as patients_router
-    # app.include_router(patients_router, prefix="/api")
+    from app.modules.patients.router import router as patients_router
+
+    app.include_router(patients_router, prefix="/api")
 
     from app.modules.inventory.router import router as inventory_router
 
     app.include_router(inventory_router, prefix="/api")
+
+    from app.modules.doctors.router import router as doctors_router
+
+    app.include_router(doctors_router, prefix="/api")
+
+    from app.modules.appointments.router import router as appointments_router
+
+    app.include_router(appointments_router, prefix="/api")
+
+    from app.modules.medical_records.router import router as medical_records_router
+
+    app.include_router(medical_records_router, prefix="/api")
+
+    from app.modules.dashboard.router import router as dashboard_router
+
+    app.include_router(dashboard_router, prefix="/api")
+
+    from app.modules.reports.router import router as reports_router
+
+    app.include_router(reports_router, prefix="/api")
 
     return app
 

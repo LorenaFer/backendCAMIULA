@@ -141,3 +141,53 @@ class ExpiringSoonReportResponse(BaseModel):
     vencen_en_60: List[EnrichedBatchResponse]
     vencen_en_90: List[EnrichedBatchResponse]
     total: int
+
+
+# ── Inventory Movements (trazabilidad persistida) ────────────────────────────
+
+class InventoryMovementResponse(BaseModel):
+    id: str
+    fk_medication_id: str
+    medication_name: Optional[str] = None
+    fk_batch_id: Optional[str] = None
+    fk_dispatch_id: Optional[str] = None
+    fk_purchase_order_id: Optional[str] = None
+    movement_type: str
+    quantity: int
+    balance_after: int
+    reference: Optional[str] = None
+    lot_number: Optional[str] = None
+    unit_cost: Optional[float] = None
+    notes: Optional[str] = None
+    movement_date: str
+    created_at: Optional[str] = None
+    created_by: Optional[str] = None
+
+
+class InventoryMovementsListResponse(BaseModel):
+    items: List[InventoryMovementResponse]
+    pagination: PaginationMeta
+
+
+# ── Stock Alerts (alertas persistidas) ───────────────────────────────────────
+
+class StockAlertResponse(BaseModel):
+    id: str
+    fk_medication_id: str
+    medication_name: Optional[str] = None
+    medication_code: Optional[str] = None
+    alert_level: str
+    current_stock: int
+    threshold: int
+    message: str
+    detected_at: str
+    resolved_at: Optional[str] = None
+    resolved_by: Optional[str] = None
+    alert_status: str
+
+
+class StockAlertsListResponse(BaseModel):
+    items: List[StockAlertResponse]
+    total: int
+    active_count: int
+    resolved_count: int

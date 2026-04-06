@@ -35,5 +35,38 @@ class UpdateProfileRequest(BaseModel):
     phone: Optional[str] = None
 
 
+class CreateUserRequest(BaseModel):
+    email: EmailStr
+    full_name: str = Field(min_length=2, max_length=255)
+    password: str = Field(min_length=8)
+    phone: Optional[str] = None
+    roles: List[str] = Field(default=["paciente"], min_length=1)
+    specialty_id: Optional[str] = Field(None, description="Required when role includes 'doctor'")
+
+
 class AssignRoleRequest(BaseModel):
     role_name: str = Field(min_length=2, max_length=50)
+
+
+# ---------------------------------------------------------------------------
+# Patient portal login (no password)
+# ---------------------------------------------------------------------------
+
+
+class PatientLoginRequest(BaseModel):
+    query: str = Field(min_length=1, max_length=30)
+    query_type: str = Field(pattern="^(cedula|nhm)$")
+
+
+class PatientLoginData(BaseModel):
+    id: str
+    nhm: int
+    first_name: str
+    last_name: str
+    university_relation: str
+    is_new: bool
+
+
+class PatientLoginResponse(BaseModel):
+    found: bool
+    patient: Optional[PatientLoginData] = None

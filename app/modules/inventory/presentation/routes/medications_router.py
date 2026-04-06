@@ -35,7 +35,7 @@ from app.modules.inventory.presentation.schemas.medication_schemas import (
     MedicationUpdate,
 )
 from app.shared.database.session import get_db
-from app.shared.middleware.auth import get_current_user_id
+from app.shared.middleware.auth import get_current_user_id, get_optional_user_id
 from app.shared.schemas.responses import created, ok, paginated
 
 router = APIRouter(prefix="/medications", tags=["Inventory — Medications"])
@@ -46,16 +46,18 @@ async def list_medications(
     search: Optional[str] = Query(None, description="Búsqueda por nombre genérico"),
     status: Optional[str] = Query(None, description="Filtrar por medication_status"),
     therapeutic_class: Optional[str] = Query(None),
+    category_id: Optional[str] = Query(None, description="Filter by category UUID"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     session: AsyncSession = Depends(get_db),
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(get_optional_user_id),
 ):
     repo = SQLAlchemyMedicationRepository(session)
     items, total = await GetMedications(repo).execute(
         search=search,
         status=status,
         therapeutic_class=therapeutic_class,
+        category_id=category_id,
         page=page,
         page_size=page_size,
     )
@@ -68,7 +70,7 @@ async def get_medication_options(
     search: Optional[str] = Query(None, description="Filtrar por nombre genérico"),
     limit: int = Query(100, ge=1, le=500, description="Máximo de resultados"),
     session: AsyncSession = Depends(get_db),
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(get_optional_user_id),
 ):
     repo = SQLAlchemyMedicationRepository(session)
     options = await repo.find_options(search=search, limit=limit)
@@ -80,7 +82,7 @@ async def get_medication_options(
 async def get_medication(
     id: str,
     session: AsyncSession = Depends(get_db),
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(get_optional_user_id),
 ):
     repo = SQLAlchemyMedicationRepository(session)
     medication = await GetMedicationById(repo).execute(id)
@@ -107,7 +109,7 @@ async def create_medication(
     )
 
 
-@router.put("/{id}", summary="Actualizar medicamento")
+@router.patch("/{id}", summary="Actualizar medicamento")
 async def update_medication(
     id: str,
     body: MedicationUpdate,

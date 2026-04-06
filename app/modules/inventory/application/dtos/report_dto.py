@@ -140,3 +140,59 @@ class MovementsReportDTO:
     generic_name: str
     items: List[MovementItemDTO] = field(default_factory=list)
     total: int = 0
+
+
+# ── Inventory Movements (trazabilidad persistida) ────────────────────────────
+
+@dataclass
+class InventoryMovementDTO:
+    """A single persisted inventory movement record."""
+    id: str
+    fk_medication_id: str
+    medication_name: Optional[str]
+    fk_batch_id: Optional[str]
+    fk_dispatch_id: Optional[str]
+    fk_purchase_order_id: Optional[str]
+    movement_type: str       # 'entry' | 'exit' | 'adjustment' | 'expiration'
+    quantity: int
+    balance_after: int
+    reference: Optional[str]
+    lot_number: Optional[str]
+    unit_cost: Optional[float]
+    notes: Optional[str]
+    movement_date: str       # ISO datetime string
+    created_at: Optional[str]
+    created_by: Optional[str]
+
+
+@dataclass
+class InventoryMovementsListDTO:
+    items: List[InventoryMovementDTO]
+    total: int
+
+
+# ── Stock Alerts (alertas persistidas) ───────────────────────────────────────
+
+@dataclass
+class StockAlertDTO:
+    """A single persisted stock alert record."""
+    id: str
+    fk_medication_id: str
+    medication_name: Optional[str]
+    medication_code: Optional[str]
+    alert_level: str         # 'low' | 'critical' | 'expired'
+    current_stock: int
+    threshold: int
+    message: str
+    detected_at: str         # ISO datetime string
+    resolved_at: Optional[str]
+    resolved_by: Optional[str]
+    alert_status: str        # 'active' | 'resolved' | 'acknowledged'
+
+
+@dataclass
+class StockAlertsListDTO:
+    items: List[StockAlertDTO]
+    total: int
+    active_count: int
+    resolved_count: int
