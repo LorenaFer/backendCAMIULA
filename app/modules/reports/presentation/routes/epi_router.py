@@ -24,6 +24,7 @@ from app.modules.reports.infrastructure.epi_query_service import (
     matches_cie10_range,
     month_date_range,
 )
+# NOTE: epi_query_service import is an accepted cross-cutting exemption (ADR-003)
 from app.shared.database.session import get_db
 from app.shared.middleware.auth import get_optional_user_id
 from app.shared.schemas.responses import ok

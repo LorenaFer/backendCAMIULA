@@ -29,30 +29,11 @@ from app.modules.patients.infrastructure.models import PatientModel
 from app.shared.database.mixins import RecordStatus
 
 
-def _parse_date(value: Optional[str]) -> date:
-    """Return a ``date`` from an ISO string or today's date."""
-    if value:
-        return date.fromisoformat(value)
-    return date.today()
-
-
-def _period_range(fecha: date, periodo: str) -> Tuple[date, date]:
-    """Return (start, end) inclusive date range for the given period."""
-    if periodo == "week":
-        start = fecha - timedelta(days=fecha.weekday())
-        end = start + timedelta(days=6)
-    elif periodo == "month":
-        start = fecha.replace(day=1)
-        next_month = (fecha.replace(day=28) + timedelta(days=4)).replace(day=1)
-        end = next_month - timedelta(days=1)
-    elif periodo == "year":
-        start = fecha.replace(month=1, day=1)
-        end = fecha.replace(month=12, day=31)
-    else:
-        # default: single day
-        start = fecha
-        end = fecha
-    return start, end
+# Pure functions re-exported from domain layer for backward compatibility
+from app.modules.dashboard.domain.date_utils import (  # noqa: F401
+    parse_date as _parse_date,
+    period_range as _period_range,
+)
 
 
 _ACTIVE = RecordStatus.ACTIVE.value
@@ -69,7 +50,7 @@ class DashboardQueryService:
     # ------------------------------------------------------------------
 
     async def kpis(
-        self, fecha: date, start: date, end: date
+        self, date_str: date, start: date, end: date
     ) -> Dict[str, Any]:
         # -- Appointment counts ----------------------------------------
         base = select(AppointmentModel).where(
@@ -85,7 +66,7 @@ class DashboardQueryService:
             .select_from(AppointmentModel)
             .where(
                 AppointmentModel.status == _ACTIVE,
-                AppointmentModel.appointment_date == fecha,
+                AppointmentModel.appointment_date == date_str,
             )
         )
         appointments_today = (await self._s.execute(today_q)).scalar() or 0
@@ -214,11 +195,11 @@ class DashboardQueryService:
         return [{"name": row[0], "count": row[1]} for row in rows]
 
     # ------------------------------------------------------------------
-    # 4. Daily trend (last 7 days from fecha)
+    # 4. Daily trend (last 7 days from date_str)
     # ------------------------------------------------------------------
 
-    async def daily_trend(self, fecha: date) -> List[int]:
-        days = [fecha - timedelta(days=i) for i in range(6, -1, -1)]
+    async def daily_trend(self, date_str: date) -> List[int]:
+        days = [date_str - timedelta(days=i) for i in range(6, -1, -1)]
         q = (
             select(
                 AppointmentModel.appointment_date,
@@ -264,7 +245,7 @@ class DashboardQueryService:
     # ------------------------------------------------------------------
 
     async def heatmap(
-        self, fecha_desde: date, fecha_hasta: date
+        self, date_from: date, date_to: date
     ) -> List[List[int]]:
         q = (
             select(
@@ -274,7 +255,7 @@ class DashboardQueryService:
             )
             .where(
                 AppointmentModel.status == _ACTIVE,
-                AppointmentModel.appointment_date.between(fecha_desde, fecha_hasta),
+                AppointmentModel.appointment_date.between(date_from, date_to),
             )
             .group_by("dow", "h")
         )

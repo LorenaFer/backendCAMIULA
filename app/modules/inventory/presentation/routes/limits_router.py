@@ -6,9 +6,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotFoundException
-from app.modules.inventory.infrastructure.repositories.sqlalchemy_limit_repository import (
-    SQLAlchemyLimitRepository,
-)
+from app.modules.inventory.presentation.dependencies import get_limit_repo
 from app.modules.inventory.presentation.schemas.limit_schemas import (
     DispatchExceptionCreate,
     DispatchExceptionResponse,
@@ -41,7 +39,8 @@ async def list_limits(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyLimitRepository(session)
+    """List monthly dispatch limits per medication, segmented by patient type."""
+    repo = get_limit_repo(session)
     items, total = await repo.find_all_limits(
         medication_id=medication_id,
         page=page,
@@ -57,7 +56,8 @@ async def create_limit(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyLimitRepository(session)
+    """Create a monthly dispatch limit for a medication."""
+    repo = get_limit_repo(session)
     data = body.model_dump()
     limit = await repo.create_limit(data, created_by=user_id)
     return created(
@@ -73,7 +73,8 @@ async def update_limit(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyLimitRepository(session)
+    """Update a dispatch limit's max quantity or applies_to type."""
+    repo = get_limit_repo(session)
 
     existing = await repo.find_limit_by_id(id)
     if not existing:
@@ -101,7 +102,8 @@ async def list_exceptions(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyLimitRepository(session)
+    """List authorized exceptions to dispatch limits."""
+    repo = get_limit_repo(session)
     items, total = await repo.find_all_exceptions(
         patient_id=patient_id,
         medication_id=medication_id,
@@ -118,7 +120,8 @@ async def create_exception(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyLimitRepository(session)
+    """Create an exception allowing a patient to exceed the monthly limit."""
+    repo = get_limit_repo(session)
     data = body.model_dump()
     # Convert date objects to ISO strings for the model
     if hasattr(data.get("valid_from", None), "isoformat"):

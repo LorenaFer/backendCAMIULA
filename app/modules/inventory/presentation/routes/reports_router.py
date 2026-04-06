@@ -19,12 +19,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.inventory.infrastructure.repositories.sqlalchemy_movement_repository import (
-    SQLAlchemyMovementRepository,
-)
-from app.modules.inventory.infrastructure.repositories.sqlalchemy_report_repository import (
-    SQLAlchemyReportRepository,
-)
+from app.modules.inventory.presentation.dependencies import get_movement_repo, get_report_repo
 from app.modules.inventory.presentation.schemas.report_schemas import (
     ConsumptionReportResponse,
     EnrichedBatchResponse,
@@ -97,11 +92,12 @@ async def get_stock_report(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyReportRepository(session)
+    """Consolidated stock report. Calculates stock_alert: ok (>50), low (<=50), critical (<=10), expired (0). Auto-generates stock alerts."""
+    repo = get_report_repo(session)
     report = await repo.get_stock_report()
 
     # Auto-generate stock alerts on each stock report request
-    movement_repo = SQLAlchemyMovementRepository(session)
+    movement_repo = get_movement_repo(session)
     await movement_repo.generate_alerts(created_by=user_id)
 
     return ok(
@@ -132,7 +128,8 @@ async def get_inventory_summary(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyReportRepository(session)
+    """Executive KPIs: total active SKUs, counts by alert level, total available units."""
+    repo = get_report_repo(session)
     summary = await repo.get_inventory_summary()
     return ok(
         data=InventorySummaryResponse(**summary.__dict__),
@@ -157,7 +154,8 @@ async def get_low_stock(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyReportRepository(session)
+    """Medications with stock_alert in low, critical, or expired. Ordered by criticality."""
+    repo = get_report_repo(session)
     report = await repo.get_low_stock_report()
     return ok(
         data=LowStockReportResponse(
@@ -189,7 +187,8 @@ async def get_expiration_report(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyReportRepository(session)
+    """Batches expiring within threshold_days (default 90). Includes medication details."""
+    repo = get_report_repo(session)
     report = await repo.get_expiration_report(threshold_days)
     return ok(
         data=ExpirationReportResponse(
@@ -218,7 +217,8 @@ async def get_expiring_soon(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyReportRepository(session)
+    """Batches expiring soon grouped into 30/60/90 day horizons."""
+    repo = get_report_repo(session)
     report_90 = await repo.get_expiration_report(threshold_days=90)
 
     today = date.today()
@@ -273,7 +273,8 @@ async def get_consumption_report(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyReportRepository(session)
+    """Monthly consumption by medication for a period (YYYY-MM)."""
+    repo = get_report_repo(session)
     report = await repo.get_consumption_report(period)
     return ok(
         data=ConsumptionReportResponse(
@@ -310,7 +311,8 @@ async def get_movements(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyReportRepository(session)
+    """Kardex: paginated entries + exits for a medication. Supports date range filters."""
+    repo = get_report_repo(session)
     report = await repo.get_movements(
         medication_id=medication_id,
         date_from=date_from,
@@ -360,7 +362,8 @@ async def get_inventory_movements(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyMovementRepository(session)
+    """All persisted inventory movements (entries, exits, adjustments, expirations)."""
+    repo = get_movement_repo(session)
     result = await repo.get_movements(
         medication_id=medication_id,
         movement_type=movement_type,
@@ -410,7 +413,8 @@ async def get_stock_alerts(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyMovementRepository(session)
+    """Persisted stock alerts with filters: status, level, medication_id."""
+    repo = get_movement_repo(session)
     result = await repo.get_alerts(
         alert_status=alert_status,
         alert_level=alert_level,
@@ -442,7 +446,8 @@ async def generate_stock_alerts(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyMovementRepository(session)
+    """Scan medications and generate alerts for those crossing stock thresholds. Auto-resolves when stock recovers."""
+    repo = get_movement_repo(session)
     new_count = await repo.generate_alerts(created_by=user_id)
     await session.commit()
     return ok(
@@ -460,7 +465,8 @@ async def acknowledge_alert(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyMovementRepository(session)
+    """Mark a stock alert as acknowledged."""
+    repo = get_movement_repo(session)
     success = await repo.acknowledge_alert(alert_id, user_id)
     if not success:
         from app.core.exceptions import AppException
@@ -478,7 +484,8 @@ async def resolve_alert(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyMovementRepository(session)
+    """Manually resolve a stock alert."""
+    repo = get_movement_repo(session)
     success = await repo.resolve_alert(alert_id, user_id)
     if not success:
         from app.core.exceptions import AppException

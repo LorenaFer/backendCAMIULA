@@ -13,16 +13,16 @@ class CreatePatient:
         self._repo = repo
 
     async def execute(self, dto: CreatePatientDTO, created_by: str) -> Patient:
-        existing = await self._repo.find_by_cedula(dto.cedula)
+        existing = await self._repo.find_by_dni(dto.dni)
         if existing:
             raise ConflictException(
-                f"Ya existe un paciente registrado con la cedula '{dto.cedula}'."
+                f"Ya existe un paciente registrado con la dni '{dto.dni}'."
             )
 
         nhm = await self._repo.get_next_nhm()
 
         data = {
-            "cedula": dto.cedula,
+            "dni": dto.dni,
             "nhm": nhm,
             "first_name": dto.first_name,
             "last_name": dto.last_name,

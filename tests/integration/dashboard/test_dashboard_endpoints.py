@@ -69,7 +69,7 @@ class TestDashboard:
         data = body["data"]
 
         # Verify top-level keys
-        assert "fecha" in data
+        assert "date_str" in data
         assert "generated_at" in data
         assert "kpis" in data
         assert "appointments_by_status" in data
@@ -114,11 +114,11 @@ class TestDashboard:
     @pytest.mark.asyncio
     async def test_dashboard_with_explicit_date(self, client, token):
         resp = await client.get(
-            "/api/dashboard?fecha=2026-01-15&periodo=week",
+            "/api/dashboard?date_str=2026-01-15&period=week",
             headers=_auth(token),
         )
         assert resp.status_code == 200
-        assert resp.json()["data"]["fecha"] == "2026-01-15"
+        assert resp.json()["data"]["date_str"] == "2026-01-15"
 
 
 # ------------------------------------------------------------------
@@ -174,7 +174,7 @@ class TestAppointmentsHeatmap:
     @pytest.mark.asyncio
     async def test_heatmap_returns_200(self, client, token):
         resp = await client.get(
-            "/api/appointments/heatmap?fecha_desde=2026-01-01&fecha_hasta=2026-12-31",
+            "/api/appointments/heatmap?date_from=2026-01-01&date_to=2026-12-31",
             headers=_auth(token),
         )
         assert resp.status_code == 200, resp.text
@@ -182,8 +182,8 @@ class TestAppointmentsHeatmap:
         assert body["status"] == "success"
         data = body["data"]
         assert "heatmap" in data
-        assert "fecha_desde" in data
-        assert "fecha_hasta" in data
+        assert "date_from" in data
+        assert "date_to" in data
         assert len(data["heatmap"]) == 5
         for row in data["heatmap"]:
             assert len(row) == 12

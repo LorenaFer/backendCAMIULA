@@ -4,62 +4,45 @@ from datetime import date as date_type
 from datetime import time as time_type
 from typing import Any, Dict, List
 
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.modules.appointments.domain.repositories.appointment_repository import (
     AppointmentRepository,
 )
-from app.modules.doctors.infrastructure.models import (
-    DoctorAvailabilityModel,
-    DoctorExceptionModel,
+from app.modules.doctors.domain.repositories.availability_reader import (
+    AvailabilityReader,
 )
-from app.shared.database.mixins import RecordStatus
 
 
 class AvailableSlots:
-    def __init__(self, repo: AppointmentRepository, session: AsyncSession) -> None:
+    def __init__(
+        self,
+        repo: AppointmentRepository,
+        availability_reader: AvailabilityReader,
+    ) -> None:
         self._repo = repo
-        self._session = session
+        self._availability = availability_reader
 
     async def execute(
-        self, doctor_id: str, fecha: str, es_nuevo: bool
+        self, doctor_id: str, date_str: str, es_nuevo: bool
     ) -> List[Dict[str, Any]]:
-        target_date = date_type.fromisoformat(fecha)
+        target_date = date_type.fromisoformat(date_str)
         dow = target_date.isoweekday()  # 1=Mon ... 7=Sun
 
         # 1. Get availability blocks for this day_of_week
-        avail_result = await self._session.execute(
-            select(DoctorAvailabilityModel).where(
-                DoctorAvailabilityModel.fk_doctor_id == doctor_id,
-                DoctorAvailabilityModel.day_of_week == dow,
-                DoctorAvailabilityModel.status == RecordStatus.ACTIVE,
-            )
-        )
-        blocks = avail_result.scalars().all()
-
+        blocks = await self._availability.get_blocks(doctor_id, dow)
         if not blocks:
             return []
 
         # 2. Check for exception on this date
-        exc_result = await self._session.execute(
-            select(DoctorExceptionModel).where(
-                DoctorExceptionModel.fk_doctor_id == doctor_id,
-                DoctorExceptionModel.exception_date == target_date,
-                DoctorExceptionModel.status == RecordStatus.ACTIVE,
-            )
-        )
-        if exc_result.scalar_one_or_none():
+        if await self._availability.has_exception(doctor_id, target_date):
             return []
 
         # 3. Get existing non-cancelled appointments
         existing = await self._repo.find_non_cancelled_by_doctor_and_date(
-            doctor_id, fecha
+            doctor_id, date_str
         )
 
         # 4. Duration based on es_nuevo
         duration = 60 if es_nuevo else 30
-        # Slot step = block's slot_duration (usually 30min)
         slot_step = blocks[0].slot_duration if blocks else 30
 
         # 5. Generate slots

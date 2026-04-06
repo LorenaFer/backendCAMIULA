@@ -9,10 +9,10 @@ class CheckSlot:
     def __init__(self, repo: AppointmentRepository) -> None:
         self._repo = repo
 
-    async def execute(self, doctor_id: str, fecha: str, hora_inicio: str) -> bool:
+    async def execute(self, doctor_id: str, date_str: str, hora_inicio: str) -> bool:
         """Returns True if the slot is occupied (double-booked)."""
         return await self._repo.check_double_booking(
             doctor_id=doctor_id,
-            fecha=fecha,
+            date_str=date_str,
             start_time=hora_inicio,
         )
