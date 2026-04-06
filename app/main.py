@@ -23,15 +23,49 @@ async def lifespan(app: FastAPI):
     yield
 
 
+OPENAPI_TAGS = [
+    {"name": "Health", "description": "Server health check"},
+    {"name": "Auth", "description": "Authentication: login, register, JWT tokens"},
+    {"name": "Users", "description": "User management: CRUD, roles, permissions (RBAC)"},
+    {"name": "Patients", "description": "Patient registration, search by cedula/NHM, demographics"},
+    {"name": "Doctors", "description": "Doctor catalog with embedded specialty"},
+    {"name": "Specialties", "description": "Medical specialty CRUD (used by doctors)"},
+    {"name": "Availability", "description": "Doctor time blocks and day-off exceptions"},
+    {"name": "Appointments", "description": "Scheduling: create, state machine, available slots/dates, stats"},
+    {"name": "Medical Records", "description": "Clinical records (JSONB evaluation), patient history"},
+    {"name": "Form Schemas", "description": "Dynamic form templates per specialty"},
+    {"name": "Inventory - Medication Categories", "description": "Medication classification: antibiotics, analgesics, etc."},
+    {"name": "Inventory - Medications", "description": "Medication catalog: generic name, form, controlled substance"},
+    {"name": "Inventory - Suppliers", "description": "Supplier registry: RIF, contact, payment terms"},
+    {"name": "Inventory - Purchase Orders", "description": "Purchase orders: create, send, receive with batch creation"},
+    {"name": "Inventory - Batches", "description": "Lot tracking: FEFO, expiration dates, available quantities"},
+    {"name": "Inventory - Prescriptions", "description": "Medical prescriptions with item-level dispensing status"},
+    {"name": "Inventory - Dispatches", "description": "Pharmacy dispensing: FEFO algorithm, monthly limits, cancellation"},
+    {"name": "Inventory - Limits", "description": "Monthly dispatch limits and authorized exceptions"},
+    {"name": "Inventory - Reports", "description": "Stock reports, consumption, expiration, kardex, alerts"},
+    {"name": "Dashboard", "description": "Consolidated BI: KPIs, trends, charts (cross-module aggregation)"},
+    {"name": "Epidemiological Reports", "description": "MPPS reports: EPI-12 (weekly), EPI-13 (nominal), EPI-15 (monthly morbidity)"},
+]
+
+
 def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.APP_NAME,
+        description=(
+            "REST API for the Centro Ambulatorio Medico Integral — Universidad de Los Andes (CAMIULA). "
+            "Manages patients, appointments, medical records, pharmacy inventory, and epidemiological reports. "
+            "Built with Clean Architecture, async SQLAlchemy, and PostgreSQL."
+        ),
         version=settings.APP_VERSION,
         lifespan=lifespan,
         redoc_url=None,
+        openapi_tags=OPENAPI_TAGS,
+        contact={"name": "CAMIULA Dev Team", "url": "https://github.com/LorenaFer/backendCAMIULA"},
+        license_info={"name": "MIT"},
     )
 
     from fastapi.openapi.docs import get_redoc_html
+    from fastapi.responses import JSONResponse
 
     @app.get("/redoc", include_in_schema=False)
     async def redoc_html():
@@ -40,6 +74,11 @@ def create_app() -> FastAPI:
             title=f"{settings.APP_NAME} - ReDoc",
             redoc_js_url="https://cdn.jsdelivr.net/npm/redoc@2.1.5/bundles/redoc.standalone.js",
         )
+
+    @app.get("/openapi.json", include_in_schema=False)
+    async def openapi_json():
+        """Download the OpenAPI spec as JSON (for Postman import)."""
+        return JSONResponse(content=app.openapi())
 
     app.add_middleware(
         CORSMiddleware,
