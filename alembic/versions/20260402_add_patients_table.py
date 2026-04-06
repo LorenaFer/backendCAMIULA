@@ -56,7 +56,7 @@ def upgrade() -> None:
             sa.Column("emergency_contact", sa.JSON, nullable=True),
             sa.Column("is_new", sa.Boolean, nullable=False, server_default="true"),
             sa.Column("patient_status", sa.String(30), nullable=False, server_default="active"),
-            sa.Column("status", sa.String(1), nullable=False, server_default="A"),
+            sa.Column("status", sa.String(1), nullable=False, server_default="A")),
             sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
             sa.Column("created_by", sa.String(36), nullable=True),
             sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
@@ -78,7 +78,7 @@ def upgrade() -> None:
         op.create_table("specialties",
             sa.Column("id", sa.String(36), primary_key=True),
             sa.Column("name", sa.String(200), nullable=False),
-            sa.Column("status", sa.String(1), nullable=False, server_default="A"),
+            sa.Column("status", sa.String(1), nullable=False, server_default="A")),
             sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
             sa.Column("created_by", sa.String(36), nullable=True),
             sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
@@ -96,7 +96,7 @@ def upgrade() -> None:
             sa.Column("first_name", sa.String(100), nullable=False),
             sa.Column("last_name", sa.String(100), nullable=False),
             sa.Column("doctor_status", sa.String(20), nullable=False, server_default="ACTIVE"),
-            sa.Column("status", sa.String(1), nullable=False, server_default="A"),
+            sa.Column("status", sa.String(1), nullable=False, server_default="A")),
             sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
             sa.Column("created_by", sa.String(36), nullable=True),
             sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
@@ -114,7 +114,7 @@ def upgrade() -> None:
             sa.Column("start_time", sa.Time, nullable=False),
             sa.Column("end_time", sa.Time, nullable=False),
             sa.Column("slot_duration", sa.Integer, nullable=False, server_default="30"),
-            sa.Column("status", sa.String(1), nullable=False, server_default="A"),
+            sa.Column("status", sa.String(1), nullable=False, server_default="A")),
             sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
             sa.Column("created_by", sa.String(36), nullable=True),
             sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
@@ -130,7 +130,7 @@ def upgrade() -> None:
             sa.Column("fk_doctor_id", sa.String(36), nullable=False),
             sa.Column("exception_date", sa.Date, nullable=False),
             sa.Column("reason", sa.String(500), nullable=True),
-            sa.Column("status", sa.String(1), nullable=False, server_default="A"),
+            sa.Column("status", sa.String(1), nullable=False, server_default="A")),
             sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
             sa.Column("created_by", sa.String(36), nullable=True),
             sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
@@ -154,7 +154,7 @@ def upgrade() -> None:
             sa.Column("reason", sa.String(500), nullable=True),
             sa.Column("observations", sa.String(500), nullable=True),
             sa.Column("appointment_status", sa.String(20), nullable=False, server_default="pendiente"),
-            sa.Column("status", sa.String(1), nullable=False, server_default="A"),
+            sa.Column("status", sa.String(1), nullable=False, server_default="A")),
             sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
             sa.Column("created_by", sa.String(36), nullable=True),
             sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
@@ -179,7 +179,7 @@ def upgrade() -> None:
             sa.Column("prepared_by", sa.String(36), nullable=True),
             sa.Column("schema_id", sa.String(36), nullable=True),
             sa.Column("schema_version", sa.String(50), nullable=True),
-            sa.Column("status", sa.String(1), nullable=False, server_default="A"),
+            sa.Column("status", sa.String(1), nullable=False, server_default="A")),
             sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
             sa.Column("created_by", sa.String(36), nullable=True),
             sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
@@ -199,7 +199,7 @@ def upgrade() -> None:
             sa.Column("specialty_key", sa.String(200), nullable=True, unique=True),
             sa.Column("version", sa.String(50), nullable=False),
             sa.Column("schema_json", sa.JSON, nullable=True),
-            sa.Column("status", sa.String(1), nullable=False, server_default="A"),
+            sa.Column("status", sa.String(1), nullable=False, server_default="A")),
             sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
             sa.Column("created_by", sa.String(36), nullable=True),
             sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
@@ -219,7 +219,7 @@ def upgrade() -> None:
             sa.Column("exam_name", sa.String(200), nullable=False),
             sa.Column("notes", sa.String(500), nullable=True),
             sa.Column("order_status", sa.String(20), nullable=False, server_default="requested"),
-            sa.Column("status", sa.String(1), nullable=False, server_default="A"),
+            sa.Column("status", sa.String(1), nullable=False, server_default="A")),
             sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
             sa.Column("created_by", sa.String(36), nullable=True),
             sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
@@ -227,6 +227,22 @@ def upgrade() -> None:
             sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
             sa.Column("deleted_by", sa.String(36), nullable=True),
         )
+
+
+
+    # Fix status columns: convert VARCHAR(1) -> record_status enum
+    # The record_status enum is created by the auth migration (5926bb76aef3)
+    tables_to_fix = ["patients", "specialties", "doctors", "doctor_availability",
+                     "doctor_exceptions", "appointments", "medical_records",
+                     "form_schemas", "medical_orders"]
+    for tbl in tables_to_fix:
+        if _table_exists(conn, tbl):
+            try:
+                conn.execute(sa.text(f"ALTER TABLE {tbl} ALTER COLUMN status DROP DEFAULT"))
+                conn.execute(sa.text(f"ALTER TABLE {tbl} ALTER COLUMN status TYPE record_status USING status::record_status"))
+                conn.execute(sa.text(f"ALTER TABLE {tbl} ALTER COLUMN status SET DEFAULT 'A'::record_status"))
+            except Exception:
+                pass  # Already correct type
 
 
 def downgrade() -> None:

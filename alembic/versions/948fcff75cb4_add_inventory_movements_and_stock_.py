@@ -90,6 +90,18 @@ def upgrade() -> None:
     op.create_index('ix_stock_alerts_status', 'stock_alerts', ['status'])
 
 
+
+    # Fix status columns: convert VARCHAR(1) -> record_status enum
+    conn = op.get_bind()
+    for tbl in ('inventory_movements', 'stock_alerts'):
+        try:
+            conn.execute(sa.text(f"ALTER TABLE {tbl} ALTER COLUMN status DROP DEFAULT"))
+            conn.execute(sa.text(f"ALTER TABLE {tbl} ALTER COLUMN status TYPE record_status USING status::record_status"))
+            conn.execute(sa.text(f"ALTER TABLE {tbl} ALTER COLUMN status SET DEFAULT 'A'::record_status"))
+        except Exception:
+            pass
+
+
 def downgrade() -> None:
     op.drop_table('stock_alerts')
     op.drop_table('inventory_movements')

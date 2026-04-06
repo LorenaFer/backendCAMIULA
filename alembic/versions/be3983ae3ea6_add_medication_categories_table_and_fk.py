@@ -48,6 +48,17 @@ def upgrade() -> None:
     )
 
 
+
+    # Fix status column: convert VARCHAR(1) -> record_status enum
+    conn = op.get_bind()
+    try:
+        conn.execute(sa.text("ALTER TABLE medication_categories ALTER COLUMN status DROP DEFAULT"))
+        conn.execute(sa.text("ALTER TABLE medication_categories ALTER COLUMN status TYPE record_status USING status::record_status"))
+        conn.execute(sa.text("ALTER TABLE medication_categories ALTER COLUMN status SET DEFAULT 'A'::record_status"))
+    except Exception:
+        pass
+
+
 def downgrade() -> None:
     op.drop_constraint('fk_medications_fk_category_id_medication_categories', 'medications', type_='foreignkey')
     op.drop_index('ix_medications_fk_category_id', table_name='medications')
