@@ -7,6 +7,9 @@ factories via Depends() instead of instantiating repos directly.
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.inventory.domain.repositories.category_repository import (
+    CategoryRepository,
+)
 from app.modules.inventory.domain.repositories.batch_repository import BatchRepository
 from app.modules.inventory.domain.repositories.dispatch_repository import (
     DispatchRepository,
@@ -23,6 +26,9 @@ from app.modules.inventory.domain.repositories.purchase_order_repository import 
 )
 from app.modules.inventory.domain.repositories.supplier_repository import (
     SupplierRepository,
+)
+from app.modules.inventory.infrastructure.repositories.sqlalchemy_category_repository import (
+    SQLAlchemyCategoryRepository,
 )
 from app.modules.inventory.infrastructure.repositories.sqlalchemy_batch_repository import (
     SQLAlchemyBatchRepository,
@@ -52,6 +58,12 @@ from app.modules.inventory.infrastructure.repositories.sqlalchemy_supplier_repos
     SQLAlchemySupplierRepository,
 )
 from app.shared.database.session import get_db
+
+
+def get_category_repo(
+    session: AsyncSession = Depends(get_db),
+) -> CategoryRepository:
+    return SQLAlchemyCategoryRepository(session)
 
 
 def get_medication_repo(
