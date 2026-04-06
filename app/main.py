@@ -92,6 +92,102 @@ def create_app() -> FastAPI:
     app.add_exception_handler(RequestValidationError, validation_exception_handler)
     app.add_exception_handler(Exception, generic_exception_handler)
 
+    def _add_code_samples(path: str, method: str, details: dict):
+        """Inject x-codeSamples for ReDoc display."""
+        full_url = "http://localhost:8000" + path
+        summary = details.get("summary", "")
+        has_body = method in ("post", "put", "patch")
+
+        # Build path with example values for path params
+        example_path = path
+        for param in details.get("parameters", []):
+            if param.get("in") == "path":
+                name = param["name"]
+                example_path = example_path.replace(
+                    "{" + name + "}", "<" + name + ">"
+                )
+
+        url = "http://localhost:8000" + example_path
+
+        # Determine query params for the example
+        query_parts = []
+        for param in details.get("parameters", []):
+            if param.get("in") == "query" and param.get("required"):
+                name = param["name"]
+                ex = param.get("schema", {}).get("example", "value")
+                query_parts.append(f"{name}={ex}")
+        qs = "?" + "&".join(query_parts) if query_parts else ""
+
+        # Get request body example
+        body_example = ""
+        body_json_str = ""
+        rb = details.get("requestBody", {}).get("content", {}).get(
+            "application/json", {}
+        ).get("schema", {})
+        if rb and rb.get("example"):
+            import json as _json
+            body_example = _json.dumps(rb["example"], indent=2)
+            body_json_str = _json.dumps(rb["example"])
+
+        # --- cURL ---
+        curl_lines = [f'curl -X {method.upper()} "{url}{qs}"']
+        curl_lines.append('  -H "Authorization: Bearer $TOKEN"')
+        if has_body:
+            curl_lines.append('  -H "Content-Type: application/json"')
+            if body_example:
+                curl_lines.append(f"  -d '{body_json_str}'")
+        curl = " \\\n".join(curl_lines)
+
+        # --- Python ---
+        py_lines = ["import httpx", ""]
+        py_lines.append('BASE = "http://localhost:8000"')
+        py_lines.append('HEADERS = {"Authorization": "Bearer <token>"}')
+        py_lines.append("")
+        if has_body and body_example:
+            py_lines.append(f"data = {body_example}")
+            py_lines.append("")
+            py_lines.append(
+                f'resp = httpx.{method}(f"{{BASE}}{example_path}{qs}", '
+                f'json=data, headers=HEADERS)'
+            )
+        else:
+            py_lines.append(
+                f'resp = httpx.{method}(f"{{BASE}}{example_path}{qs}", '
+                f'headers=HEADERS)'
+            )
+        py_lines.append("print(resp.json())")
+        python = "\n".join(py_lines)
+
+        # --- JavaScript ---
+        js_lines = []
+        if has_body and body_example:
+            js_lines.append(
+                f'const resp = await fetch("{url}{qs}", {{'
+            )
+            js_lines.append(f'  method: "{method.upper()}",')
+            js_lines.append('  headers: {')
+            js_lines.append('    "Authorization": "Bearer <token>",')
+            js_lines.append('    "Content-Type": "application/json",')
+            js_lines.append("  },")
+            js_lines.append(f"  body: JSON.stringify({body_json_str}),")
+            js_lines.append("});")
+        else:
+            js_lines.append(
+                f'const resp = await fetch("{url}{qs}", {{'
+            )
+            js_lines.append(f'  method: "{method.upper()}",')
+            js_lines.append('  headers: { "Authorization": "Bearer <token>" },')
+            js_lines.append("});")
+        js_lines.append("const data = await resp.json();")
+        js_lines.append("console.log(data);")
+        javascript = "\n".join(js_lines)
+
+        details["x-codeSamples"] = [
+            {"lang": "cURL", "label": "cURL", "source": curl},
+            {"lang": "Python", "label": "Python", "source": python},
+            {"lang": "JavaScript", "label": "JavaScript", "source": javascript},
+        ]
+
     # Sobreescribir los schemas de OpenAPI para que ReDoc/Swagger
     # muestre nuestro envelope estandar { status, message, data } en todas
     # las respuestas, y el formato de error estandar en 422.
@@ -174,11 +270,56 @@ def create_app() -> FastAPI:
                 # Replace 422 with our error envelope
                 if "422" in responses:
                     responses["422"] = {
-                        "description": "Validation error",
+                        "description": "Validation error — one or more fields failed validation",
                         "content": {
-                            "application/json": {"schema": error_schema}
+                            "application/json": {
+                                "schema": error_schema,
+                                "example": {
+                                    "status": "error",
+                                    "message": "Error de validacion",
+                                    "data": [{"field": "email", "message": "Invalid email format"}],
+                                },
+                            }
                         },
                     }
+
+                # Add standard error responses (401, 404)
+                _error_example = lambda msg: {
+                    "content": {
+                        "application/json": {
+                            "schema": error_schema,
+                            "example": {"status": "error", "message": msg, "data": None},
+                        }
+                    }
+                }
+
+                # Determine which error codes to add based on method and path
+                has_auth = any(
+                    p.get("name") == "authorization"
+                    for p in details.get("parameters", [])
+                    if p.get("in") == "header"
+                ) or details.get("security")
+
+                if "401" not in responses:
+                    responses["401"] = {
+                        "description": "Unauthorized — missing or invalid JWT token",
+                        **_error_example("Token invalido o expirado"),
+                    }
+
+                if method in ("get",) and "{" in path_str and "404" not in responses:
+                    responses["404"] = {
+                        "description": "Not found — the requested resource does not exist",
+                        **_error_example("Recurso no encontrado"),
+                    }
+
+                if method in ("post",) and "409" not in responses:
+                    responses["409"] = {
+                        "description": "Conflict — a resource with this identifier already exists",
+                        **_error_example("Ya existe un recurso con ese identificador"),
+                    }
+
+                # Add code samples (x-codeSamples) for ReDoc
+                _add_code_samples(path_str, method, details)
 
         app.openapi_schema = schema
         return schema
