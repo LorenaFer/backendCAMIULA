@@ -18,12 +18,12 @@ class CreateAppointment:
         # Validate double-booking: same doctor + date + start_time, non-cancelled
         is_booked = await self._repo.check_double_booking(
             doctor_id=dto.fk_doctor_id,
-            fecha=dto.appointment_date,
+            date_str=dto.appointment_date,
             start_time=dto.start_time,
         )
         if is_booked:
             raise ConflictException(
-                "Ya existe una cita para este doctor en la misma fecha y hora."
+                "Ya existe una cita para este doctor en la misma date_str y hora."
             )
 
         data = {

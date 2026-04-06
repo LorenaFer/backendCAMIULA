@@ -36,7 +36,7 @@ router = APIRouter(prefix="/medical-records", tags=["Medical Records"])
 @router.get("/diagnostics/top", summary="Top diagnoses")
 async def top_diagnostics(
     limit: int = Query(5, ge=1, le=50, description="Number of top diagnoses"),
-    periodo: Optional[str] = Query(
+    period: Optional[str] = Query(
         None, description="Period: week | month | year (from today)"
     ),
     session: AsyncSession = Depends(get_db),
@@ -54,9 +54,9 @@ async def top_diagnostics(
     svc = DashboardQueryService(session)
     start = None
     end = None
-    if periodo:
+    if period:
         ref = _date.today()
-        start, end = _period_range(ref, periodo)
+        start, end = _period_range(ref, period)
 
     data = await svc.top_diagnoses(limit=limit, start=start, end=end)
     return ok(data=data, message="Top diagnoses retrieved successfully")

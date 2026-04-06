@@ -120,15 +120,19 @@ def create_app() -> FastAPI:
         # Collect query params — include ALL with examples, not just required
         _PARAM_EXAMPLES = {
             "page": "1", "page_size": "20", "search": "amoxicilina",
-            "fecha": "2026-04-15", "doctor_id": "<doctor_uuid>",
+            "date_str": "2026-04-15", "doctor_id": "<doctor_uuid>",
             "medication_id": "<medication_uuid>", "patient_id": "<patient_uuid>",
-            "status": "active", "period": "2026-03", "year": "2026",
-            "month": "4", "week": "15", "threshold_days": "90",
+            "status": "active", "status_filter": "pendiente",
+            "period": "2026-03", "year": "2026",
+            "month": "4", "month_str": "2026-04", "week": "15",
+            "threshold_days": "90",
             "date_from": "2026-01-01", "date_to": "2026-12-31",
             "alert_status": "active", "alert_level": "critical",
             "movement_type": "entry", "prescription_id": "<prescription_uuid>",
-            "q": "perez", "mes": "2026-04", "nhm": "1234",
+            "q": "perez", "nhm": "1234",
             "cedula": "V-12345678", "es_nuevo": "false",
+            "specialty_id": "<specialty_uuid>",
+            "exclude_cancelled": "true",
         }
         query_parts = []
         for param in details.get("parameters", []):

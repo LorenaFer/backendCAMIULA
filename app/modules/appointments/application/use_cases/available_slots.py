@@ -22,9 +22,9 @@ class AvailableSlots:
         self._availability = availability_reader
 
     async def execute(
-        self, doctor_id: str, fecha: str, es_nuevo: bool
+        self, doctor_id: str, date_str: str, es_nuevo: bool
     ) -> List[Dict[str, Any]]:
-        target_date = date_type.fromisoformat(fecha)
+        target_date = date_type.fromisoformat(date_str)
         dow = target_date.isoweekday()  # 1=Mon ... 7=Sun
 
         # 1. Get availability blocks for this day_of_week
@@ -38,7 +38,7 @@ class AvailableSlots:
 
         # 3. Get existing non-cancelled appointments
         existing = await self._repo.find_non_cancelled_by_doctor_and_date(
-            doctor_id, fecha
+            doctor_id, date_str
         )
 
         # 4. Duration based on es_nuevo

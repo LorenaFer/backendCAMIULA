@@ -54,8 +54,8 @@ router = APIRouter(prefix="/appointments", tags=["Appointments"])
 
 @router.get("/heatmap", summary="Appointments heatmap (day x hour)")
 async def get_heatmap(
-    fecha_desde: str = Query(..., description="Start date YYYY-MM-DD"),
-    fecha_hasta: str = Query(..., description="End date YYYY-MM-DD"),
+    date_from: str = Query(..., description="Start date YYYY-MM-DD"),
+    date_to: str = Query(..., description="End date YYYY-MM-DD"),
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
@@ -68,11 +68,11 @@ async def get_heatmap(
 
     svc = DashboardQueryService(session)
     heatmap = await svc.heatmap(
-        _date.fromisoformat(fecha_desde), _date.fromisoformat(fecha_hasta)
+        _date.fromisoformat(date_from), _date.fromisoformat(date_to)
     )
     data = {
-        "fecha_desde": fecha_desde,
-        "fecha_hasta": fecha_hasta,
+        "date_from": date_from,
+        "date_to": date_to,
         "heatmap": heatmap,
     }
     return ok(data=data, message="Heatmap generated successfully")
@@ -80,20 +80,20 @@ async def get_heatmap(
 
 @router.get("/stats", summary="Appointment stats")
 async def get_stats(
-    fecha: Optional[str] = Query(None, description="ISO date YYYY-MM-DD"),
+    date_str: Optional[str] = Query(None, description="ISO date YYYY-MM-DD"),
     doctor_id: Optional[str] = Query(None),
-    especialidad_id: Optional[str] = Query(None),
-    estado: Optional[str] = Query(None),
+    specialty_id: Optional[str] = Query(None),
+    status_filter: Optional[str] = Query(None),
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
     """Aggregated appointment statistics: counts by status, specialty, doctor, patient type, daily trend, and peak hours."""
     repo = get_appointment_repo(session)
     stats = await GetAppointmentStats(repo).execute(
-        fecha=fecha,
+        date_str=date_str,
         doctor_id=doctor_id,
-        especialidad_id=especialidad_id,
-        estado=estado,
+        specialty_id=specialty_id,
+        status_filter=status_filter,
     )
     return ok(data=CitasStats(**stats), message="Estadisticas obtenidas exitosamente")
 
@@ -101,7 +101,7 @@ async def get_stats(
 @router.get("/check-slot", summary="Check if a slot is occupied")
 async def check_slot(
     doctor_id: str = Query(...),
-    fecha: str = Query(..., description="ISO date YYYY-MM-DD"),
+    date_str: str = Query(..., description="ISO date YYYY-MM-DD"),
     hora_inicio: str = Query(..., description="HH:MM"),
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
@@ -109,7 +109,7 @@ async def check_slot(
     """Check if a specific time slot is already occupied. Returns occupied: true/false."""
     repo = get_appointment_repo(session)
     occupied = await CheckSlot(repo).execute(
-        doctor_id=doctor_id, fecha=fecha, hora_inicio=hora_inicio
+        doctor_id=doctor_id, date_str=date_str, hora_inicio=hora_inicio
     )
     return ok(
         data=CheckSlotResponse(occupied=occupied),
@@ -120,7 +120,7 @@ async def check_slot(
 @router.get("/available-slots", summary="Available time slots for a doctor on a date")
 async def get_available_slots(
     doctor_id: str = Query(...),
-    fecha: str = Query(..., description="ISO date YYYY-MM-DD"),
+    date_str: str = Query(..., description="ISO date YYYY-MM-DD"),
     es_nuevo: bool = Query(False, description="True=60min, False=30min"),
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
@@ -132,7 +132,7 @@ async def get_available_slots(
     repo = get_appointment_repo(session)
     reader = get_availability_reader(session)
     slots = await AvailableSlots(repo, reader).execute(
-        doctor_id=doctor_id, fecha=fecha, es_nuevo=es_nuevo
+        doctor_id=doctor_id, date_str=date_str, es_nuevo=es_nuevo
     )
     data = [SlotResponse(**s) for s in slots]
     return ok(data=data, message="Slots disponibles obtenidos")
@@ -173,14 +173,14 @@ async def get_appointment(
 
 @router.get("", summary="List appointments (paginated, filtered)")
 async def list_appointments(
-    fecha: Optional[str] = Query(None, description="ISO date YYYY-MM-DD"),
+    date_str: Optional[str] = Query(None, description="ISO date YYYY-MM-DD"),
     doctor_id: Optional[str] = Query(None),
-    especialidad_id: Optional[str] = Query(None),
-    estado: Optional[str] = Query(None),
+    specialty_id: Optional[str] = Query(None),
+    status_filter: Optional[str] = Query(None),
     q: Optional[str] = Query(None, description="Search patient name/cedula"),
     fk_patient_id: Optional[str] = Query(None, description="Filter by patient ID"),
-    mes: Optional[str] = Query(None, description="YYYY-MM for month view"),
-    excluir_canceladas: bool = Query(False),
+    month_str: Optional[str] = Query(None, description="YYYY-MM for month view"),
+    exclude_cancelled: bool = Query(False),
     page: int = Query(1, ge=1),
     page_size: int = Query(25, ge=1, le=10000),
     session: AsyncSession = Depends(get_db),
@@ -189,25 +189,25 @@ async def list_appointments(
     """List appointments with multiple view modes: doctor month view, doctor day view, or general list with search and pagination."""
     repo = get_appointment_repo(session)
 
-    # Doctor month view: GET /appointments?doctor_id=X&mes=YYYY-MM&excluir_canceladas=true
-    if doctor_id and mes:
-        parts = mes.split("-")
+    # Doctor month view: GET /appointments?doctor_id=X&month_str=YYYY-MM&exclude_cancelled=true
+    if doctor_id and month_str:
+        parts = month_str.split("-")
         year, month = int(parts[0]), int(parts[1])
         items = await ListDoctorMonthAppointments(repo).execute(
             doctor_id=doctor_id,
             year=year,
             month=month,
-            exclude_cancelled=excluir_canceladas,
+            exclude_cancelled=exclude_cancelled,
         )
         data = [AppointmentResponse(**a.__dict__) for a in items]
-        return ok(data=data, message="Citas del mes obtenidas exitosamente")
+        return ok(data=data, message="Citas del month_str obtenidas exitosamente")
 
-    # Doctor day view: GET /appointments?doctor_id=X&fecha=X&excluir_canceladas=true
-    if doctor_id and fecha and excluir_canceladas:
+    # Doctor day view: GET /appointments?doctor_id=X&fecha=X&exclude_cancelled=true
+    if doctor_id and date_str and exclude_cancelled:
         items = await ListDoctorDayAppointments(repo).execute(
             doctor_id=doctor_id,
-            fecha=fecha,
-            exclude_cancelled=excluir_canceladas,
+            date_str=date_str,
+            exclude_cancelled=exclude_cancelled,
         )
         data = [AppointmentResponse(**a.__dict__) for a in items]
         return ok(data=data, message="Citas del dia obtenidas exitosamente")
@@ -216,10 +216,10 @@ async def list_appointments(
     items, total = await ListAppointments(repo).execute(
         page=page,
         page_size=page_size,
-        fecha=fecha,
+        date_str=date_str,
         doctor_id=doctor_id,
-        especialidad_id=especialidad_id,
-        estado=estado,
+        specialty_id=specialty_id,
+        status_filter=status_filter,
         q=q,
         fk_patient_id=fk_patient_id,
     )

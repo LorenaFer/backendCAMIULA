@@ -24,17 +24,17 @@ router = APIRouter(prefix="/dashboard", tags=["Dashboard BI"])
 
 @router.get("", summary="Consolidated dashboard with KPIs, charts, and trends")
 async def get_dashboard(
-    fecha: Optional[str] = Query(None, description="Reference date (YYYY-MM-DD)"),
-    periodo: Optional[str] = Query(
+    date_str: Optional[str] = Query(None, description="Reference date (YYYY-MM-DD)"),
+    period: Optional[str] = Query(
         "day", description="Period: day | week | month | year"
     ),
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    """Consolidated dashboard: KPIs, charts, trends. Aggregates cross-module data. Filterable by fecha and periodo."""
+    """Consolidated dashboard: KPIs, charts, trends. Aggregates cross-module data. Filterable by date_str and period."""
     svc = get_dashboard_service(session)
-    ref = _parse_date(fecha)
-    start, end = _period_range(ref, periodo or "day")
+    ref = _parse_date(date_str)
+    start, end = _period_range(ref, period or "day")
 
     kpis = await svc.kpis(ref, start, end)
     by_status = await svc.appointments_by_status(start, end)
@@ -53,7 +53,7 @@ async def get_dashboard(
     consumption = await svc.top_consumption(start, end)
 
     data = DashboardResponse(
-        fecha=ref.isoformat(),
+        date_str=ref.isoformat(),
         generated_at=datetime.now(timezone.utc).isoformat(),
         kpis=KpisResponse(**kpis),
         appointments_by_status=by_status,

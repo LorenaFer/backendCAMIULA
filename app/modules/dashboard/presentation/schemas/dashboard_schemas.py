@@ -69,7 +69,7 @@ class ConsumptionItem(BaseModel):
 
 
 class DashboardResponse(BaseModel):
-    fecha: str
+    date_str: str
     generated_at: str
     kpis: KpisResponse
     appointments_by_status: Dict[str, int]
@@ -97,8 +97,8 @@ class DemographicsResponse(BaseModel):
 
 
 class HeatmapResponse(BaseModel):
-    fecha_desde: str
-    fecha_hasta: str
+    date_from: str
+    date_to: str
     heatmap: List[List[int]]
 
 

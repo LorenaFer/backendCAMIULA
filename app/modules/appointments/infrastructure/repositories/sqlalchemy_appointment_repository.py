@@ -130,10 +130,10 @@ class SQLAlchemyAppointmentRepository(AppointmentRepository):
         self,
         page: int,
         page_size: int,
-        fecha: Optional[str] = None,
+        date_str: Optional[str] = None,
         doctor_id: Optional[str] = None,
-        especialidad_id: Optional[str] = None,
-        estado: Optional[str] = None,
+        specialty_id: Optional[str] = None,
+        status_filter: Optional[str] = None,
         q: Optional[str] = None,
         fk_patient_id: Optional[str] = None,
     ) -> Tuple[List[Appointment], int]:
@@ -141,16 +141,16 @@ class SQLAlchemyAppointmentRepository(AppointmentRepository):
 
         if fk_patient_id:
             stmt = stmt.where(AppointmentModel.fk_patient_id == fk_patient_id)
-        if fecha:
+        if date_str:
             stmt = stmt.where(
-                AppointmentModel.appointment_date == date_type.fromisoformat(fecha)
+                AppointmentModel.appointment_date == date_type.fromisoformat(date_str)
             )
         if doctor_id:
             stmt = stmt.where(AppointmentModel.fk_doctor_id == doctor_id)
-        if especialidad_id:
-            stmt = stmt.where(AppointmentModel.fk_specialty_id == especialidad_id)
-        if estado:
-            stmt = stmt.where(AppointmentModel.appointment_status == estado)
+        if specialty_id:
+            stmt = stmt.where(AppointmentModel.fk_specialty_id == specialty_id)
+        if status_filter:
+            stmt = stmt.where(AppointmentModel.appointment_status == status_filter)
         if q:
             pattern = f"%{q}%"
             stmt = stmt.where(
@@ -201,12 +201,12 @@ class SQLAlchemyAppointmentRepository(AppointmentRepository):
     async def find_by_doctor_and_date(
         self,
         doctor_id: str,
-        fecha: str,
+        date_str: str,
         exclude_cancelled: bool = True,
     ) -> List[Appointment]:
         stmt = self._base_with_joins().where(
             AppointmentModel.fk_doctor_id == doctor_id,
-            AppointmentModel.appointment_date == date_type.fromisoformat(fecha),
+            AppointmentModel.appointment_date == date_type.fromisoformat(date_str),
         )
         if exclude_cancelled:
             stmt = stmt.where(AppointmentModel.appointment_status != "cancelada")
@@ -215,14 +215,14 @@ class SQLAlchemyAppointmentRepository(AppointmentRepository):
         return [self._row_to_entity(row) for row in result.all()]
 
     async def check_double_booking(
-        self, doctor_id: str, fecha: str, start_time: str
+        self, doctor_id: str, date_str: str, start_time: str
     ) -> bool:
         stmt = (
             select(func.count())
             .select_from(AppointmentModel)
             .where(
                 AppointmentModel.fk_doctor_id == doctor_id,
-                AppointmentModel.appointment_date == date_type.fromisoformat(fecha),
+                AppointmentModel.appointment_date == date_type.fromisoformat(date_str),
                 AppointmentModel.start_time == self._parse_time(start_time),
                 AppointmentModel.appointment_status != "cancelada",
                 AppointmentModel.status == RecordStatus.ACTIVE,
@@ -254,10 +254,10 @@ class SQLAlchemyAppointmentRepository(AppointmentRepository):
 
     async def get_stats(
         self,
-        fecha: Optional[str] = None,
+        date_str: Optional[str] = None,
         doctor_id: Optional[str] = None,
-        especialidad_id: Optional[str] = None,
-        estado: Optional[str] = None,
+        specialty_id: Optional[str] = None,
+        status_filter: Optional[str] = None,
     ) -> Dict[str, Any]:
         base = (
             select(AppointmentModel)
@@ -267,16 +267,16 @@ class SQLAlchemyAppointmentRepository(AppointmentRepository):
             .where(AppointmentModel.status == RecordStatus.ACTIVE)
         )
 
-        if fecha:
+        if date_str:
             base = base.where(
-                AppointmentModel.appointment_date == date_type.fromisoformat(fecha)
+                AppointmentModel.appointment_date == date_type.fromisoformat(date_str)
             )
         if doctor_id:
             base = base.where(AppointmentModel.fk_doctor_id == doctor_id)
-        if especialidad_id:
-            base = base.where(AppointmentModel.fk_specialty_id == especialidad_id)
-        if estado:
-            base = base.where(AppointmentModel.appointment_status == estado)
+        if specialty_id:
+            base = base.where(AppointmentModel.fk_specialty_id == specialty_id)
+        if status_filter:
+            base = base.where(AppointmentModel.appointment_status == status_filter)
 
         # Total count
         count_q = select(func.count()).select_from(base.subquery())
@@ -293,16 +293,16 @@ class SQLAlchemyAppointmentRepository(AppointmentRepository):
             .join(SpecialtyModel, SpecialtyModel.id == AppointmentModel.fk_specialty_id)
             .where(AppointmentModel.status == RecordStatus.ACTIVE)
         )
-        if fecha:
+        if date_str:
             by_status_q = by_status_q.where(
-                AppointmentModel.appointment_date == date_type.fromisoformat(fecha)
+                AppointmentModel.appointment_date == date_type.fromisoformat(date_str)
             )
         if doctor_id:
             by_status_q = by_status_q.where(AppointmentModel.fk_doctor_id == doctor_id)
-        if especialidad_id:
-            by_status_q = by_status_q.where(AppointmentModel.fk_specialty_id == especialidad_id)
-        if estado:
-            by_status_q = by_status_q.where(AppointmentModel.appointment_status == estado)
+        if specialty_id:
+            by_status_q = by_status_q.where(AppointmentModel.fk_specialty_id == specialty_id)
+        if status_filter:
+            by_status_q = by_status_q.where(AppointmentModel.appointment_status == status_filter)
         by_status_q = by_status_q.group_by(AppointmentModel.appointment_status)
         by_status_rows = (await self._session.execute(by_status_q)).all()
         by_status = {row[0]: row[1] for row in by_status_rows}
@@ -319,16 +319,16 @@ class SQLAlchemyAppointmentRepository(AppointmentRepository):
             .join(SpecialtyModel, SpecialtyModel.id == AppointmentModel.fk_specialty_id)
             .where(AppointmentModel.status == RecordStatus.ACTIVE)
         )
-        if fecha:
+        if date_str:
             by_spec_q = by_spec_q.where(
-                AppointmentModel.appointment_date == date_type.fromisoformat(fecha)
+                AppointmentModel.appointment_date == date_type.fromisoformat(date_str)
             )
         if doctor_id:
             by_spec_q = by_spec_q.where(AppointmentModel.fk_doctor_id == doctor_id)
-        if especialidad_id:
-            by_spec_q = by_spec_q.where(AppointmentModel.fk_specialty_id == especialidad_id)
-        if estado:
-            by_spec_q = by_spec_q.where(AppointmentModel.appointment_status == estado)
+        if specialty_id:
+            by_spec_q = by_spec_q.where(AppointmentModel.fk_specialty_id == specialty_id)
+        if status_filter:
+            by_spec_q = by_spec_q.where(AppointmentModel.appointment_status == status_filter)
         by_spec_q = by_spec_q.group_by(SpecialtyModel.name)
         by_spec_rows = (await self._session.execute(by_spec_q)).all()
         by_specialty = [{"name": row[0], "count": row[1]} for row in by_spec_rows]
@@ -349,16 +349,16 @@ class SQLAlchemyAppointmentRepository(AppointmentRepository):
             .join(SpecialtyModel, SpecialtyModel.id == AppointmentModel.fk_specialty_id)
             .where(AppointmentModel.status == RecordStatus.ACTIVE)
         )
-        if fecha:
+        if date_str:
             by_doc_q = by_doc_q.where(
-                AppointmentModel.appointment_date == date_type.fromisoformat(fecha)
+                AppointmentModel.appointment_date == date_type.fromisoformat(date_str)
             )
         if doctor_id:
             by_doc_q = by_doc_q.where(AppointmentModel.fk_doctor_id == doctor_id)
-        if especialidad_id:
-            by_doc_q = by_doc_q.where(AppointmentModel.fk_specialty_id == especialidad_id)
-        if estado:
-            by_doc_q = by_doc_q.where(AppointmentModel.appointment_status == estado)
+        if specialty_id:
+            by_doc_q = by_doc_q.where(AppointmentModel.fk_specialty_id == specialty_id)
+        if status_filter:
+            by_doc_q = by_doc_q.where(AppointmentModel.appointment_status == status_filter)
         by_doc_q = by_doc_q.group_by(
             DoctorModel.first_name,
             DoctorModel.last_name,
@@ -387,16 +387,16 @@ class SQLAlchemyAppointmentRepository(AppointmentRepository):
                 AppointmentModel.is_first_visit.is_(True),
             )
         )
-        if fecha:
+        if date_str:
             first_q = first_q.where(
-                AppointmentModel.appointment_date == date_type.fromisoformat(fecha)
+                AppointmentModel.appointment_date == date_type.fromisoformat(date_str)
             )
         if doctor_id:
             first_q = first_q.where(AppointmentModel.fk_doctor_id == doctor_id)
-        if especialidad_id:
-            first_q = first_q.where(AppointmentModel.fk_specialty_id == especialidad_id)
-        if estado:
-            first_q = first_q.where(AppointmentModel.appointment_status == estado)
+        if specialty_id:
+            first_q = first_q.where(AppointmentModel.fk_specialty_id == specialty_id)
+        if status_filter:
+            first_q = first_q.where(AppointmentModel.appointment_status == status_filter)
         first_time_count = (await self._session.execute(first_q)).scalar_one()
         returning_count = total - first_time_count
 
@@ -412,16 +412,16 @@ class SQLAlchemyAppointmentRepository(AppointmentRepository):
             .join(SpecialtyModel, SpecialtyModel.id == AppointmentModel.fk_specialty_id)
             .where(AppointmentModel.status == RecordStatus.ACTIVE)
         )
-        if fecha:
+        if date_str:
             by_pt_q = by_pt_q.where(
-                AppointmentModel.appointment_date == date_type.fromisoformat(fecha)
+                AppointmentModel.appointment_date == date_type.fromisoformat(date_str)
             )
         if doctor_id:
             by_pt_q = by_pt_q.where(AppointmentModel.fk_doctor_id == doctor_id)
-        if especialidad_id:
-            by_pt_q = by_pt_q.where(AppointmentModel.fk_specialty_id == especialidad_id)
-        if estado:
-            by_pt_q = by_pt_q.where(AppointmentModel.appointment_status == estado)
+        if specialty_id:
+            by_pt_q = by_pt_q.where(AppointmentModel.fk_specialty_id == specialty_id)
+        if status_filter:
+            by_pt_q = by_pt_q.where(AppointmentModel.appointment_status == status_filter)
         by_pt_q = by_pt_q.group_by(PatientModel.university_relation)
         by_pt_rows = (await self._session.execute(by_pt_q)).all()
         by_patient_type = {row[0]: row[1] for row in by_pt_rows}
@@ -438,16 +438,16 @@ class SQLAlchemyAppointmentRepository(AppointmentRepository):
             .join(SpecialtyModel, SpecialtyModel.id == AppointmentModel.fk_specialty_id)
             .where(AppointmentModel.status == RecordStatus.ACTIVE)
         )
-        if fecha:
+        if date_str:
             daily_q = daily_q.where(
-                AppointmentModel.appointment_date == date_type.fromisoformat(fecha)
+                AppointmentModel.appointment_date == date_type.fromisoformat(date_str)
             )
         if doctor_id:
             daily_q = daily_q.where(AppointmentModel.fk_doctor_id == doctor_id)
-        if especialidad_id:
-            daily_q = daily_q.where(AppointmentModel.fk_specialty_id == especialidad_id)
-        if estado:
-            daily_q = daily_q.where(AppointmentModel.appointment_status == estado)
+        if specialty_id:
+            daily_q = daily_q.where(AppointmentModel.fk_specialty_id == specialty_id)
+        if status_filter:
+            daily_q = daily_q.where(AppointmentModel.appointment_status == status_filter)
         daily_q = daily_q.group_by("d").order_by("d")
         daily_rows = (await self._session.execute(daily_q)).all()
         # Build array indexed by day (sparse -> fill gaps with 0)
@@ -467,16 +467,16 @@ class SQLAlchemyAppointmentRepository(AppointmentRepository):
             .join(SpecialtyModel, SpecialtyModel.id == AppointmentModel.fk_specialty_id)
             .where(AppointmentModel.status == RecordStatus.ACTIVE)
         )
-        if fecha:
+        if date_str:
             peak_q = peak_q.where(
-                AppointmentModel.appointment_date == date_type.fromisoformat(fecha)
+                AppointmentModel.appointment_date == date_type.fromisoformat(date_str)
             )
         if doctor_id:
             peak_q = peak_q.where(AppointmentModel.fk_doctor_id == doctor_id)
-        if especialidad_id:
-            peak_q = peak_q.where(AppointmentModel.fk_specialty_id == especialidad_id)
-        if estado:
-            peak_q = peak_q.where(AppointmentModel.appointment_status == estado)
+        if specialty_id:
+            peak_q = peak_q.where(AppointmentModel.fk_specialty_id == specialty_id)
+        if status_filter:
+            peak_q = peak_q.where(AppointmentModel.appointment_status == status_filter)
         peak_q = peak_q.group_by(AppointmentModel.start_time).order_by(
             func.count().desc()
         )
@@ -502,13 +502,13 @@ class SQLAlchemyAppointmentRepository(AppointmentRepository):
         }
 
     async def find_non_cancelled_by_doctor_and_date(
-        self, doctor_id: str, fecha: str
+        self, doctor_id: str, date_str: str
     ) -> List[Appointment]:
         stmt = (
             self._base_active()
             .where(
                 AppointmentModel.fk_doctor_id == doctor_id,
-                AppointmentModel.appointment_date == date_type.fromisoformat(fecha),
+                AppointmentModel.appointment_date == date_type.fromisoformat(date_str),
                 AppointmentModel.appointment_status != "cancelada",
             )
             .order_by(AppointmentModel.start_time)

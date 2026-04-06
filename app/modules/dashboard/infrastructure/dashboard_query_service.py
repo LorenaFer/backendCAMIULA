@@ -50,7 +50,7 @@ class DashboardQueryService:
     # ------------------------------------------------------------------
 
     async def kpis(
-        self, fecha: date, start: date, end: date
+        self, date_str: date, start: date, end: date
     ) -> Dict[str, Any]:
         # -- Appointment counts ----------------------------------------
         base = select(AppointmentModel).where(
@@ -66,7 +66,7 @@ class DashboardQueryService:
             .select_from(AppointmentModel)
             .where(
                 AppointmentModel.status == _ACTIVE,
-                AppointmentModel.appointment_date == fecha,
+                AppointmentModel.appointment_date == date_str,
             )
         )
         appointments_today = (await self._s.execute(today_q)).scalar() or 0
@@ -195,11 +195,11 @@ class DashboardQueryService:
         return [{"name": row[0], "count": row[1]} for row in rows]
 
     # ------------------------------------------------------------------
-    # 4. Daily trend (last 7 days from fecha)
+    # 4. Daily trend (last 7 days from date_str)
     # ------------------------------------------------------------------
 
-    async def daily_trend(self, fecha: date) -> List[int]:
-        days = [fecha - timedelta(days=i) for i in range(6, -1, -1)]
+    async def daily_trend(self, date_str: date) -> List[int]:
+        days = [date_str - timedelta(days=i) for i in range(6, -1, -1)]
         q = (
             select(
                 AppointmentModel.appointment_date,
@@ -245,7 +245,7 @@ class DashboardQueryService:
     # ------------------------------------------------------------------
 
     async def heatmap(
-        self, fecha_desde: date, fecha_hasta: date
+        self, date_from: date, date_to: date
     ) -> List[List[int]]:
         q = (
             select(
@@ -255,7 +255,7 @@ class DashboardQueryService:
             )
             .where(
                 AppointmentModel.status == _ACTIVE,
-                AppointmentModel.appointment_date.between(fecha_desde, fecha_hasta),
+                AppointmentModel.appointment_date.between(date_from, date_to),
             )
             .group_by("dow", "h")
         )

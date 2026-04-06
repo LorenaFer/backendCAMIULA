@@ -14,19 +14,19 @@ def parse_date(value: Optional[str]) -> date:
     return date.today()
 
 
-def period_range(fecha: date, periodo: str) -> Tuple[date, date]:
+def period_range(ref_date: date, period: str) -> Tuple[date, date]:
     """Return (start, end) inclusive date range for the given period. O(1)."""
-    if periodo == "week":
-        start = fecha - timedelta(days=fecha.weekday())
+    if period == "week":
+        start = ref_date - timedelta(days=ref_date.weekday())
         end = start + timedelta(days=6)
-    elif periodo == "month":
-        start = fecha.replace(day=1)
-        next_month = (fecha.replace(day=28) + timedelta(days=4)).replace(day=1)
+    elif period == "month":
+        start = ref_date.replace(day=1)
+        next_month = (ref_date.replace(day=28) + timedelta(days=4)).replace(day=1)
         end = next_month - timedelta(days=1)
-    elif periodo == "year":
-        start = fecha.replace(month=1, day=1)
-        end = fecha.replace(month=12, day=31)
+    elif period == "year":
+        start = ref_date.replace(month=1, day=1)
+        end = ref_date.replace(month=12, day=31)
     else:
-        start = fecha
-        end = fecha
+        start = ref_date
+        end = ref_date
     return start, end

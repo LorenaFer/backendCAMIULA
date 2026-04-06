@@ -346,7 +346,7 @@ class TestCheckSlot:
     async def test_check_slot_free(self, client, token):
         fake_doctor = str(uuid.uuid4())
         resp = await client.get(
-            f"{BASE}/check-slot?doctor_id={fake_doctor}&fecha=2026-12-01&hora_inicio=10:00",
+            f"{BASE}/check-slot?doctor_id={fake_doctor}&date_str=2026-12-01&hora_inicio=10:00",
             headers=_auth_headers(token),
         )
         assert resp.status_code == 200
@@ -360,7 +360,7 @@ class TestAvailableSlots:
     async def test_available_slots_no_availability(self, client, token):
         fake_doctor = str(uuid.uuid4())
         resp = await client.get(
-            f"{BASE}/available-slots?doctor_id={fake_doctor}&fecha=2026-12-01&es_nuevo=false",
+            f"{BASE}/available-slots?doctor_id={fake_doctor}&date_str=2026-12-01&es_nuevo=false",
             headers=_auth_headers(token),
         )
         assert resp.status_code == 200
