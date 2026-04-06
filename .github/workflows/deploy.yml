@@ -1,22 +1,40 @@
 name: CD — Deploy to Railway (development)
 
 on:
-  push:
+  workflow_run:
+    workflows: ["CI — Lint & Test"]
+    types: [completed]
     branches: [development]
 
 jobs:
   deploy:
     name: Deploy to Railway
     runs-on: ubuntu-latest
-    # Only deploy if CI passes (tests run via ci.yml)
+    # Only deploy if CI passed AND secrets are configured
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'development'
 
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check Railway secrets
+        id: check
+        run: |
+          if [ -z "${{ secrets.RAILWAY_TOKEN }}" ] || [ -z "${{ secrets.RAILWAY_SERVICE_ID }}" ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "⚠️ Railway secrets not configured. Skipping deploy."
+            echo "Set RAILWAY_TOKEN and RAILWAY_SERVICE_ID in GitHub Secrets."
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Install Railway CLI
+        if: steps.check.outputs.skip != 'true'
         run: npm i -g @railway/cli
 
       - name: Deploy to Railway
+        if: steps.check.outputs.skip != 'true'
         run: railway up --service ${{ secrets.RAILWAY_SERVICE_ID }}
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
