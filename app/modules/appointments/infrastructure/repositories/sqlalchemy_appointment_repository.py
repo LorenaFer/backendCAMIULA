@@ -29,6 +29,7 @@ class SQLAlchemyAppointmentRepository(AppointmentRepository):
         model: AppointmentModel,
         patient_name: Optional[str] = None,
         patient_dni: Optional[str] = None,
+        patient_nhm: Optional[int] = None,
         doctor_name: Optional[str] = None,
         specialty_name: Optional[str] = None,
         patient_university_relation: Optional[str] = None,
@@ -59,6 +60,7 @@ class SQLAlchemyAppointmentRepository(AppointmentRepository):
             created_by=model.created_by,
             patient_name=patient_name,
             patient_dni=patient_dni,
+            patient_nhm=patient_nhm,
             doctor_name=doctor_name,
             specialty_name=specialty_name,
             patient_university_relation=patient_university_relation,
@@ -78,6 +80,7 @@ class SQLAlchemyAppointmentRepository(AppointmentRepository):
                     "patient_name"
                 ),
                 PatientModel.dni.label("patient_dni"),
+                PatientModel.nhm.label("patient_nhm"),
                 (DoctorModel.first_name + " " + DoctorModel.last_name).label(
                     "doctor_name"
                 ),
@@ -107,6 +110,7 @@ class SQLAlchemyAppointmentRepository(AppointmentRepository):
             model,
             patient_name=row.patient_name if hasattr(row, "patient_name") else None,
             patient_dni=row.patient_dni if hasattr(row, "patient_dni") else None,
+            patient_nhm=row.patient_nhm if hasattr(row, "patient_nhm") else None,
             doctor_name=row.doctor_name if hasattr(row, "doctor_name") else None,
             specialty_name=row.specialty_name if hasattr(row, "specialty_name") else None,
             patient_university_relation=(

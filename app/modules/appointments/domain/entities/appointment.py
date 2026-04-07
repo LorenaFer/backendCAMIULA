@@ -24,6 +24,7 @@ class Appointment:
     # Embedded cross-module data (populated by joins)
     patient_name: Optional[str] = None
     patient_dni: Optional[str] = None
+    patient_nhm: Optional[int] = None
     doctor_name: Optional[str] = None
     specialty_name: Optional[str] = None
     patient_university_relation: Optional[str] = None

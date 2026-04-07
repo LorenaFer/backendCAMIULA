@@ -6,9 +6,11 @@ Usage:
 """
 
 import asyncio
+import json
 import os
 import random
 import sys
+import unicodedata
 from datetime import date, time, timedelta
 from pathlib import Path
 from uuid import uuid4
@@ -26,6 +28,17 @@ from app.core.security import hash_password
 
 uid = lambda: str(uuid4())
 today = date.today()
+
+
+def normalize_specialty_key(name: str) -> str:
+    """Strip accents, lowercase, replace spaces with hyphens.
+
+    Mirrors `normalize_specialty_name` in
+    `app/modules/medical_records/infrastructure/repositories/sqlalchemy_form_schema_repository.py`.
+    """
+    nfkd = unicodedata.normalize("NFKD", name.lower())
+    ascii_text = nfkd.encode("ascii", "ignore").decode("ascii")
+    return ascii_text.replace(" ", "-").replace("(", "").replace(")", "")
 
 
 async def q(s, sql, p=None):
@@ -65,6 +78,113 @@ async def main():
                 roles[name] = rid
         await s.commit()
         print(f"  Roles: {len(roles)}")
+
+        # ── 1b. Permissions + role_permissions ──────────────────
+        # Catalog of permission codes (mirrors permission_seeder.py)
+        permission_defs = [
+            ("patients:read",        "patients",     "Listar y ver pacientes"),
+            ("patients:create",      "patients",     "Crear pacientes"),
+            ("patients:update",      "patients",     "Actualizar pacientes"),
+            ("patients:delete",      "patients",     "Eliminar pacientes"),
+            ("appointments:read",    "appointments", "Ver citas"),
+            ("appointments:create",  "appointments", "Crear citas"),
+            ("appointments:update",  "appointments", "Actualizar citas"),
+            ("appointments:cancel",  "appointments", "Cancelar citas"),
+            ("doctors:read",         "doctors",      "Ver doctores"),
+            ("doctors:availability", "doctors",      "Gestionar disponibilidad"),
+            ("inventory:read",       "inventory",    "Ver inventario"),
+            ("inventory:create",     "inventory",    "Crear medicamentos / lotes"),
+            ("inventory:update",     "inventory",    "Actualizar inventario"),
+            ("inventory:adjust",     "inventory",    "Ajustar stock / despachos"),
+            ("users:read",           "auth",         "Ver usuarios"),
+            ("users:create",         "auth",         "Crear usuarios"),
+            ("users:update",         "auth",         "Actualizar usuarios"),
+            ("users:deactivate",     "auth",         "Desactivar usuarios"),
+            ("roles:read",           "auth",         "Ver roles y permisos"),
+            ("roles:assign",         "auth",         "Asignar roles a usuarios"),
+            ("reports:view",         "reports",      "Ver reportes"),
+            ("reports:export",       "reports",      "Exportar reportes"),
+            ("profile:read",         "auth",         "Ver perfil propio"),
+            ("profile:update",       "auth",         "Actualizar perfil propio"),
+            ("dashboard:view",       "dashboard",    "Ver dashboard / KPIs"),
+        ]
+        perms = {}
+        for code, module, desc in permission_defs:
+            row = await fetch_scalar(
+                s, "SELECT id FROM permissions WHERE code = :c", {"c": code}
+            )
+            if row:
+                perms[code] = row
+            else:
+                pid = uid()
+                await q(
+                    s,
+                    "INSERT INTO permissions (id, code, module, description) "
+                    "VALUES (:id, :c, :m, :d)",
+                    {"id": pid, "c": code, "m": module, "d": desc},
+                )
+                perms[code] = pid
+        await s.commit()
+        print(f"  Permissions: {len(perms)}")
+
+        # Role → permissions matrix
+        all_codes = [c for c, _, _ in permission_defs]
+        role_permission_matrix = {
+            "admin": all_codes,
+            "doctor": [
+                "patients:read",
+                "appointments:read",
+                "appointments:cancel",
+                "doctors:read",
+                "doctors:availability",
+                "reports:view",
+                "profile:read",
+                "profile:update",
+                "dashboard:view",
+            ],
+            "analista": [
+                "patients:read", "patients:create", "patients:update",
+                "appointments:read", "appointments:create",
+                "appointments:update", "appointments:cancel",
+                "doctors:read", "doctors:availability",
+                "reports:view", "reports:export",
+                "profile:read", "profile:update",
+                "dashboard:view",
+            ],
+            "farmacia": [
+                "inventory:read", "inventory:create",
+                "inventory:update", "inventory:adjust",
+                "patients:read",
+                "profile:read", "profile:update",
+                "dashboard:view",
+            ],
+            "paciente": [
+                "appointments:read", "appointments:create", "appointments:cancel",
+                "profile:read", "profile:update",
+            ],
+        }
+        rp_count = 0
+        for role_name, codes in role_permission_matrix.items():
+            role_id = roles[role_name]
+            for code in codes:
+                perm_id = perms[code]
+                exists = await fetch_scalar(
+                    s,
+                    "SELECT id FROM role_permissions "
+                    "WHERE fk_role_id = :r AND fk_permission_id = :p",
+                    {"r": role_id, "p": perm_id},
+                )
+                if exists:
+                    continue
+                await q(
+                    s,
+                    "INSERT INTO role_permissions (id, fk_role_id, fk_permission_id) "
+                    "VALUES (:id, :r, :p)",
+                    {"id": uid(), "r": role_id, "p": perm_id},
+                )
+                rp_count += 1
+        await s.commit()
+        print(f"  Role-permissions: {rp_count} new links")
 
         # ── 2. Users ─────────────────────────────────────────────
         users = {}
@@ -116,6 +236,54 @@ async def main():
                 specs[name] = sid
         await s.commit()
         print(f"  Specialties: {len(specs)}")
+
+        # ── 3b. Form schemas (linked to real specialty UUIDs) ────
+        # Loads scripts/schemas_seed_data.json and inserts each schema
+        # using the REAL specialty UUID resolved by normalized name.
+        # Avoids the bug in seed_form_schemas.py where the slug literal
+        # ("cardiologia") was inserted as specialty_id when name match failed.
+        schemas_file = ROOT / "scripts" / "schemas_seed_data.json"
+        if schemas_file.exists():
+            with open(schemas_file) as f:
+                schemas_data = json.load(f)
+
+            # Build {normalized_key: real_uuid} from the specialties just created
+            spec_by_key = {normalize_specialty_key(name): sid for name, sid in specs.items()}
+
+            # Clean ALL existing form_schemas to avoid stale rows with bogus
+            # specialty_id values from previous runs of seed_form_schemas.py
+            await q(s, "DELETE FROM form_schemas")
+            await s.commit()
+
+            fs_created = 0
+            fs_skipped = 0
+            for schema in schemas_data:
+                name = schema["specialty_name"]
+                key = normalize_specialty_key(name)
+                real_id = spec_by_key.get(key)
+                if not real_id:
+                    print(f"    ⚠ skipped '{name}' — no matching specialty in DB")
+                    fs_skipped += 1
+                    continue
+
+                await q(
+                    s,
+                    "INSERT INTO form_schemas "
+                    "(id, specialty_id, specialty_name, version, schema_json, status, created_at) "
+                    "VALUES (:id, :sid, :sn, :v, CAST(:sj AS jsonb), 'A', NOW())",
+                    {
+                        "id": uid(),
+                        "sid": real_id,
+                        "sn": name,
+                        "v": schema["version"],
+                        "sj": json.dumps(schema["schema_json"]),
+                    },
+                )
+                fs_created += 1
+            await s.commit()
+            print(f"  Form schemas: {fs_created} created, {fs_skipped} skipped")
+        else:
+            print("  Form schemas: schemas_seed_data.json not found — skipped")
 
         # ── 4. Doctors + availability ─────────────────────────────
         doctors = {}
