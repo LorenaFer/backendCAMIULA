@@ -38,6 +38,10 @@ class DispatchResponse(BaseModel):
     dispatch_status: str = Field(description="Status: pending, completed, cancelled", example="completed")
     items: List[DispatchItemResponse] = Field(description="Dispatched items with batch allocation")
     created_at: Optional[str] = Field(None, description="Creation timestamp")
+    # Enriched display fields
+    prescription_number: Optional[str] = Field(None, description="Prescription number (e.g. RX-2026-00001)", example="RX-2026-00001")
+    patient_full_name: Optional[str] = Field(None, description="Patient full name", example="Juan Perez")
+    pharmacist_full_name: Optional[str] = Field(None, description="Pharmacist full name", example="Pedro Farmacia")
 
 
 class DispatchValidationItemResponse(BaseModel):

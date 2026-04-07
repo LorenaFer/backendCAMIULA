@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Seed Supabase cloud DB with realistic test data.
+"""Seed Supabase cloud DB with realistic test data for thesis screenshots.
 
 Usage:
     DATABASE_URL="postgresql+asyncpg://..." python scripts/seed_supabase.py
@@ -25,17 +25,24 @@ from app.core.config import get_settings
 from app.core.security import hash_password
 
 uid = lambda: str(uuid4())
+today = date.today()
 
 
 async def q(s, sql, p=None):
-    """Execute, skip on duplicate."""
+    """Execute raw SQL, skip on duplicate key."""
     try:
         return await s.execute(text(sql), p or {})
     except Exception as e:
-        if "duplicate" in str(e).lower() or "unique" in str(e).lower() or "conflict" in str(e).lower():
+        msg = str(e).lower()
+        if any(k in msg for k in ("duplicate", "unique", "conflict")):
             await s.rollback()
             return None
         raise
+
+
+async def fetch_scalar(s, sql, p=None):
+    r = await s.execute(text(sql), p or {})
+    return r.scalar()
 
 
 async def main():
@@ -46,11 +53,10 @@ async def main():
     async with S() as s:
         print("Seeding Supabase...\n")
 
-        # 1. Roles
+        # ── 1. Roles ─────────────────────────────────────────────
         roles = {}
         for name in ["admin", "doctor", "analista", "farmacia", "paciente"]:
-            r = await s.execute(text("SELECT id FROM roles WHERE name = :n"), {"n": name})
-            row = r.scalar()
+            row = await fetch_scalar(s, "SELECT id FROM roles WHERE name = :n", {"n": name})
             if row:
                 roles[name] = row
             else:
@@ -60,35 +66,48 @@ async def main():
         await s.commit()
         print(f"  Roles: {len(roles)}")
 
-        # 2. Users
+        # ── 2. Users ─────────────────────────────────────────────
         users = {}
-        for email, name, role in [
-            ("admin@camiula.edu.ve", "Administrador CAMIULA", "admin"),
-            ("dr.mendez@camiula.edu.ve", "Dr. Carlos Mendez", "doctor"),
-            ("dr.lopez@camiula.edu.ve", "Dra. Ana Lopez", "doctor"),
-            ("dr.garcia@camiula.edu.ve", "Dr. Roberto Garcia", "doctor"),
-            ("analista@camiula.edu.ve", "Maria Analista", "analista"),
-            ("farmacia@camiula.edu.ve", "Pedro Farmacia", "farmacia"),
-        ]:
-            r = await s.execute(text("SELECT id FROM users WHERE email = :e"), {"e": email})
-            row = r.scalar()
+        user_defs = [
+            ("admin@camiula.edu.ve",       "Administrador CAMIULA",     "admin"),
+            ("dr.mendez@camiula.edu.ve",   "Dr. Carlos Mendez",         "doctor"),
+            ("dr.lopez@camiula.edu.ve",    "Dra. Ana Lopez",            "doctor"),
+            ("dr.garcia@camiula.edu.ve",   "Dr. Roberto Garcia",        "doctor"),
+            ("dr.torres@camiula.edu.ve",   "Dr. Miguel Torres",         "doctor"),
+            ("dr.romero@camiula.edu.ve",   "Dra. Patricia Romero",      "doctor"),
+            ("analista@camiula.edu.ve",    "Maria Analista",            "analista"),
+            ("farmacia@camiula.edu.ve",    "Pedro Blanco",              "farmacia"),
+            ("farmacia2@camiula.edu.ve",   "Luisa Fernandez",           "farmacia"),
+        ]
+        for email, name, role in user_defs:
+            row = await fetch_scalar(s, "SELECT id FROM users WHERE email = :e", {"e": email})
             if row:
                 users[email] = row
             else:
                 user_id = uid()
-                await q(s, "INSERT INTO users (id, email, full_name, hashed_password, user_status) VALUES (:id, :e, :n, :pw, 'ACTIVE')",
-                        {"id": user_id, "e": email, "n": name, "pw": hash_password("Test12345")})
+                await q(
+                    s,
+                    "INSERT INTO users (id, email, full_name, hashed_password, user_status) "
+                    "VALUES (:id, :e, :n, :pw, 'ACTIVE')",
+                    {"id": user_id, "e": email, "n": name, "pw": hash_password("Test12345")},
+                )
                 users[email] = user_id
-                await q(s, "INSERT INTO user_roles (id, fk_user_id, fk_role_id) VALUES (:id, :uid, :rid)",
-                        {"id": uid(), "uid": user_id, "rid": roles[role]})
+                await q(
+                    s,
+                    "INSERT INTO user_roles (id, fk_user_id, fk_role_id) VALUES (:id, :uid, :rid)",
+                    {"id": uid(), "uid": user_id, "rid": roles[role]},
+                )
         await s.commit()
         print(f"  Users: {len(users)}")
 
-        # 3. Specialties
+        # ── 3. Specialties ────────────────────────────────────────
         specs = {}
-        for name in ["Medicina General", "Cardiologia", "Pediatria", "Psicologia", "Odontologia", "Traumatologia"]:
-            r = await s.execute(text("SELECT id FROM specialties WHERE name = :n"), {"n": name})
-            row = r.scalar()
+        for name in [
+            "Medicina General", "Cardiologia", "Pediatria",
+            "Psicologia", "Odontologia", "Traumatologia",
+            "Ginecologia", "Neurologia",
+        ]:
+            row = await fetch_scalar(s, "SELECT id FROM specialties WHERE name = :n", {"n": name})
             if row:
                 specs[name] = row
             else:
@@ -98,119 +117,225 @@ async def main():
         await s.commit()
         print(f"  Specialties: {len(specs)}")
 
-        # 4. Doctors + availability
+        # ── 4. Doctors + availability ─────────────────────────────
         doctors = {}
-        for email, first, last, spec in [
-            ("dr.mendez@camiula.edu.ve", "Carlos", "Mendez", "Medicina General"),
-            ("dr.lopez@camiula.edu.ve", "Ana", "Lopez", "Cardiologia"),
-            ("dr.garcia@camiula.edu.ve", "Roberto", "Garcia", "Pediatria"),
-        ]:
-            r = await s.execute(text("SELECT id FROM doctors WHERE fk_user_id = :u"), {"u": users[email]})
-            row = r.scalar()
+        doctor_defs = [
+            ("dr.mendez@camiula.edu.ve",  "Carlos",   "Mendez",  "Medicina General"),
+            ("dr.lopez@camiula.edu.ve",   "Ana",      "Lopez",   "Cardiologia"),
+            ("dr.garcia@camiula.edu.ve",  "Roberto",  "Garcia",  "Pediatria"),
+            ("dr.torres@camiula.edu.ve",  "Miguel",   "Torres",  "Traumatologia"),
+            ("dr.romero@camiula.edu.ve",  "Patricia", "Romero",  "Ginecologia"),
+        ]
+        for email, first, last, spec in doctor_defs:
+            row = await fetch_scalar(s, "SELECT id FROM doctors WHERE fk_user_id = :u", {"u": users[email]})
             if row:
                 doctors[f"{first} {last}"] = row
             else:
                 did = uid()
-                await q(s, "INSERT INTO doctors (id, fk_user_id, fk_specialty_id, first_name, last_name, doctor_status) VALUES (:id, :uid, :sid, :fn, :ln, 'ACTIVE')",
-                        {"id": did, "uid": users[email], "sid": specs[spec], "fn": first, "ln": last})
+                await q(
+                    s,
+                    "INSERT INTO doctors (id, fk_user_id, fk_specialty_id, first_name, last_name, doctor_status) "
+                    "VALUES (:id, :uid, :sid, :fn, :ln, 'ACTIVE')",
+                    {"id": did, "uid": users[email], "sid": specs[spec], "fn": first, "ln": last},
+                )
                 doctors[f"{first} {last}"] = did
                 for dow in range(1, 6):
-                    await q(s, "INSERT INTO doctor_availability (id, fk_doctor_id, day_of_week, start_time, end_time, slot_duration) VALUES (:id, :did, :dow, :st, :et, 30)",
-                            {"id": uid(), "did": did, "dow": dow, "st": time(8, 0), "et": time(12, 0)})
+                    await q(
+                        s,
+                        "INSERT INTO doctor_availability (id, fk_doctor_id, day_of_week, start_time, end_time, slot_duration) "
+                        "VALUES (:id, :did, :dow, :st, :et, 30)",
+                        {"id": uid(), "did": did, "dow": dow, "st": time(8, 0), "et": time(14, 0)},
+                    )
         await s.commit()
         print(f"  Doctors: {len(doctors)}")
 
-        # 5. Patients
+        # ── 5. Patients (25 realistic Venezuelan patients) ────────
         patients = []
-        names = [
-            ("Juan", "Perez", "M"), ("Maria", "Garcia", "F"), ("Carlos", "Rodriguez", "M"),
-            ("Ana", "Martinez", "F"), ("Luis", "Hernandez", "M"), ("Sofia", "Diaz", "F"),
-            ("Pedro", "Sanchez", "M"), ("Laura", "Ramirez", "F"), ("Diego", "Torres", "M"),
-            ("Valentina", "Flores", "F"), ("Andres", "Morales", "M"), ("Camila", "Vargas", "F"),
-            ("Ricardo", "Castillo", "M"), ("Isabella", "Rojas", "F"), ("Miguel", "Navarro", "M"),
+        patient_defs = [
+            # (first, last, sex, birth_year, relation, dni_num)
+            ("Juan",       "Perez Rojas",       "M", 1985, "estudiante",  12345678),
+            ("Maria",      "Garcia Mendez",     "F", 1992, "estudiante",  15678234),
+            ("Carlos",     "Rodriguez Silva",   "M", 1978, "docente",     8765432),
+            ("Ana",        "Martinez Vargas",   "F", 1990, "personal",    18234567),
+            ("Luis",       "Hernandez Paz",     "M", 2002, "estudiante",  27456789),
+            ("Sofia",      "Diaz Gonzalez",     "F", 1995, "estudiante",  22345678),
+            ("Pedro",      "Sanchez Mora",      "M", 1970, "docente",     5678901),
+            ("Laura",      "Ramirez Ortiz",     "F", 1988, "personal",    14567890),
+            ("Diego",      "Torres Blanco",     "M", 2001, "estudiante",  26789012),
+            ("Valentina",  "Flores Castillo",   "F", 2003, "estudiante",  29012345),
+            ("Andres",     "Morales Fuentes",   "M", 1975, "docente",     7890123),
+            ("Camila",     "Vargas Suarez",     "F", 1999, "estudiante",  24567890),
+            ("Ricardo",    "Castillo Reyes",    "M", 1982, "personal",    10234567),
+            ("Isabella",   "Rojas Medina",      "F", 2000, "estudiante",  25678901),
+            ("Miguel",     "Navarro Leal",      "M", 1993, "estudiante",  19876543),
+            ("Alejandra",  "Vega Bravo",        "F", 1987, "docente",     13456789),
+            ("Fernando",   "Salazar Pinto",     "M", 2004, "estudiante",  30123456),
+            ("Gabriela",   "Paredes Acosta",    "F", 1996, "familia",     21345678),
+            ("Hector",     "Dominguez Rios",    "M", 1968, "externo",     4567890),
+            ("Natalia",    "Campos Serrano",    "F", 2002, "estudiante",  27890123),
+            ("Oscar",      "Delgado Vera",      "M", 1980, "personal",    11234567),
+            ("Paola",      "Ibarra Molina",     "F", 1994, "estudiante",  20345678),
+            ("Ramon",      "Espinoza Cruz",     "M", 1972, "docente",     6789012),
+            ("Daniela",    "Rios Cabrera",      "F", 1998, "estudiante",  23456789),
+            ("Esteban",    "Cordero Pena",      "M", 2005, "estudiante",  31234567),
         ]
-        rels = ["estudiante", "personal", "docente", "familia", "externo"]
-        for i, (first, last, sex) in enumerate(names):
-            pid = uid()
+        for i, (first, last, sex, birth_year, rel, dni_num) in enumerate(patient_defs):
             nhm = 1000 + i + 1
-            dni = f"V-{random.randint(10000000, 30000000)}"
-            bd = date(random.randint(1970, 2005), random.randint(1, 12), random.randint(1, 28))
-            await q(s, "INSERT INTO patients (id, nhm, dni, first_name, last_name, sex, birth_date, university_relation, is_new, phone, home_address, medical_data, patient_status) VALUES (:id, :nhm, :dni, :fn, :ln, :sex, :bd, :rel, :new, :ph, :addr, :md, 'active')",
-                    {"id": pid, "nhm": nhm, "dni": dni, "fn": first, "ln": last, "sex": sex, "bd": bd, "rel": random.choice(rels), "new": i < 5, "ph": f"0414-{random.randint(1000000, 9999999)}", "addr": f"Av. {random.choice(['Universidad', 'Las Americas'])}, Merida", "md": '{"blood_type": "' + random.choice(["O+", "A+", "B+"]) + '"}'})
+            dni = f"V-{dni_num}"
+            existing = await fetch_scalar(s, "SELECT id FROM patients WHERE nhm = :nhm", {"nhm": nhm})
+            if existing:
+                patients.append(existing)
+                continue
+            pid = uid()
+            bd = date(birth_year, random.randint(1, 12), random.randint(1, 28))
+            await q(
+                s,
+                "INSERT INTO patients (id, nhm, dni, first_name, last_name, sex, birth_date, "
+                "university_relation, is_new, phone, home_address, medical_data, patient_status) "
+                "VALUES (:id, :nhm, :dni, :fn, :ln, :sex, :bd, :rel, :new, :ph, :addr, :md, 'active')",
+                {
+                    "id": pid, "nhm": nhm, "dni": dni, "fn": first, "ln": last,
+                    "sex": sex, "bd": bd, "rel": rel, "new": i < 5,
+                    "ph": f"0414-{random.randint(1000000, 9999999)}",
+                    "addr": f"Av. {random.choice(['Universidad', 'Las Americas', 'Los Proceres', 'Urdaneta'])}, Merida",
+                    "md": f'{{"blood_type": "{random.choice(["O+", "A+", "B+", "AB+", "O-"])}", "allergies": []}}',
+                },
+            )
             patients.append(pid)
         await s.commit()
         print(f"  Patients: {len(patients)}")
 
-        # 6. Appointments
+        # ── 6. Appointments (50 appointments, well distributed) ───
         doc_ids = list(doctors.values())
         spec_ids = list(specs.values())
-        today = date.today()
-        for i in range(30):
-            ad = today - timedelta(days=random.randint(0, 60))
-            h = random.randint(8, 11)
-            await q(s, "INSERT INTO appointments (id, fk_patient_id, fk_doctor_id, fk_specialty_id, appointment_date, start_time, end_time, duration_minutes, is_first_visit, appointment_status) VALUES (:id, :pid, :did, :sid, :ad, :st, :et, 30, :fv, :status)",
-                    {"id": uid(), "pid": random.choice(patients), "did": random.choice(doc_ids), "sid": random.choice(spec_ids), "ad": ad, "st": time(h, 0), "et": time(h, 30), "fv": random.random() < 0.3, "status": random.choice(["pendiente", "confirmada", "atendida", "cancelada"])})
-        await s.commit()
-        print(f"  Appointments: 30")
+        existing_appts = await fetch_scalar(s, "SELECT COUNT(*) FROM appointments")
+        if existing_appts == 0:
+            statuses = ["atendida"] * 5 + ["confirmada"] * 2 + ["pendiente"] + ["cancelada"]
+            for i in range(50):
+                ad = today - timedelta(days=random.randint(0, 90))
+                h = random.randint(8, 12)
+                await q(
+                    s,
+                    "INSERT INTO appointments (id, fk_patient_id, fk_doctor_id, fk_specialty_id, "
+                    "appointment_date, start_time, end_time, duration_minutes, is_first_visit, appointment_status) "
+                    "VALUES (:id, :pid, :did, :sid, :ad, :st, :et, 30, :fv, :status)",
+                    {
+                        "id": uid(), "pid": random.choice(patients),
+                        "did": random.choice(doc_ids), "sid": random.choice(spec_ids),
+                        "ad": ad, "st": time(h, 0), "et": time(h, 30),
+                        "fv": random.random() < 0.3, "status": random.choice(statuses),
+                    },
+                )
+            await s.commit()
+            print("  Appointments: 50")
+        else:
+            print(f"  Appointments: {existing_appts} already exist")
 
-        # 7. Categories
+        # ── 7. Categories ─────────────────────────────────────────
         cats = {}
-        for name, desc in [("Antibiotico", "Antibiotics"), ("Analgesico", "Analgesics"), ("Antiinflamatorio", "Anti-inflammatory"), ("Material medico", "Medical supplies")]:
-            r = await s.execute(text("SELECT id FROM medication_categories WHERE name = :n"), {"n": name})
-            row = r.scalar()
+        for name, desc in [
+            ("Antibiotico",       "Antibiotics"),
+            ("Analgesico",        "Analgesics and pain relievers"),
+            ("Antiinflamatorio",  "Anti-inflammatory drugs"),
+            ("Antihipertensivo",  "Antihypertensive drugs"),
+            ("Antidiabetico",     "Antidiabetic drugs"),
+            ("Material medico",   "Medical supplies and consumables"),
+            ("Vitaminas",         "Vitamins and supplements"),
+        ]:
+            row = await fetch_scalar(s, "SELECT id FROM medication_categories WHERE name = :n", {"n": name})
             if row:
                 cats[name] = row
             else:
                 cid = uid()
-                await q(s, "INSERT INTO medication_categories (id, name, description) VALUES (:id, :n, :d)", {"id": cid, "n": name, "d": desc})
+                await q(s, "INSERT INTO medication_categories (id, name, description) VALUES (:id, :n, :d)",
+                        {"id": cid, "n": name, "d": desc})
                 cats[name] = cid
         await s.commit()
         print(f"  Categories: {len(cats)}")
 
-        # 8. Medications
+        # ── 8. Medications ────────────────────────────────────────
         meds = {}
-        for code, name, form, conc, cat in [
-            ("MED-001", "Amoxicilina", "tablet", "500mg", "Antibiotico"),
-            ("MED-002", "Ibuprofeno", "tablet", "400mg", "Analgesico"),
-            ("MED-003", "Metformina", "tablet", "850mg", "Analgesico"),
-            ("MED-004", "Losartan", "tablet", "50mg", "Antiinflamatorio"),
-            ("MED-005", "Acetaminofen", "tablet", "500mg", "Analgesico"),
-            ("MED-006", "Gasas esteriles", "unit", None, "Material medico"),
-        ]:
-            r = await s.execute(text("SELECT id FROM medications WHERE code = :c"), {"c": code})
-            row = r.scalar()
+        med_defs = [
+            ("MED-001", "Amoxicilina",        "tablet",  "500mg",  "Antibiotico"),
+            ("MED-002", "Ibuprofeno",          "tablet",  "400mg",  "Analgesico"),
+            ("MED-003", "Metformina",          "tablet",  "850mg",  "Antidiabetico"),
+            ("MED-004", "Losartan",            "tablet",  "50mg",   "Antihipertensivo"),
+            ("MED-005", "Acetaminofen",        "tablet",  "500mg",  "Analgesico"),
+            ("MED-006", "Azitromicina",        "tablet",  "500mg",  "Antibiotico"),
+            ("MED-007", "Enalapril",           "tablet",  "10mg",   "Antihipertensivo"),
+            ("MED-008", "Omeprazol",           "capsule", "20mg",   "Antiinflamatorio"),
+            ("MED-009", "Diclofenac",          "tablet",  "50mg",   "Antiinflamatorio"),
+            ("MED-010", "Vitamina C",          "tablet",  "500mg",  "Vitaminas"),
+            ("MED-011", "Gasas esteriles",     "unit",    None,     "Material medico"),
+            ("MED-012", "Guantes latex M",     "unit",    None,     "Material medico"),
+        ]
+        for code, name, form, conc, cat in med_defs:
+            row = await fetch_scalar(s, "SELECT id FROM medications WHERE code = :c", {"c": code})
             if row:
                 meds[code] = row
             else:
                 mid = uid()
-                await q(s, "INSERT INTO medications (id, fk_category_id, code, generic_name, pharmaceutical_form, concentration, unit_measure, controlled_substance, requires_refrigeration, medication_status) VALUES (:id, :cid, :code, :name, :form, :conc, 'unit', false, false, 'active')",
-                        {"id": mid, "cid": cats.get(cat), "code": code, "name": name, "form": form, "conc": conc})
+                await q(
+                    s,
+                    "INSERT INTO medications (id, fk_category_id, code, generic_name, pharmaceutical_form, "
+                    "concentration, unit_measure, controlled_substance, requires_refrigeration, medication_status) "
+                    "VALUES (:id, :cid, :code, :name, :form, :conc, 'unit', false, false, 'active')",
+                    {"id": mid, "cid": cats.get(cat), "code": code, "name": name, "form": form, "conc": conc},
+                )
                 meds[code] = mid
         await s.commit()
         print(f"  Medications: {len(meds)}")
 
-        # 9. Supplier
-        r = await s.execute(text("SELECT id FROM suppliers LIMIT 1"))
-        sup_id = r.scalar()
+        # ── 9. Suppliers ──────────────────────────────────────────
+        sup_id = await fetch_scalar(s, "SELECT id FROM suppliers LIMIT 1")
         if not sup_id:
             sup_id = uid()
-            await q(s, "INSERT INTO suppliers (id, name, rif, phone, supplier_status) VALUES (:id, 'Distribuidora Farmaceutica Nacional', 'J-12345678-9', '0212-1234567', 'active')", {"id": sup_id})
+            await q(
+                s,
+                "INSERT INTO suppliers (id, name, rif, phone, supplier_status) "
+                "VALUES (:id, 'Distribuidora Farmaceutica Nacional', 'J-12345678-9', '0212-1234567', 'active')",
+                {"id": sup_id},
+            )
+            sup2 = uid()
+            await q(
+                s,
+                "INSERT INTO suppliers (id, name, rif, phone, supplier_status) "
+                "VALUES (:id, 'MedSuply Venezuela C.A.', 'J-98765432-1', '0212-7654321', 'active')",
+                {"id": sup2},
+            )
             await s.commit()
-        print(f"  Suppliers: 1")
+        print("  Suppliers: ready")
 
-        # 10. Batches
+        # ── 10. Batches (3 batches per medication) ────────────────
+        med_items = list(meds.items())
         bc = 0
-        for code, mid in meds.items():
+        for code, mid in med_items:
             if not mid:
                 continue
-            for j in range(2):
-                await q(s, "INSERT INTO batches (id, fk_medication_id, fk_supplier_id, lot_number, expiration_date, quantity_received, quantity_available, received_at, batch_status) VALUES (:id, :mid, :sid, :lot, :exp, :qr, :qa, :rec, 'available')",
-                        {"id": uid(), "mid": mid, "sid": sup_id, "lot": f"LOT-{code}-{j+1:03d}", "exp": today + timedelta(days=random.randint(90, 365)), "qr": random.choice([100, 200, 500]), "qa": random.choice([50, 100, 200]), "rec": today - timedelta(days=random.randint(10, 90))})
+            for j in range(3):
+                lot = f"LOT-{code}-{j+1:03d}"
+                existing = await fetch_scalar(s, "SELECT id FROM batches WHERE lot_number = :lot", {"lot": lot})
+                if existing:
+                    continue
+                qty_rcv = random.choice([200, 300, 500])
+                qty_avail = int(qty_rcv * random.uniform(0.4, 0.9))
+                exp = today + timedelta(days=random.randint(120, 540))
+                rec = today - timedelta(days=random.randint(10, 120))
+                await q(
+                    s,
+                    "INSERT INTO batches (id, fk_medication_id, fk_supplier_id, lot_number, expiration_date, "
+                    "quantity_received, quantity_available, received_at, batch_status) "
+                    "VALUES (:id, :mid, :sid, :lot, :exp, :qr, :qa, :rec, 'available')",
+                    {
+                        "id": uid(), "mid": mid, "sid": sup_id, "lot": lot,
+                        "exp": exp, "qr": qty_rcv, "qa": qty_avail, "rec": rec,
+                    },
+                )
                 bc += 1
         await s.commit()
-        print(f"  Batches: {bc}")
+        print(f"  Batches: {bc} new")
 
-        print(f"\nDone! Supabase seeded.")
+        print("\nBase seed complete.")
     await engine.dispose()
 
 

@@ -25,3 +25,7 @@ class Dispatch:
     notes: Optional[str] = None
     created_at: Optional[str] = None
     created_by: Optional[str] = None
+    # Enriched display fields (populated in list queries)
+    prescription_number: Optional[str] = None
+    patient_full_name: Optional[str] = None
+    pharmacist_full_name: Optional[str] = None
