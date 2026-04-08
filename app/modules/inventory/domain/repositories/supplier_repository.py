@@ -28,7 +28,7 @@ class SupplierRepository(ABC):
 
     @abstractmethod
     async def find_options(self) -> list[Supplier]:
-        """Lista simplificada para selects: id, name, rif."""
+        """Simplified list for dropdowns: id, name, rif."""
         ...
 
     @abstractmethod

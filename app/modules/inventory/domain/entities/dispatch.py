@@ -11,6 +11,11 @@ class DispatchItem:
     fk_batch_id: str
     fk_medication_id: str
     quantity_dispatched: int
+    # Enriched display fields (populated via JOIN to medications/batches)
+    medication_name: Optional[str] = None
+    medication_form: Optional[str] = None
+    batch_number: Optional[str] = None
+    expiration_date: Optional[str] = None
 
 
 @dataclass
@@ -25,3 +30,7 @@ class Dispatch:
     notes: Optional[str] = None
     created_at: Optional[str] = None
     created_by: Optional[str] = None
+    # Enriched display fields (populated in list queries)
+    prescription_number: Optional[str] = None
+    patient_full_name: Optional[str] = None
+    pharmacist_full_name: Optional[str] = None

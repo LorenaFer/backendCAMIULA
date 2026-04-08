@@ -15,15 +15,24 @@ class CreateAppointment:
         self._repo = repo
 
     async def execute(self, dto: CreateAppointmentDTO, created_by: str) -> Appointment:
+        # Idempotency: if the client retries the same request after a network
+        # microcut, return the previously-created appointment instead of duplicating.
+        # The client_token is a UUID generated on the frontend and persisted in the
+        # wizard draft so the same token survives reloads.
+        if dto.client_token:
+            existing = await self._repo.find_by_client_token(dto.client_token)
+            if existing:
+                return existing
+
         # Validate double-booking: same doctor + date + start_time, non-cancelled
         is_booked = await self._repo.check_double_booking(
             doctor_id=dto.fk_doctor_id,
-            fecha=dto.appointment_date,
+            date_str=dto.appointment_date,
             start_time=dto.start_time,
         )
         if is_booked:
             raise ConflictException(
-                "Ya existe una cita para este doctor en la misma fecha y hora."
+                "An appointment already exists for this doctor at the same date and time."
             )
 
         data = {
@@ -37,6 +46,7 @@ class CreateAppointment:
             "is_first_visit": dto.is_first_visit,
             "reason": dto.reason,
             "observations": dto.observations,
+            "client_token": dto.client_token,
             "appointment_status": "pendiente",
         }
         return await self._repo.create(data, created_by)

@@ -16,7 +16,7 @@ from app.shared.database.mixins import RecordStatus
 
 
 def _stock_subquery():
-    """Subquery reutilizable: stock disponible por medicamento (lotes vigentes)."""
+    """Subquery reutilizable: stock available por medicamento (lotes vigentes)."""
     today = date.today()
     return (
         select(
@@ -147,7 +147,7 @@ class SQLAlchemyMedicationRepository(MedicationRepository):
     async def find_options(
         self, search: Optional[str] = None, limit: int = 100
     ) -> list[Medication]:
-        """Lista simplificada para selects — stock calculado en un solo JOIN."""
+        """Simplified list for dropdowns — stock calculado en un solo JOIN."""
         stock_sq = _stock_subquery()
         q = (
             select(

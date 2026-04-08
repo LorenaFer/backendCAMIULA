@@ -24,7 +24,7 @@ class UserRepository(ABC):
     async def get_by_external_sub(
         self, provider: str, sub: str
     ) -> Optional[User]:
-        """Busca usuario por sub de un proveedor externo (auth0, keycloak, etc.)."""
+        """Find user by sub from an external provider (auth0, keycloak, etc.)."""
         ...
 
     @abstractmethod

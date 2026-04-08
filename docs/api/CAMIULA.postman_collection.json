@@ -1,0 +1,3839 @@
+{
+  "info": {
+    "_postman_id": "d7f005f1-fb70-487a-9b65-15be01de87a5",
+    "name": "CAMIULA API",
+    "description": "",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "health"
+              ],
+              "query": [],
+              "variable": []
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"string\",\n  \"password\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"string\",\n  \"full_name\": \"string\",\n  \"password\": \"string\",\n  \"phone\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Patient Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/patient/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "patient",
+                "login"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"string\",\n  \"query_type\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get My Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/users/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me"
+              ],
+              "query": [],
+              "variable": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update My Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"string\",\n  \"phone\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/users",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Search by email or name",
+                  "disabled": true
+                },
+                {
+                  "key": "role",
+                  "value": "",
+                  "description": "Filter by role name",
+                  "disabled": true
+                },
+                {
+                  "key": "staff_only",
+                  "value": "",
+                  "description": "Exclude users whose only role is paciente",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "page_size",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                }
+              ],
+              "variable": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"string\",\n  \"full_name\": \"string\",\n  \"password\": \"string\",\n  \"phone\": \"string\",\n  \"roles\": [],\n  \"specialty_id\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/users/:user_id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                ":user_id"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "user_id",
+                  "value": "",
+                  "description": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Assign Role",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users/:user_id/roles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                ":user_id",
+                "roles"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "user_id",
+                  "value": "",
+                  "description": ""
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role_name\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Remove Role",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/users/:user_id/roles/:role_name",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                ":user_id",
+                "roles",
+                ":role_name"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "user_id",
+                  "value": "",
+                  "description": ""
+                },
+                {
+                  "key": "role_name",
+                  "value": "",
+                  "description": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Patients",
+      "item": [
+        {
+          "name": "Patient demographics breakdown",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/patients/demographics",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "patients",
+                "demographics"
+              ],
+              "query": [],
+              "variable": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get full patient by id, cedula or NHM",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/patients/full",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "patients",
+                "full"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": "Patient UUID",
+                  "disabled": true
+                },
+                {
+                  "key": "cedula",
+                  "value": "",
+                  "description": "Patient cedula",
+                  "disabled": true
+                },
+                {
+                  "key": "nhm",
+                  "value": "",
+                  "description": "Patient NHM",
+                  "disabled": true
+                }
+              ],
+              "variable": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get highest NHM registered",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/patients/max-nhm",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "patients",
+                "max-nhm"
+              ],
+              "query": [],
+              "variable": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List patients or search by NHM/cedula/text",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/patients",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "patients"
+              ],
+              "query": [
+                {
+                  "key": "nhm",
+                  "value": "",
+                  "description": "Search by NHM",
+                  "disabled": true
+                },
+                {
+                  "key": "cedula",
+                  "value": "",
+                  "description": "Search by cedula",
+                  "disabled": true
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Search by cedula, name or NHM",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "page_size",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                }
+              ],
+              "variable": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create patient",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/patients",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "patients"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cedula\": \"string\",\n  \"first_name\": \"string\",\n  \"last_name\": \"string\",\n  \"university_relation\": \"string\",\n  \"sex\": \"string\",\n  \"birth_date\": \"string\",\n  \"birth_place\": \"string\",\n  \"marital_status\": \"string\",\n  \"religion\": \"string\",\n  \"origin\": \"string\",\n  \"home_address\": \"string\",\n  \"phone\": \"string\",\n  \"profession\": \"string\",\n  \"current_occupation\": \"string\",\n  \"work_address\": \"string\",\n  \"economic_classification\": \"string\",\n  \"family_relationship\": \"string\",\n  \"fk_holder_patient_id\": \"string\",\n  \"medical_data\": \"string\",\n  \"emergency_contact\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get patient by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/patients/:patient_id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "patients",
+                ":patient_id"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "patient_id",
+                  "value": "",
+                  "description": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Register patient (ULA portal)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/patients/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "patients",
+                "register"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cedula\": \"string\",\n  \"first_name\": \"string\",\n  \"last_name\": \"string\",\n  \"university_relation\": \"string\",\n  \"phone\": \"string\",\n  \"email\": \"string\",\n  \"sex\": \"string\",\n  \"birth_date\": \"string\",\n  \"country\": \"string\",\n  \"state_geo\": \"string\",\n  \"city\": \"string\",\n  \"marital_status\": \"string\",\n  \"blood_type\": \"string\",\n  \"religion\": \"string\",\n  \"economic_classification\": \"string\",\n  \"profession\": \"string\",\n  \"current_occupation\": \"string\",\n  \"family_relationship\": \"string\",\n  \"holder_cedula\": \"string\",\n  \"home_address\": \"string\",\n  \"work_address\": \"string\",\n  \"emergency_name\": \"string\",\n  \"emergency_relationship\": \"string\",\n  \"emergency_phone\": \"string\",\n  \"emergency_address\": \"string\",\n  \"allergies\": \"string\",\n  \"medical_alerts\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Inventory - Medication Categories",
+      "item": [
+        {
+          "name": "List medication categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/categories",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "categories"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Search by name",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "page_size",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                }
+              ],
+              "variable": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create medication category",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/categories",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "categories"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"string\",\n  \"description\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get category by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/categories/:category_id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "categories",
+                ":category_id"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "category_id",
+                  "value": "",
+                  "description": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update medication category",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/categories/:category_id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "categories",
+                ":category_id"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "category_id",
+                  "value": "",
+                  "description": ""
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"string\",\n  \"description\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete category (soft-delete)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/categories/:category_id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "categories",
+                ":category_id"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "category_id",
+                  "value": "",
+                  "description": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Inventory — Medications",
+      "item": [
+        {
+          "name": "Listar medicamentos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/medications",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "medications"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Búsqueda por nombre genérico",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "Filtrar por medication_status",
+                  "disabled": true
+                },
+                {
+                  "key": "therapeutic_class",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "category_id",
+                  "value": "",
+                  "description": "Filter by category UUID",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "page_size",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                }
+              ],
+              "variable": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Registrar nuevo medicamento",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/medications",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "medications"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"string\",\n  \"generic_name\": \"string\",\n  \"pharmaceutical_form\": \"string\",\n  \"unit_measure\": \"string\",\n  \"controlled_substance\": false,\n  \"requires_refrigeration\": false,\n  \"commercial_name\": \"string\",\n  \"concentration\": \"string\",\n  \"therapeutic_class\": \"string\",\n  \"fk_category_id\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Lista simplificada para selects",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/medications/options",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "medications",
+                "options"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Filtrar por nombre genérico",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "",
+                  "description": "Máximo de resultados",
+                  "disabled": true
+                }
+              ],
+              "variable": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Detalle de medicamento con stock actual",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/medications/:id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "medications",
+                ":id"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Actualizar medicamento",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/medications/:id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "medications",
+                ":id"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": ""
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"generic_name\": \"string\",\n  \"commercial_name\": \"string\",\n  \"pharmaceutical_form\": \"string\",\n  \"concentration\": \"string\",\n  \"unit_measure\": \"string\",\n  \"therapeutic_class\": \"string\",\n  \"fk_category_id\": \"string\",\n  \"controlled_substance\": \"string\",\n  \"requires_refrigeration\": \"string\",\n  \"medication_status\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Eliminar medicamento (soft-delete)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/medications/:id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "medications",
+                ":id"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Inventory — Suppliers",
+      "item": [
+        {
+          "name": "List suppliers (paginated)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/suppliers",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "suppliers"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Search by name",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "Filter by supplier_status",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "page_size",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                }
+              ],
+              "variable": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create a new supplier",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/suppliers",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "suppliers"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"string\",\n  \"rif\": \"string\",\n  \"phone\": \"string\",\n  \"email\": \"string\",\n  \"contact_name\": \"string\",\n  \"payment_terms\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Active suppliers for select dropdowns",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/suppliers/options",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "suppliers",
+                "options"
+              ],
+              "query": [],
+              "variable": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get supplier by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/suppliers/:id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "suppliers",
+                ":id"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update a supplier",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/suppliers/:id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "suppliers",
+                ":id"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": ""
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"string\",\n  \"phone\": \"string\",\n  \"email\": \"string\",\n  \"contact_name\": \"string\",\n  \"payment_terms\": \"string\",\n  \"supplier_status\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Inventory — Purchase Orders",
+      "item": [
+        {
+          "name": "List purchase orders (paginated)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/purchase-orders",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "purchase-orders"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "page_size",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                }
+              ],
+              "variable": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create purchase order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/purchase-orders",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "purchase-orders"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fk_supplier_id\": \"string\",\n  \"expected_date\": \"string\",\n  \"notes\": \"string\",\n  \"items\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get purchase order detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/purchase-orders/:order_id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "purchase-orders",
+                ":order_id"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "order_id",
+                  "value": "",
+                  "description": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Send purchase order (draft → sent)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/purchase-orders/:order_id/send",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "purchase-orders",
+                ":order_id",
+                "send"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "order_id",
+                  "value": "",
+                  "description": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Receive purchase order (creates batches, updates stock)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/purchase-orders/:order_id/receive",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "purchase-orders",
+                ":order_id",
+                "receive"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "order_id",
+                  "value": "",
+                  "description": ""
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Inventory — Batches",
+      "item": [
+        {
+          "name": "List batches with filters (paginated)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/batches",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "batches"
+              ],
+              "query": [
+                {
+                  "key": "medication_id",
+                  "value": "",
+                  "description": "Filter by medication ID",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "Filter by batch_status",
+                  "disabled": true
+                },
+                {
+                  "key": "expiring_before",
+                  "value": "",
+                  "description": "ISO date YYYY-MM-DD — batches expiring on or before this date",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "page_size",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                }
+              ],
+              "variable": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get batch by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/batches/:id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "batches",
+                ":id"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Inventory — Prescriptions",
+      "item": [
+        {
+          "name": "List / search prescriptions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/prescriptions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "prescriptions"
+              ],
+              "query": [
+                {
+                  "key": "appointment_id",
+                  "value": "",
+                  "description": "Filter by appointment ID",
+                  "disabled": true
+                },
+                {
+                  "key": "prescription_number",
+                  "value": "",
+                  "description": "Filter by prescription number",
+                  "disabled": true
+                },
+                {
+                  "key": "patient_id",
+                  "value": "",
+                  "description": "Filter by patient ID",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "page_size",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                }
+              ],
+              "variable": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create a new prescription",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/prescriptions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "prescriptions"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fk_appointment_id\": \"string\",\n  \"fk_patient_id\": \"string\",\n  \"fk_doctor_id\": \"string\",\n  \"notes\": \"string\",\n  \"items\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get prescription by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/prescriptions/:id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "prescriptions",
+                ":id"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Inventory — Dispatches",
+      "item": [
+        {
+          "name": "List dispatches (paginated, filterable)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/dispatches",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "dispatches"
+              ],
+              "query": [
+                {
+                  "key": "patient_id",
+                  "value": "",
+                  "description": "Filter by patient ID",
+                  "disabled": true
+                },
+                {
+                  "key": "prescription_number",
+                  "value": "",
+                  "description": "Search by prescription number",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "Filter by dispatch_status",
+                  "disabled": true
+                },
+                {
+                  "key": "date_from",
+                  "value": "",
+                  "description": "Start date YYYY-MM-DD",
+                  "disabled": true
+                },
+                {
+                  "key": "date_to",
+                  "value": "",
+                  "description": "End date YYYY-MM-DD",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "page_size",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                }
+              ],
+              "variable": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Ejecutar despacho (FEFO atómico)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/dispatches",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "dispatches"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fk_prescription_id\": \"string\",\n  \"patient_type\": \"string\",\n  \"notes\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Validar despacho (FEFO + límites mensuales)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/dispatches/validate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "dispatches",
+                "validate"
+              ],
+              "query": [
+                {
+                  "key": "prescription_id",
+                  "value": "",
+                  "description": "ID de la receta a validar",
+                  "disabled": false
+                },
+                {
+                  "key": "patient_type",
+                  "value": "",
+                  "description": "Tipo de beneficiario",
+                  "disabled": true
+                }
+              ],
+              "variable": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Despachos de una receta",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/dispatches/by-prescription/:prescription_id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "dispatches",
+                "by-prescription",
+                ":prescription_id"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "prescription_id",
+                  "value": "",
+                  "description": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Historial de despachos de un paciente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/dispatches/by-patient/:patient_id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "dispatches",
+                "by-patient",
+                ":patient_id"
+              ],
+              "query": [
+                {
+                  "key": "prescription_number",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "date_from",
+                  "value": "",
+                  "description": "ISO date YYYY-MM-DD",
+                  "disabled": true
+                },
+                {
+                  "key": "date_to",
+                  "value": "",
+                  "description": "ISO date YYYY-MM-DD",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "page_size",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                }
+              ],
+              "variable": [
+                {
+                  "key": "patient_id",
+                  "value": "",
+                  "description": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Detalle de un despacho",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/dispatches/:id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "dispatches",
+                ":id"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Cancelar un despacho y revertir stock",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/dispatches/:id/cancel",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "dispatches",
+                ":id",
+                "cancel"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Inventory — Dispatch Limits",
+      "item": [
+        {
+          "name": "List dispatch limits (paginated)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/dispatch-limits",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "dispatch-limits"
+              ],
+              "query": [
+                {
+                  "key": "medication_id",
+                  "value": "",
+                  "description": "Filter by medication ID",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "page_size",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                }
+              ],
+              "variable": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create a dispatch limit",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/dispatch-limits",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "dispatch-limits"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fk_medication_id\": \"string\",\n  \"monthly_max_quantity\": 0,\n  \"applies_to\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update a dispatch limit",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/dispatch-limits/:id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "dispatch-limits",
+                ":id"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": ""
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"monthly_max_quantity\": \"string\",\n  \"applies_to\": \"string\",\n  \"active\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Inventory — Dispatch Exceptions",
+      "item": [
+        {
+          "name": "List dispatch exceptions (paginated)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/dispatch-exceptions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "dispatch-exceptions"
+              ],
+              "query": [
+                {
+                  "key": "patient_id",
+                  "value": "",
+                  "description": "Filter by patient ID",
+                  "disabled": true
+                },
+                {
+                  "key": "medication_id",
+                  "value": "",
+                  "description": "Filter by medication ID",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "page_size",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                }
+              ],
+              "variable": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create a dispatch exception",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/dispatch-exceptions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "dispatch-exceptions"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fk_patient_id\": \"string\",\n  \"fk_medication_id\": \"string\",\n  \"authorized_quantity\": 0,\n  \"valid_from\": \"string\",\n  \"valid_until\": \"string\",\n  \"reason\": \"string\",\n  \"authorized_by\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Inventory — Reports",
+      "item": [
+        {
+          "name": "Reporte completo de stock por medicamento",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/reports/stock",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "reports",
+                "stock"
+              ],
+              "query": [],
+              "variable": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "KPIs ejecutivos del inventario",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/reports/inventory-summary",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "reports",
+                "inventory-summary"
+              ],
+              "query": [],
+              "variable": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Medicamentos con stock bajo o crítico",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/reports/low-stock",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "reports",
+                "low-stock"
+              ],
+              "query": [],
+              "variable": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Lotes próximos a vencer",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/reports/expiration",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "reports",
+                "expiration"
+              ],
+              "query": [
+                {
+                  "key": "threshold_days",
+                  "value": "",
+                  "description": "Días a partir de hoy como horizonte de búsqueda",
+                  "disabled": true
+                }
+              ],
+              "variable": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Lotes próximos a vencer agrupados en horizontes 30/60/90 días",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/reports/expiring-soon",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "reports",
+                "expiring-soon"
+              ],
+              "query": [],
+              "variable": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reporte de consumo mensual por medicamento",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/reports/consumption",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "reports",
+                "consumption"
+              ],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "",
+                  "description": "Mes en formato YYYY-MM (ej. 2026-03)",
+                  "disabled": false
+                }
+              ],
+              "variable": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Kardex paginado de un medicamento (entradas + salidas)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/reports/movements",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "reports",
+                "movements"
+              ],
+              "query": [
+                {
+                  "key": "medication_id",
+                  "value": "",
+                  "description": "ID del medicamento",
+                  "disabled": false
+                },
+                {
+                  "key": "date_from",
+                  "value": "",
+                  "description": "Fecha inicio ISO YYYY-MM-DD (inclusive)",
+                  "disabled": true
+                },
+                {
+                  "key": "date_to",
+                  "value": "",
+                  "description": "Fecha fin ISO YYYY-MM-DD (inclusive)",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "page_size",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                }
+              ],
+              "variable": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Movimientos de inventario persistidos (trazabilidad)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/reports/inventory-movements",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "reports",
+                "inventory-movements"
+              ],
+              "query": [
+                {
+                  "key": "medication_id",
+                  "value": "",
+                  "description": "Filter by medication ID",
+                  "disabled": true
+                },
+                {
+                  "key": "movement_type",
+                  "value": "",
+                  "description": "Filter by type: entry, exit, adjustment, expiration",
+                  "disabled": true
+                },
+                {
+                  "key": "date_from",
+                  "value": "",
+                  "description": "Start date ISO YYYY-MM-DD",
+                  "disabled": true
+                },
+                {
+                  "key": "date_to",
+                  "value": "",
+                  "description": "End date ISO YYYY-MM-DD",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "page_size",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                }
+              ],
+              "variable": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Alertas de stock persistidas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/reports/stock-alerts",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "reports",
+                "stock-alerts"
+              ],
+              "query": [
+                {
+                  "key": "alert_status",
+                  "value": "",
+                  "description": "Filter: active, resolved, acknowledged",
+                  "disabled": true
+                },
+                {
+                  "key": "alert_level",
+                  "value": "",
+                  "description": "Filter: low, critical, expired",
+                  "disabled": true
+                },
+                {
+                  "key": "medication_id",
+                  "value": "",
+                  "description": "Filter by medication ID",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "page_size",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                }
+              ],
+              "variable": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Generar alertas de stock",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/reports/stock-alerts/generate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "reports",
+                "stock-alerts",
+                "generate"
+              ],
+              "query": [],
+              "variable": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Marcar alerta como reconocida",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/reports/stock-alerts/:alert_id/acknowledge",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "reports",
+                "stock-alerts",
+                ":alert_id",
+                "acknowledge"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "alert_id",
+                  "value": "",
+                  "description": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Resolver alerta manualmente",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/reports/stock-alerts/:alert_id/resolve",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "reports",
+                "stock-alerts",
+                ":alert_id",
+                "resolve"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "alert_id",
+                  "value": "",
+                  "description": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Doctors -- Specialties",
+      "item": [
+        {
+          "name": "List all specialties",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/specialties",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "specialties"
+              ],
+              "query": [],
+              "variable": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create specialty",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/specialties",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "specialties"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update specialty",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/specialties/:id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "specialties",
+                ":id"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": ""
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Toggle specialty active/inactive",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/specialties/:id/toggle",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "specialties",
+                ":id",
+                "toggle"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Doctors -- Doctors",
+      "item": [
+        {
+          "name": "Lightweight doctor list for selects",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/doctors/options",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "doctors",
+                "options"
+              ],
+              "query": [],
+              "variable": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List active doctors with specialty",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/doctors",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "doctors"
+              ],
+              "query": [],
+              "variable": []
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Doctors -- Availability",
+      "item": [
+        {
+          "name": "Availability summary by specialty",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/doctors/availability/summary",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "doctors",
+                "availability",
+                "summary"
+              ],
+              "query": [],
+              "variable": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get availability blocks for a doctor",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/doctors/:doctor_id/availability",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "doctors",
+                ":doctor_id",
+                "availability"
+              ],
+              "query": [
+                {
+                  "key": "dow",
+                  "value": "",
+                  "description": "Day of week (0=Mon)",
+                  "disabled": true
+                }
+              ],
+              "variable": [
+                {
+                  "key": "doctor_id",
+                  "value": "",
+                  "description": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create availability block",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/doctors/:doctor_id/availability",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "doctors",
+                ":doctor_id",
+                "availability"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "doctor_id",
+                  "value": "",
+                  "description": ""
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"day_of_week\": 0,\n  \"start_time\": \"string\",\n  \"end_time\": \"string\",\n  \"slot_duration\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update availability block",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/doctors/:doctor_id/availability/:block_id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "doctors",
+                ":doctor_id",
+                "availability",
+                ":block_id"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "doctor_id",
+                  "value": "",
+                  "description": ""
+                },
+                {
+                  "key": "block_id",
+                  "value": "",
+                  "description": ""
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"day_of_week\": \"string\",\n  \"start_time\": \"string\",\n  \"end_time\": \"string\",\n  \"slot_duration\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete availability block (soft-delete)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/doctors/:doctor_id/availability/:block_id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "doctors",
+                ":doctor_id",
+                "availability",
+                ":block_id"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "doctor_id",
+                  "value": "",
+                  "description": ""
+                },
+                {
+                  "key": "block_id",
+                  "value": "",
+                  "description": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Check doctor exceptions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/doctors/:doctor_id/exceptions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "doctors",
+                ":doctor_id",
+                "exceptions"
+              ],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "",
+                  "description": "Filter by date (YYYY-MM-DD)",
+                  "disabled": true
+                }
+              ],
+              "variable": [
+                {
+                  "key": "doctor_id",
+                  "value": "",
+                  "description": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Appointments",
+      "item": [
+        {
+          "name": "Appointments heatmap (day x hour)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/appointments/heatmap",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "appointments",
+                "heatmap"
+              ],
+              "query": [
+                {
+                  "key": "fecha_desde",
+                  "value": "",
+                  "description": "Start date YYYY-MM-DD",
+                  "disabled": false
+                },
+                {
+                  "key": "fecha_hasta",
+                  "value": "",
+                  "description": "End date YYYY-MM-DD",
+                  "disabled": false
+                }
+              ],
+              "variable": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Appointment stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/appointments/stats",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "appointments",
+                "stats"
+              ],
+              "query": [
+                {
+                  "key": "fecha",
+                  "value": "",
+                  "description": "ISO date YYYY-MM-DD",
+                  "disabled": true
+                },
+                {
+                  "key": "doctor_id",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "especialidad_id",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "estado",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                }
+              ],
+              "variable": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Check if a slot is occupied",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/appointments/check-slot",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "appointments",
+                "check-slot"
+              ],
+              "query": [
+                {
+                  "key": "doctor_id",
+                  "value": "",
+                  "description": "",
+                  "disabled": false
+                },
+                {
+                  "key": "fecha",
+                  "value": "",
+                  "description": "ISO date YYYY-MM-DD",
+                  "disabled": false
+                },
+                {
+                  "key": "hora_inicio",
+                  "value": "",
+                  "description": "HH:MM",
+                  "disabled": false
+                }
+              ],
+              "variable": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Available time slots for a doctor on a date",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/appointments/available-slots",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "appointments",
+                "available-slots"
+              ],
+              "query": [
+                {
+                  "key": "doctor_id",
+                  "value": "",
+                  "description": "",
+                  "disabled": false
+                },
+                {
+                  "key": "fecha",
+                  "value": "",
+                  "description": "ISO date YYYY-MM-DD",
+                  "disabled": false
+                },
+                {
+                  "key": "es_nuevo",
+                  "value": "",
+                  "description": "True=60min, False=30min",
+                  "disabled": true
+                }
+              ],
+              "variable": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Dates with availability in a month",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/appointments/available-dates",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "appointments",
+                "available-dates"
+              ],
+              "query": [
+                {
+                  "key": "doctor_id",
+                  "value": "",
+                  "description": "",
+                  "disabled": false
+                },
+                {
+                  "key": "year",
+                  "value": "",
+                  "description": "",
+                  "disabled": false
+                },
+                {
+                  "key": "month",
+                  "value": "",
+                  "description": "",
+                  "disabled": false
+                }
+              ],
+              "variable": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get appointment detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/appointments/:appointment_id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "appointments",
+                ":appointment_id"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "appointment_id",
+                  "value": "",
+                  "description": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List appointments (paginated, filtered)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/appointments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "appointments"
+              ],
+              "query": [
+                {
+                  "key": "fecha",
+                  "value": "",
+                  "description": "ISO date YYYY-MM-DD",
+                  "disabled": true
+                },
+                {
+                  "key": "doctor_id",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "especialidad_id",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "estado",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "q",
+                  "value": "",
+                  "description": "Search patient name/cedula",
+                  "disabled": true
+                },
+                {
+                  "key": "fk_patient_id",
+                  "value": "",
+                  "description": "Filter by patient ID",
+                  "disabled": true
+                },
+                {
+                  "key": "mes",
+                  "value": "",
+                  "description": "YYYY-MM for month view",
+                  "disabled": true
+                },
+                {
+                  "key": "excluir_canceladas",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "page_size",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                }
+              ],
+              "variable": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create appointment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/appointments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "appointments"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fk_patient_id\": \"string\",\n  \"fk_doctor_id\": \"string\",\n  \"fk_specialty_id\": \"string\",\n  \"appointment_date\": \"string\",\n  \"start_time\": \"string\",\n  \"end_time\": \"string\",\n  \"duration_minutes\": 0,\n  \"is_first_visit\": false,\n  \"reason\": \"string\",\n  \"observations\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update appointment status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/appointments/:appointment_id/status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "appointments",
+                ":appointment_id",
+                "status"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "appointment_id",
+                  "value": "",
+                  "description": ""
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"new_status\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Medical Records",
+      "item": [
+        {
+          "name": "Top diagnoses",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/medical-records/diagnostics/top",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "medical-records",
+                "diagnostics",
+                "top"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "",
+                  "description": "Number of top diagnoses",
+                  "disabled": true
+                },
+                {
+                  "key": "periodo",
+                  "value": "",
+                  "description": "Period: week | month | year (from today)",
+                  "disabled": true
+                }
+              ],
+              "variable": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Find medical record by appointment ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/medical-records",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "medical-records"
+              ],
+              "query": [
+                {
+                  "key": "appointment_id",
+                  "value": "",
+                  "description": "Appointment UUID",
+                  "disabled": false
+                }
+              ],
+              "variable": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Upsert medical record",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/medical-records",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "medical-records"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fk_appointment_id\": \"string\",\n  \"fk_patient_id\": \"string\",\n  \"fk_doctor_id\": \"string\",\n  \"evaluation\": \"string\",\n  \"schema_id\": \"string\",\n  \"schema_version\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Patient history summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/medical-records/patient/:patient_id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "medical-records",
+                "patient",
+                ":patient_id"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "exclude",
+                  "value": "",
+                  "description": "Record ID to exclude",
+                  "disabled": true
+                }
+              ],
+              "variable": [
+                {
+                  "key": "patient_id",
+                  "value": "",
+                  "description": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Find medical record by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/medical-records/:record_id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "medical-records",
+                ":record_id"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "record_id",
+                  "value": "",
+                  "description": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Mark medical record as prepared",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/medical-records/:record_id/prepared",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "medical-records",
+                ":record_id",
+                "prepared"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "record_id",
+                  "value": "",
+                  "description": ""
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prepared_by\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get exam orders for a patient",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/medical-records/orders/patient/:patient_id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "medical-records",
+                "orders",
+                "patient",
+                ":patient_id"
+              ],
+              "query": [
+                {
+                  "key": "appointment_id",
+                  "value": "",
+                  "description": "Filter by appointment",
+                  "disabled": true
+                }
+              ],
+              "variable": [
+                {
+                  "key": "patient_id",
+                  "value": "",
+                  "description": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create exam order(s)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/medical-records/orders",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "medical-records",
+                "orders"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Medical Records — Form Schemas",
+      "item": [
+        {
+          "name": "List all form schemas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/schemas",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "schemas"
+              ],
+              "query": [],
+              "variable": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Upsert form schema",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/schemas",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "schemas"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"specialty_id\": \"string\",\n  \"specialty_name\": \"string\",\n  \"version\": \"string\",\n  \"schema_json\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get form schema by specialty UUID or name",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/schemas/:specialty_key",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "schemas",
+                ":specialty_key"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "specialty_key",
+                  "value": "",
+                  "description": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Soft delete form schema by specialty name",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/schemas/:specialty_key",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "schemas",
+                ":specialty_key"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "specialty_key",
+                  "value": "",
+                  "description": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Dashboard BI",
+      "item": [
+        {
+          "name": "Consolidated dashboard with KPIs, charts, and trends",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/dashboard",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "dashboard"
+              ],
+              "query": [
+                {
+                  "key": "fecha",
+                  "value": "",
+                  "description": "Reference date (YYYY-MM-DD)",
+                  "disabled": true
+                },
+                {
+                  "key": "periodo",
+                  "value": "",
+                  "description": "Period: day | week | month | year",
+                  "disabled": true
+                }
+              ],
+              "variable": []
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Epidemiological Reports",
+      "item": [
+        {
+          "name": "Epi12 Weekly Consolidation",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/reports/epi-12",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "reports",
+                "epi-12"
+              ],
+              "query": [
+                {
+                  "key": "year",
+                  "value": "",
+                  "description": "Year",
+                  "disabled": false
+                },
+                {
+                  "key": "week",
+                  "value": "",
+                  "description": "Epidemiological week (ISO)",
+                  "disabled": false
+                }
+              ],
+              "variable": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Epi13 Nominal Listing",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/reports/epi-13",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "reports",
+                "epi-13"
+              ],
+              "query": [
+                {
+                  "key": "year",
+                  "value": "",
+                  "description": "Year",
+                  "disabled": false
+                },
+                {
+                  "key": "week",
+                  "value": "",
+                  "description": "Epidemiological week (ISO)",
+                  "disabled": false
+                }
+              ],
+              "variable": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Epi15 Monthly Morbidity",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/reports/epi-15",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "reports",
+                "epi-15"
+              ],
+              "query": [
+                {
+                  "key": "year",
+                  "value": "",
+                  "description": "Year",
+                  "disabled": false
+                },
+                {
+                  "key": "month",
+                  "value": "",
+                  "description": "Month (1-12)",
+                  "disabled": false
+                }
+              ],
+              "variable": []
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

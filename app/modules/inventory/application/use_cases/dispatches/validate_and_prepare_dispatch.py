@@ -1,13 +1,13 @@
 """Caso de uso: Validar y preparar un despacho (FEFO + límites mensuales).
 
 Retorna un DispatchValidationDTO con el análisis por ítem.
-No ejecuta ninguna escritura — es una operación de solo lectura.
+No ejecuta none escritura — es una operación de solo lectura.
 """
 
 from datetime import date
 from typing import Optional
 
-from app.core.exceptions import NotFoundException
+from app.core.exceptions import ConflictException, NotFoundException
 from app.modules.inventory.application.dtos.dispatch_dto import (
     DispatchValidationDTO,
     DispatchValidationItemDTO,
@@ -32,10 +32,12 @@ async def validate_and_prepare_dispatch(
 ) -> DispatchValidationDTO:
     prescription = await prescription_repo.find_by_id(prescription_id)
     if not prescription:
-        raise NotFoundException("Receta no encontrada")
+        raise NotFoundException("Prescription not found")
 
     if prescription.prescription_status in ("dispensed", "cancelled"):
-        raise NotFoundException(
+        # State conflict, not a missing resource — must return 409, not 404,
+        # so the frontend can render the actual reason instead of "not found".
+        raise ConflictException(
             f"La receta está en estado '{prescription.prescription_status}'"
             " y no puede ser despachada"
         )
@@ -68,7 +70,7 @@ async def validate_and_prepare_dispatch(
         if remaining <= 0:
             continue
 
-        # Stock disponible en orden FEFO (solo lectura, sin SELECT FOR UPDATE aquí)
+        # Stock available en orden FEFO (solo lectura, sin SELECT FOR UPDATE aquí)
         batches = await batch_repo.find_available_fefo(item.fk_medication_id)
         total_available = sum(b.quantity_available for b in batches)
 
@@ -98,8 +100,8 @@ async def validate_and_prepare_dispatch(
         if total_available < remaining:
             can_dispatch = False
             block_reason = (
-                f"Stock insuficiente: disponible {total_available}, "
-                f"requerido {remaining}"
+                f"Stock insuficiente: available {total_available}, "
+                f"required {remaining}"
             )
         elif monthly_limit is not None and (monthly_used + remaining) > monthly_limit:
             exception = await limit_repo.find_active_exception(
@@ -113,14 +115,14 @@ async def validate_and_prepare_dispatch(
                     can_dispatch = False
                     block_reason = (
                         f"Excede la cantidad autorizada por excepción: "
-                        f"{monthly_used} usados + {remaining} solicitados "
+                        f"{monthly_used} used + {remaining} requested "
                         f"> {exception.authorized_quantity} autorizados"
                     )
             else:
                 can_dispatch = False
                 block_reason = (
-                    f"Límite mensual excedido: {monthly_used} usados + "
-                    f"{remaining} solicitados > {monthly_limit} permitidos"
+                    f"Límite mensual excedido: {monthly_used} used + "
+                    f"{remaining} requested > {monthly_limit} allowed"
                 )
 
         if not can_dispatch:

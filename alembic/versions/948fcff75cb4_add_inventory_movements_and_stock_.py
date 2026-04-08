@@ -40,7 +40,7 @@ def upgrade() -> None:
     sa.Column('unit_cost', sa.Numeric(precision=10, scale=2), nullable=True),
     sa.Column('notes', sa.String(length=500), nullable=True),
     sa.Column('movement_date', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('status', sa.Enum('A', 'I', 'T', name='record_status', create_type=False), server_default=sa.text("'A'::record_status"), nullable=False),
+    sa.Column('status', sa.String(length=1), server_default='A', nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=36), nullable=True),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
@@ -73,7 +73,7 @@ def upgrade() -> None:
     sa.Column('resolved_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('resolved_by', sa.String(length=36), nullable=True),
     sa.Column('alert_status', sa.String(length=20), nullable=False),
-    sa.Column('status', sa.Enum('A', 'I', 'T', name='record_status', create_type=False), server_default=sa.text("'A'::record_status"), nullable=False),
+    sa.Column('status', sa.String(length=1), server_default='A', nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_by', sa.String(length=36), nullable=True),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
@@ -88,6 +88,18 @@ def upgrade() -> None:
     op.create_index('ix_stock_alerts_alert_status', 'stock_alerts', ['alert_status'])
     op.create_index('ix_stock_alerts_detected_at', 'stock_alerts', ['detected_at'])
     op.create_index('ix_stock_alerts_status', 'stock_alerts', ['status'])
+
+
+
+    # Fix status columns: convert VARCHAR(1) -> record_status enum
+    conn = op.get_bind()
+    for tbl in ('inventory_movements', 'stock_alerts'):
+        try:
+            conn.execute(sa.text(f"ALTER TABLE {tbl} ALTER COLUMN status DROP DEFAULT"))
+            conn.execute(sa.text(f"ALTER TABLE {tbl} ALTER COLUMN status TYPE record_status USING status::record_status"))
+            conn.execute(sa.text(f"ALTER TABLE {tbl} ALTER COLUMN status SET DEFAULT 'A'::record_status"))
+        except Exception:
+            pass
 
 
 def downgrade() -> None:

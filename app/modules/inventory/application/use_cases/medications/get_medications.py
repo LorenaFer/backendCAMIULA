@@ -1,4 +1,4 @@
-"""Caso de uso: Listar medicamentos con filtros y paginación."""
+"""Caso de uso: List medications con filtros y paginación."""
 
 from typing import Optional
 

@@ -1,4 +1,4 @@
-"""Caso de uso: Actualizar medicamento."""
+"""Caso de uso: Update medication."""
 
 from app.core.exceptions import NotFoundException
 from app.modules.inventory.application.dtos.medication_dto import UpdateMedicationDTO
@@ -18,7 +18,7 @@ class UpdateMedication:
     ) -> Medication:
         existing = await self._repo.find_by_id(id)
         if not existing:
-            raise NotFoundException("Medicamento no encontrado.")
+            raise NotFoundException("Medication not found.")
 
         data = {
             k: v

@@ -1,9 +1,9 @@
 """
-Interfaz abstracta del proveedor de autenticación.
+Abstract interface for the authentication providón.
 
 Esta es LA ABSTRACCIÓN CLAVE de Clean Architecture para auth.
 Implementar esta interfaz es el ÚNICO cambio necesario para migrar
-de Auth0 a Keycloak, Firebase, o cualquier otro proveedor.
+from Auth0 to Keycloak, Firebase, or any other provider.
 
 Implementaciones:
     - Auth0Provider  (producción)   → infrastructure/providers/auth0_provider.py
@@ -28,5 +28,5 @@ class AuthProvider(ABC):
 
     @abstractmethod
     async def get_user_info(self, token: str) -> dict:
-        """Obtiene información del usuario desde el proveedor."""
+        """Retrieves informatión about the user from the provider."""
         ...

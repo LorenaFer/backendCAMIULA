@@ -23,7 +23,7 @@ Uso en una migración manual:
             [
                 "id",
                 "fk_doctor_id",
-                "first_name", "last_name", "cedula", "email", "phone",
+                "first_name", "last_name", "dni", "email", "phone",
                 "patient_status",
                 "status",
                 "created_at", "created_by",

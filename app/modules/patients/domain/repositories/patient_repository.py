@@ -20,7 +20,7 @@ class PatientRepository(ABC):
         ...
 
     @abstractmethod
-    async def find_by_cedula(self, cedula: str) -> Optional[Patient]:
+    async def find_by_dni(self, dni: str) -> Optional[Patient]:
         ...
 
     @abstractmethod

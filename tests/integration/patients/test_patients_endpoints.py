@@ -15,7 +15,7 @@ from app.main import app
 BASE = "/api/patients"
 
 
-def _unique_cedula() -> str:
+def _unique_dni() -> str:
     return f"V-TEST-{uuid.uuid4().hex[:8]}"
 
 
@@ -70,11 +70,11 @@ class TestCreatePatient:
 
     @pytest.mark.asyncio
     async def test_create_patient_success(self, client, token):
-        cedula = _unique_cedula()
+        dni = _unique_dni()
         resp = await client.post(
             BASE,
             json={
-                "cedula": cedula,
+                "dni": dni,
                 "first_name": "Juan",
                 "last_name": "Perez",
                 "university_relation": "estudiante",
@@ -84,17 +84,17 @@ class TestCreatePatient:
         assert resp.status_code == 201
         body = resp.json()
         assert body["status"] == "success"
-        assert body["data"]["cedula"] == cedula
+        assert body["data"]["dni"] == dni
         assert body["data"]["nhm"] >= 1
         assert body["data"]["is_new"] is True
 
     @pytest.mark.asyncio
-    async def test_create_patient_duplicate_cedula(self, client, token):
-        cedula = _unique_cedula()
+    async def test_create_patient_duplicate_dni(self, client, token):
+        dni = _unique_dni()
         await client.post(
             BASE,
             json={
-                "cedula": cedula,
+                "dni": dni,
                 "first_name": "Ana",
                 "last_name": "Lopez",
                 "university_relation": "empleado",
@@ -104,7 +104,7 @@ class TestCreatePatient:
         resp = await client.post(
             BASE,
             json={
-                "cedula": cedula,
+                "dni": dni,
                 "first_name": "Maria",
                 "last_name": "Garcia",
                 "university_relation": "profesor",
@@ -112,28 +112,28 @@ class TestCreatePatient:
             headers=_auth_headers(token),
         )
         assert resp.status_code == 409
-        assert "ya existe" in resp.json()["message"].lower()
+        assert "already exists" in resp.json()["message"].lower()
 
     @pytest.mark.asyncio
     async def test_create_patient_missing_fields(self, client, token):
         resp = await client.post(
             BASE,
-            json={"cedula": _unique_cedula()},
+            json={"dni": _unique_dni()},
             headers=_auth_headers(token),
         )
         assert resp.status_code == 422
 
 
 class TestSearchPatient:
-    """GET /api/patients?nhm=X / ?cedula=X"""
+    """GET /api/patients?nhm=X / ?dni=X"""
 
     @pytest.mark.asyncio
-    async def test_search_by_cedula(self, client, token):
-        cedula = _unique_cedula()
+    async def test_search_by_dni(self, client, token):
+        dni = _unique_dni()
         create_resp = await client.post(
             BASE,
             json={
-                "cedula": cedula,
+                "dni": dni,
                 "first_name": "Carlos",
                 "last_name": "Mendoza",
                 "university_relation": "estudiante",
@@ -143,7 +143,7 @@ class TestSearchPatient:
         assert create_resp.status_code == 201
 
         resp = await client.get(
-            f"{BASE}?cedula={cedula}", headers=_auth_headers(token)
+            f"{BASE}?dni={dni}", headers=_auth_headers(token)
         )
         assert resp.status_code == 200
         data = resp.json()["data"]
@@ -155,11 +155,11 @@ class TestSearchPatient:
 
     @pytest.mark.asyncio
     async def test_search_by_nhm(self, client, token):
-        cedula = _unique_cedula()
+        dni = _unique_dni()
         create_resp = await client.post(
             BASE,
             json={
-                "cedula": cedula,
+                "dni": dni,
                 "first_name": "Pedro",
                 "last_name": "Ramirez",
                 "university_relation": "empleado",
@@ -177,7 +177,7 @@ class TestSearchPatient:
     @pytest.mark.asyncio
     async def test_search_not_found(self, client, token):
         resp = await client.get(
-            f"{BASE}?cedula=V-NO-EXISTE-999", headers=_auth_headers(token)
+            f"{BASE}?dni=V-NO-EXISTE-999", headers=_auth_headers(token)
         )
         assert resp.status_code == 200
         assert resp.json()["data"] is None
@@ -187,12 +187,12 @@ class TestGetPatientFull:
     """GET /api/patients/full"""
 
     @pytest.mark.asyncio
-    async def test_full_by_cedula(self, client, token):
-        cedula = _unique_cedula()
+    async def test_full_by_dni(self, client, token):
+        dni = _unique_dni()
         await client.post(
             BASE,
             json={
-                "cedula": cedula,
+                "dni": dni,
                 "first_name": "Luis",
                 "last_name": "Torres",
                 "university_relation": "profesor",
@@ -203,11 +203,11 @@ class TestGetPatientFull:
         )
 
         resp = await client.get(
-            f"{BASE}/full?cedula={cedula}", headers=_auth_headers(token)
+            f"{BASE}/full?dni={dni}", headers=_auth_headers(token)
         )
         assert resp.status_code == 200
         data = resp.json()["data"]
-        assert data["cedula"] == cedula
+        assert data["dni"] == dni
         assert data["phone"] == "0412-1234567"
         assert data["medical_data"]["blood_type"] == "O+"
 
@@ -254,11 +254,11 @@ class TestRegisterPatient:
 
     @pytest.mark.asyncio
     async def test_register_basic(self, client, token):
-        cedula = _unique_cedula()
+        dni = _unique_dni()
         resp = await client.post(
             f"{BASE}/register",
             json={
-                "cedula": cedula,
+                "dni": dni,
                 "first_name": "Maria",
                 "last_name": "Fernandez",
                 "university_relation": "estudiante",
@@ -281,12 +281,12 @@ class TestRegisterPatient:
         assert data["nhm"] >= 1
 
     @pytest.mark.asyncio
-    async def test_register_duplicate_cedula(self, client, token):
-        cedula = _unique_cedula()
+    async def test_register_duplicate_dni(self, client, token):
+        dni = _unique_dni()
         await client.post(
             f"{BASE}/register",
             json={
-                "cedula": cedula,
+                "dni": dni,
                 "first_name": "Test",
                 "last_name": "Dup",
                 "university_relation": "empleado",
@@ -296,7 +296,7 @@ class TestRegisterPatient:
         resp = await client.post(
             f"{BASE}/register",
             json={
-                "cedula": cedula,
+                "dni": dni,
                 "first_name": "Test2",
                 "last_name": "Dup2",
                 "university_relation": "empleado",
@@ -311,18 +311,18 @@ class TestUnauthenticated:
 
     @pytest.mark.asyncio
     async def test_search_without_token_is_public(self, client):
-        """GET /patients?cedula=X is public (portal needs it)."""
-        resp = await client.get(f"{BASE}?cedula=V-NOEXISTE")
+        """GET /patients?dni=X is public (portal needs it)."""
+        resp = await client.get(f"{BASE}?dni=V-NOEXISTE")
         assert resp.status_code == 200
 
     @pytest.mark.asyncio
     async def test_register_without_token_is_public(self, client):
         """POST /patients/register is public (portal registration)."""
-        cedula = f"V-PUB-{uuid.uuid4().hex[:8]}"
+        dni = f"V-PUB-{uuid.uuid4().hex[:8]}"
         resp = await client.post(
             f"{BASE}/register",
             json={
-                "cedula": cedula,
+                "dni": dni,
                 "first_name": "Public",
                 "last_name": "Register",
                 "university_relation": "estudiante",
@@ -335,7 +335,7 @@ class TestUnauthenticated:
         resp = await client.post(
             BASE,
             json={
-                "cedula": "V-0",
+                "dni": "V-0",
                 "first_name": "X",
                 "last_name": "Y",
                 "university_relation": "estudiante",

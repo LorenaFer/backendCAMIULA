@@ -23,7 +23,7 @@ class SQLAlchemyPatientRepository(PatientRepository):
     def _to_entity(model: PatientModel) -> Patient:
         return Patient(
             id=model.id,
-            cedula=model.cedula,
+            dni=model.dni,
             nhm=model.nhm,
             first_name=model.first_name,
             last_name=model.last_name,
@@ -65,7 +65,7 @@ class SQLAlchemyPatientRepository(PatientRepository):
             pattern = f"%{search}%"
             base = base.where(
                 or_(
-                    PatientModel.cedula.ilike(pattern),
+                    PatientModel.dni.ilike(pattern),
                     PatientModel.first_name.ilike(pattern),
                     PatientModel.last_name.ilike(pattern),
                     (PatientModel.first_name + " " + PatientModel.last_name).ilike(pattern),
@@ -104,10 +104,10 @@ class SQLAlchemyPatientRepository(PatientRepository):
         model = result.scalar_one_or_none()
         return self._to_entity(model) if model else None
 
-    async def find_by_cedula(self, cedula: str) -> Optional[Patient]:
+    async def find_by_dni(self, dni: str) -> Optional[Patient]:
         result = await self._session.execute(
             select(PatientModel).where(
-                PatientModel.cedula == cedula,
+                PatientModel.dni == dni,
                 PatientModel.status == RecordStatus.ACTIVE,
             )
         )

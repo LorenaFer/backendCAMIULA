@@ -33,8 +33,8 @@ class UpdateAppointmentStatus:
 
         if new_status not in allowed:
             raise AppException(
-                f"Transicion invalida: '{current}' -> '{new_status}'. "
-                f"Transiciones permitidas desde '{current}': {sorted(allowed) if allowed else 'ninguna'}",
+                f"Invalid transition: '{current}' -> '{new_status}'. "
+                f"Valid transitions from '{current}': {sorted(allowed) if allowed else 'none'}",
                 status_code=400,
             )
 

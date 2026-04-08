@@ -1,51 +1,77 @@
 from typing import List, Optional
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class LoginRequest(BaseModel):
-    email: EmailStr
-    password: str = Field(min_length=8)
+    """Credentials for user authentication."""
+
+    email: EmailStr = Field(description="User email address", example="doctor@camiula.edu.ve")
+    password: str = Field(min_length=8, description="Account password (min 8 characters)", example="SecurePass123")
+
+    model_config = ConfigDict(json_schema_extra={
+        "example": {"email": "doctor@camiula.edu.ve", "password": "SecurePass123"}
+    })
 
 
 class RegisterRequest(BaseModel):
-    email: EmailStr
-    full_name: str = Field(min_length=2, max_length=255)
-    password: str = Field(min_length=8)
-    phone: Optional[str] = None
+    """New user registration payload."""
+
+    email: EmailStr = Field(description="Unique email address", example="nuevo@ula.ve")
+    full_name: str = Field(min_length=2, max_length=255, description="Full name", example="Maria Garcia")
+    password: str = Field(min_length=8, description="Password (min 8 characters)", example="MiPassword123")
+    phone: Optional[str] = Field(None, description="Contact phone number", example="0414-1234567")
+
+    model_config = ConfigDict(json_schema_extra={
+        "example": {"email": "nuevo@ula.ve", "full_name": "Maria Garcia", "password": "MiPassword123", "phone": "0414-1234567"}
+    })
 
 
 class TokenResponse(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
-    expires_in: int
+    """JWT token returned after successful authentication."""
+
+    access_token: str = Field(description="JWT access token for Authorization header", example="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
+    token_type: str = Field(default="bearer", description="Token type, always 'bearer'", example="bearer")
+    expires_in: int = Field(description="Token validity in seconds", example=1800)
 
 
 class UserResponse(BaseModel):
-    id: str
-    email: str
-    full_name: str
-    phone: Optional[str]
-    user_status: Optional[str]
-    roles: List[str]
+    """User profile with assigned roles."""
+
+    id: str = Field(description="User UUID", example="a1b2c3d4-e5f6-7890-abcd-1234567890ab")
+    email: str = Field(description="User email", example="doctor@camiula.edu.ve")
+    full_name: str = Field(description="Full name", example="Dr. Carlos Mendez")
+    phone: Optional[str] = Field(None, description="Phone number", example="0274-2401111")
+    user_status: Optional[str] = Field(None, description="Account status: ACTIVE, INACTIVE", example="ACTIVE")
+    roles: List[str] = Field(description="Assigned role names", example=["doctor", "admin"])
 
 
 class UpdateProfileRequest(BaseModel):
-    full_name: Optional[str] = Field(None, min_length=2, max_length=255)
-    phone: Optional[str] = None
+    """Fields to update on the current user's profile."""
+
+    full_name: Optional[str] = Field(None, min_length=2, max_length=255, description="New full name", example="Carlos A. Mendez")
+    phone: Optional[str] = Field(None, description="New phone number", example="0414-9876543")
 
 
 class CreateUserRequest(BaseModel):
-    email: EmailStr
-    full_name: str = Field(min_length=2, max_length=255)
-    password: str = Field(min_length=8)
-    phone: Optional[str] = None
-    roles: List[str] = Field(default=["paciente"], min_length=1)
-    specialty_id: Optional[str] = Field(None, description="Required when role includes 'doctor'")
+    """Create a staff user with specific roles."""
+
+    email: EmailStr = Field(description="Unique email", example="enfermera@camiula.edu.ve")
+    full_name: str = Field(min_length=2, max_length=255, description="Full name", example="Ana Lopez")
+    password: str = Field(min_length=8, description="Password", example="StaffPass123")
+    phone: Optional[str] = Field(None, description="Phone", example="0274-2401111")
+    roles: List[str] = Field(default=["paciente"], min_length=1, description="Roles to assign. Options: admin, doctor, analista, farmacia, paciente", example=["doctor"])
+    specialty_id: Optional[str] = Field(None, description="Specialty UUID. Required when role includes 'doctor'", example="f1e2d3c4-b5a6-7890-abcd-1234567890ab")
+
+    model_config = ConfigDict(json_schema_extra={
+        "example": {"email": "enfermera@camiula.edu.ve", "full_name": "Ana Lopez", "password": "StaffPass123", "roles": ["doctor"], "specialty_id": "f1e2d3c4-b5a6-7890-abcd-1234567890ab"}
+    })
 
 
 class AssignRoleRequest(BaseModel):
-    role_name: str = Field(min_length=2, max_length=50)
+    """Role to assign to a user."""
+
+    role_name: str = Field(min_length=2, max_length=50, description="Role name to assign. Options: admin, doctor, analista, farmacia, paciente", example="admin")
 
 
 # ---------------------------------------------------------------------------
@@ -54,19 +80,25 @@ class AssignRoleRequest(BaseModel):
 
 
 class PatientLoginRequest(BaseModel):
-    query: str = Field(min_length=1, max_length=30)
-    query_type: str = Field(pattern="^(cedula|nhm)$")
+    """Authenticate patient by dni or NHM (no password required)."""
+
+    query: str = Field(min_length=1, max_length=30, description="Dni number or NHM value", example="V-12345678")
+    query_type: str = Field(pattern="^(dni|nhm)$", description="Lookup type: 'dni' or 'nhm'", example="dni")
 
 
 class PatientLoginData(BaseModel):
-    id: str
-    nhm: int
-    first_name: str
-    last_name: str
-    university_relation: str
-    is_new: bool
+    """Minimal patient data returned on portal login."""
+
+    id: str = Field(description="Patient UUID", example="b2c3d4e5-f6a7-8901-bcde-234567890abc")
+    nhm: int = Field(description="Hospital Medical Number", example=1234)
+    first_name: str = Field(description="First name", example="Juan")
+    last_name: str = Field(description="Last name", example="Perez")
+    university_relation: str = Field(description="Relation type with ULA", example="estudiante")
+    is_new: bool = Field(description="True if first-time patient", example=False)
 
 
 class PatientLoginResponse(BaseModel):
-    found: bool
-    patient: Optional[PatientLoginData] = None
+    """Result of patient portal authentication."""
+
+    found: bool = Field(description="Whether the patient was found in the system", example=True)
+    patient: Optional[PatientLoginData] = Field(None, description="Patient data, null if not found")

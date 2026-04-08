@@ -13,14 +13,14 @@ class GetAppointmentStats:
 
     async def execute(
         self,
-        fecha: Optional[str] = None,
+        date_str: Optional[str] = None,
         doctor_id: Optional[str] = None,
-        especialidad_id: Optional[str] = None,
-        estado: Optional[str] = None,
+        specialty_id: Optional[str] = None,
+        status_filter: Optional[str] = None,
     ) -> Dict[str, Any]:
         return await self._repo.get_stats(
-            fecha=fecha,
+            date_str=date_str,
             doctor_id=doctor_id,
-            especialidad_id=especialidad_id,
-            estado=estado,
+            specialty_id=specialty_id,
+            status_filter=status_filter,
         )

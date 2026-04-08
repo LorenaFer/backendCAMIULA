@@ -23,7 +23,7 @@ class UpdateAvailability:
     ) -> None:
         existing = await self._repo.find_by_id(doctor_id, block_id)
         if not existing:
-            raise NotFoundException("Bloque de disponibilidad no encontrado.")
+            raise NotFoundException("Bloque de disponibilidad not found.")
 
         data = {
             k: v

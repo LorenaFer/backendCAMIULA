@@ -16,5 +16,5 @@ class DeleteAvailability:
     ) -> None:
         existing = await self._repo.find_by_id(doctor_id, block_id)
         if not existing:
-            raise NotFoundException("Bloque de disponibilidad no encontrado.")
+            raise NotFoundException("Bloque de disponibilidad not found.")
         await self._repo.soft_delete(doctor_id, block_id, deleted_by)

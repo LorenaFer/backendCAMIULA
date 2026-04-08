@@ -16,12 +16,13 @@ from app.modules.patients.application.use_cases.register_patient import (
     RegisterPatient,
 )
 from app.modules.patients.application.use_cases.search_patient import (
-    SearchPatientByCedula,
+    SearchPatientByDni,
     SearchPatientByNhm,
 )
-from app.modules.patients.infrastructure.repositories.sqlalchemy_patient_repository import (
-    SQLAlchemyPatientRepository,
+from app.modules.patients.domain.repositories.patient_repository import (
+    PatientRepository,
 )
+from app.modules.patients.presentation.dependencies import get_patient_repo
 from app.modules.patients.presentation.schemas.patient_schemas import (
     MaxNhmResponse,
     PatientCreate,
@@ -44,6 +45,7 @@ async def patient_demographics(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Returns patient distribution statistics: count by university relation type (estudiante, personal, docente, familia, externo), count by sex, and first-time vs returning patient counts. Used by the dashboard."""
     from app.modules.dashboard.infrastructure.dashboard_query_service import (
         DashboardQueryService,
     )
@@ -53,26 +55,27 @@ async def patient_demographics(
     return ok(data=data, message="Patient demographics retrieved successfully")
 
 
-@router.get("/full", summary="Get full patient by id, cedula or NHM")
+@router.get("/full", summary="Get full patient by id, dni or NHM")
 async def get_patient_full(
     id: Optional[str] = Query(None, description="Patient UUID"),
-    cedula: Optional[str] = Query(None, description="Patient cedula"),
+    dni: Optional[str] = Query(None, description="Patient dni"),
     nhm: Optional[int] = Query(None, description="Patient NHM"),
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
-    repo = SQLAlchemyPatientRepository(session)
+    """Retrieve complete patient data including medical_data (JSONB) and emergency_contact. Accepts one of three identifiers: `id` (UUID), `dni`, or `nhm`. Returns null if not found."""
+    repo = get_patient_repo(session)
     patient = None
     if id:
         patient = await repo.find_by_id(id)
-    elif cedula:
-        patient = await SearchPatientByCedula(repo).execute(cedula)
+    elif dni:
+        patient = await SearchPatientByDni(repo).execute(dni)
     elif nhm is not None:
         patient = await SearchPatientByNhm(repo).execute(nhm)
 
     return ok(
         data=PatientResponse(**patient.__dict__) if patient else None,
-        message="Paciente obtenido exitosamente" if patient else "Paciente no encontrado",
+        message="Patient retrieved successfully" if patient else "Patient not found",
     )
 
 
@@ -81,7 +84,8 @@ async def get_max_nhm(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyPatientRepository(session)
+    """Returns the highest NHM (Hospital Medical Number) currently registered. Used by the registration form to display the next available NHM."""
+    repo = get_patient_repo(session)
     max_nhm = await GetMaxNhm(repo).execute()
     return ok(
         data=MaxNhmResponse(max_nhm=max_nhm),
@@ -89,38 +93,39 @@ async def get_max_nhm(
     )
 
 
-@router.get("", summary="List patients or search by NHM/cedula/text")
+@router.get("", summary="List patients or search by NHM/dni/text")
 async def list_or_search_patients(
     nhm: Optional[int] = Query(None, description="Search by NHM"),
-    cedula: Optional[str] = Query(None, description="Search by cedula"),
-    search: Optional[str] = Query(None, description="Search by cedula, name or NHM"),
+    dni: Optional[str] = Query(None, description="Search by dni"),
+    search: Optional[str] = Query(None, description="Search by dni, name or NHM"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=10000),
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
-    repo = SQLAlchemyPatientRepository(session)
+    """Search and list patients with multiple strategies. Priority: nhm (exact) > dni (exact) > search (text) > list all. Text search queries dni, first_name, last_name, and NHM. Paginated, sorted by last_name."""
+    repo = get_patient_repo(session)
 
     # Search by NHM -> returns PatientPublic | null
     if nhm is not None:
         patient = await SearchPatientByNhm(repo).execute(nhm)
         return ok(
             data=PatientPublicResponse(**patient.__dict__) if patient else None,
-            message="Paciente encontrado" if patient else "Paciente no encontrado",
+            message="Paciente encontrado" if patient else "Patient not found",
         )
 
-    # Search by cedula -> returns PatientPublic | null
-    if cedula:
-        patient = await SearchPatientByCedula(repo).execute(cedula)
+    # Search by dni -> returns PatientPublic | null
+    if dni:
+        patient = await SearchPatientByDni(repo).execute(dni)
         return ok(
             data=PatientPublicResponse(**patient.__dict__) if patient else None,
-            message="Paciente encontrado" if patient else "Paciente no encontrado",
+            message="Paciente encontrado" if patient else "Patient not found",
         )
 
     # Paginated list with optional text search
     items, total = await repo.find_all(page, page_size, search=search)
     data = [PatientResponse(**p.__dict__) for p in items]
-    return paginated(data, total, page, page_size, "Pacientes obtenidos exitosamente")
+    return paginated(data, total, page, page_size, "Patients retrieved successfully")
 
 
 @router.get("/{patient_id}", summary="Get patient by ID")
@@ -129,14 +134,15 @@ async def get_patient_by_id(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
-    repo = SQLAlchemyPatientRepository(session)
+    """Retrieve a patient by their UUID. Returns 404 if not found."""
+    repo = get_patient_repo(session)
     patient = await repo.find_by_id(patient_id)
     if not patient:
         from app.core.exceptions import NotFoundException
-        raise NotFoundException("Paciente no encontrado")
+        raise NotFoundException("Patient not found")
     return ok(
         data=PatientResponse(**patient.__dict__),
-        message="Paciente obtenido exitosamente",
+        message="Patient retrieved successfully",
     )
 
 
@@ -146,12 +152,13 @@ async def create_patient(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyPatientRepository(session)
+    """Register a new patient with auto-generated NHM. NHM assignment uses pg_advisory_xact_lock for concurrency safety. The dni must be unique."""
+    repo = get_patient_repo(session)
     dto = CreatePatientDTO(**body.model_dump())
     patient = await CreatePatient(repo).execute(dto, created_by=user_id)
     return created(
         data=PatientResponse(**patient.__dict__),
-        message="Paciente creado exitosamente",
+        message="Patient created successfully",
     )
 
 
@@ -161,10 +168,11 @@ async def register_patient(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
-    repo = SQLAlchemyPatientRepository(session)
+    """Self-registration endpoint for the ULA patient portal. No authentication required. Accepts extended fields (country, state, city, blood_type, emergency contact) that the backend composes into JSONB fields. Returns minimal data for security."""
+    repo = get_patient_repo(session)
     dto = RegisterPatientDTO(**body.model_dump())
     patient = await RegisterPatient(repo).execute(dto, created_by=user_id)
     return created(
         data=PatientPublicResponse(**patient.__dict__),
-        message="Paciente registrado exitosamente",
+        message="Patient registered successfully",
     )

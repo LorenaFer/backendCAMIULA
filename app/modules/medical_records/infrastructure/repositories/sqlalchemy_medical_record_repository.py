@@ -5,6 +5,7 @@ from typing import List, Optional
 from uuid import uuid4
 
 from sqlalchemy import select, update as sql_update
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.appointments.infrastructure.models import AppointmentModel
@@ -150,6 +151,49 @@ class SQLAlchemyMedicalRecordRepository(MedicalRecordRepository):
         )
         await self._session.flush()
         return await self.find_by_id(record_id)
+
+    async def upsert_by_appointment(
+        self, data: dict, user_id: str
+    ) -> tuple[MedicalRecord, bool]:
+        """Atomic INSERT ... ON CONFLICT (fk_appointment_id) DO UPDATE.
+
+        Single round-trip, race-free under concurrent autosave from the
+        clinical wizard. The unique index on fk_appointment_id makes the
+        conflict resolution O(1).
+        """
+        now = datetime.now(timezone.utc)
+        new_id = str(uuid4())
+
+        insert_values = {
+            "id": new_id,
+            "fk_appointment_id": data["fk_appointment_id"],
+            "fk_patient_id": data["fk_patient_id"],
+            "fk_doctor_id": data["fk_doctor_id"],
+            "evaluation": data.get("evaluation"),
+            "schema_id": data.get("schema_id"),
+            "schema_version": data.get("schema_version"),
+            "created_by": user_id,
+        }
+
+        stmt = pg_insert(MedicalRecordModel).values(**insert_values)
+        stmt = stmt.on_conflict_do_update(
+            index_elements=["fk_appointment_id"],
+            set_={
+                "evaluation": stmt.excluded.evaluation,
+                "schema_id": stmt.excluded.schema_id,
+                "schema_version": stmt.excluded.schema_version,
+                "updated_at": now,
+                "updated_by": user_id,
+            },
+        ).returning(MedicalRecordModel.id)
+
+        result = await self._session.execute(stmt)
+        returned_id = result.scalar_one()
+        await self._session.flush()
+
+        was_created = returned_id == new_id
+        entity = await self.find_by_id(returned_id)
+        return entity, was_created
 
     async def mark_prepared(self, record_id: str, prepared_by: str) -> MedicalRecord:
         now = datetime.now(timezone.utc)

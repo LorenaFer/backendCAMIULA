@@ -25,6 +25,18 @@ class MedicalRecordRepository(ABC):
         ...
 
     @abstractmethod
+    async def upsert_by_appointment(
+        self, data: dict, user_id: str
+    ) -> tuple[MedicalRecord, bool]:
+        """Atomic upsert keyed by fk_appointment_id.
+
+        Returns (entity, was_created). Implementations must use a single
+        INSERT ... ON CONFLICT statement so concurrent autosave requests from
+        the clinical wizard cannot race.
+        """
+        ...
+
+    @abstractmethod
     async def mark_prepared(self, record_id: str, prepared_by: str) -> MedicalRecord:
         ...
 

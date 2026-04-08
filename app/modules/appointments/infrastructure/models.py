@@ -32,6 +32,11 @@ class AppointmentModel(Base, SoftDeleteMixin, AuditMixin):
     reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     observations: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
+    # 3.b Idempotency key (client-generated UUID for safe retries on flaky networks)
+    client_token: Mapped[Optional[str]] = mapped_column(
+        String(36), nullable=True, unique=True, index=True
+    )
+
     # 4. Business status
     appointment_status: Mapped[str] = mapped_column(
         String(20),

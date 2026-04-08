@@ -1,4 +1,4 @@
-"""Rutas FastAPI para el recurso Despacho (Dispatch)."""
+"""FastAPI routes for the Dispatch resource."""
 
 from typing import Optional
 
@@ -15,23 +15,11 @@ from app.modules.inventory.application.use_cases.dispatches.execute_dispatch imp
 from app.modules.inventory.application.use_cases.dispatches.validate_and_prepare_dispatch import (
     validate_and_prepare_dispatch,
 )
-from app.modules.inventory.infrastructure.repositories.sqlalchemy_batch_repository import (
-    SQLAlchemyBatchRepository,
+from app.modules.inventory.presentation.dependencies import (
+    get_batch_repo, get_dispatch_repo, get_movement_repo,
 )
-from app.modules.inventory.infrastructure.repositories.sqlalchemy_dispatch_repository import (
-    SQLAlchemyDispatchRepository,
-)
-from app.modules.inventory.infrastructure.repositories.sqlalchemy_movement_repository import (
-    SQLAlchemyMovementRepository,
-)
-from app.modules.inventory.infrastructure.repositories.sqlalchemy_limit_repository import (
-    SQLAlchemyLimitRepository,
-)
-from app.modules.inventory.infrastructure.repositories.sqlalchemy_medication_repository import (
-    SQLAlchemyMedicationRepository,
-)
-from app.modules.inventory.infrastructure.repositories.sqlalchemy_prescription_repository import (
-    SQLAlchemyPrescriptionRepository,
+from app.modules.inventory.presentation.dependencies import (
+    get_limit_repo, get_medication_repo, get_prescription_repo,
 )
 from app.modules.inventory.presentation.schemas.dispatch_schemas import (
     DispatchCreate,
@@ -62,7 +50,8 @@ async def list_dispatches(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_optional_user_id),
 ):
-    repo = SQLAlchemyDispatchRepository(session)
+    """List pharmacy dispatches with filters: patient_id, prescription_number, status, date range."""
+    repo = get_dispatch_repo(session)
     items, total = await repo.find_all(
         patient_id=patient_id,
         prescription_number=prescription_number,
@@ -91,14 +80,15 @@ async def validate_dispatch(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Pre-validate a dispatch. Checks stock (FEFO), monthly limits, and returns a detailed allocation plan."""
     result = await validate_and_prepare_dispatch(
         prescription_id=prescription_id,
         patient_type=patient_type,
-        prescription_repo=SQLAlchemyPrescriptionRepository(session),
-        batch_repo=SQLAlchemyBatchRepository(session),
-        dispatch_repo=SQLAlchemyDispatchRepository(session),
-        limit_repo=SQLAlchemyLimitRepository(session),
-        medication_repo=SQLAlchemyMedicationRepository(session),
+        prescription_repo=get_prescription_repo(session),
+        batch_repo=get_batch_repo(session),
+        dispatch_repo=get_dispatch_repo(session),
+        limit_repo=get_limit_repo(session),
+        medication_repo=get_medication_repo(session),
     )
     return ok(
         data=DispatchValidationResponse(**result.__dict__),
@@ -116,21 +106,22 @@ async def create_dispatch(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Execute a pharmacy dispatch using FEFO. Atomic: validates, allocates stock, checks limits, creates records, updates batches, records movements."""
     dispatch = await execute_dispatch(
         fk_prescription_id=body.fk_prescription_id,
         fk_pharmacist_id=user_id,
         patient_type=body.patient_type,
         notes=body.notes,
         pharmacist_id=user_id,
-        prescription_repo=SQLAlchemyPrescriptionRepository(session),
-        batch_repo=SQLAlchemyBatchRepository(session),
-        dispatch_repo=SQLAlchemyDispatchRepository(session),
-        limit_repo=SQLAlchemyLimitRepository(session),
+        prescription_repo=get_prescription_repo(session),
+        batch_repo=get_batch_repo(session),
+        dispatch_repo=get_dispatch_repo(session),
+        limit_repo=get_limit_repo(session),
     )
 
     # Record exit movements for traceability
     from datetime import datetime, timezone
-    movement_repo = SQLAlchemyMovementRepository(session)
+    movement_repo = get_movement_repo(session)
     for item in dispatch.items:
         balance = await movement_repo.get_current_balance(item.fk_medication_id)
         await movement_repo.record_movement(
@@ -148,7 +139,7 @@ async def create_dispatch(
 
     return created(
         data=DispatchResponse(**dispatch.__dict__),
-        message="Despacho ejecutado exitosamente",
+        message="Dispatch executed successfully",
     )
 
 
@@ -156,19 +147,20 @@ async def create_dispatch(
 # Consultas
 # ──────────────────────────────────────────────────────────
 
-@router.get("/by-prescription/{prescription_id}", summary="Despachos de una receta")
+@router.get("/by-prescription/{prescription_id}", summary="Dispatches for a prescription")
 async def get_by_prescription(
     prescription_id: str,
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyDispatchRepository(session)
+    """List all dispatches associated with a prescription."""
+    repo = get_dispatch_repo(session)
     dispatches = await repo.find_by_prescription(prescription_id)
     data = [DispatchResponse(**d.__dict__) for d in dispatches]
-    return ok(data=data, message="Despachos obtenidos exitosamente")
+    return ok(data=data, message="Dispatches retrieved successfully")
 
 
-@router.get("/by-patient/{patient_id}", summary="Historial de despachos de un paciente")
+@router.get("/by-patient/{patient_id}", summary="Dispatch history for a patient")
 async def get_by_patient(
     patient_id: str,
     prescription_number: Optional[str] = Query(None),
@@ -180,7 +172,8 @@ async def get_by_patient(
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyDispatchRepository(session)
+    """Paginated dispatch history for a patient."""
+    repo = get_dispatch_repo(session)
     dispatches, total = await repo.find_by_patient(
         fk_patient_id=patient_id,
         prescription_number=prescription_number,
@@ -191,22 +184,23 @@ async def get_by_patient(
         page_size=page_size,
     )
     data = [DispatchResponse(**d.__dict__) for d in dispatches]
-    return paginated(data, total, page, page_size, "Historial de despachos obtenido")
+    return paginated(data, total, page, page_size, "Dispatch history retrieved")
 
 
-@router.get("/{id}", summary="Detalle de un despacho")
+@router.get("/{id}", summary="Dispatch detail")
 async def get_dispatch(
     id: str,
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    repo = SQLAlchemyDispatchRepository(session)
+    """Retrieve a dispatch with item details and batch allocation."""
+    repo = get_dispatch_repo(session)
     dispatch = await repo.find_by_id(id)
     if not dispatch:
-        raise NotFoundException("Despacho no encontrado")
+        raise NotFoundException("Dispatch not found")
     return ok(
         data=DispatchResponse(**dispatch.__dict__),
-        message="Despacho obtenido exitosamente",
+        message="Dispatch retrieved successfully",
     )
 
 
@@ -214,17 +208,18 @@ async def get_dispatch(
 # Cancelación
 # ──────────────────────────────────────────────────────────
 
-@router.post("/{id}/cancel", summary="Cancelar un despacho y revertir stock")
+@router.post("/{id}/cancel", summary="Cancel a dispatch and revert stock")
 async def cancel_dispatch_endpoint(
     id: str,
     session: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Cancel a dispatch and revert stock to original batches."""
     await cancel_dispatch(
         dispatch_id=id,
         cancelled_by=user_id,
-        dispatch_repo=SQLAlchemyDispatchRepository(session),
-        batch_repo=SQLAlchemyBatchRepository(session),
-        prescription_repo=SQLAlchemyPrescriptionRepository(session),
+        dispatch_repo=get_dispatch_repo(session),
+        batch_repo=get_batch_repo(session),
+        prescription_repo=get_prescription_repo(session),
     )
-    return ok(message="Despacho cancelado y stock revertido exitosamente")
+    return ok(message="Dispatch cancelled and stock reverted successfully")
