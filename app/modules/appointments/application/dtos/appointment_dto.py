@@ -16,6 +16,7 @@ class CreateAppointmentDTO:
     is_first_visit: bool = False
     reason: Optional[str] = None
     observations: Optional[str] = None
+    client_token: Optional[str] = None
 
 
 @dataclass

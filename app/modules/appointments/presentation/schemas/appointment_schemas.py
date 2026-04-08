@@ -18,6 +18,7 @@ class AppointmentCreate(BaseModel):
     is_first_visit: bool = Field(False, description="True if first-time patient visit", example=False)
     reason: Optional[str] = Field(None, description="Reason for visit", example="Consulta general")
     observations: Optional[str] = Field(None, description="Additional notes", example="Paciente refiere dolor de cabeza")
+    client_token: Optional[str] = Field(None, max_length=36, description="Client-generated UUID for idempotent retries (safe against network microcuts)", example="b3f1c2a4-1234-4abc-9def-0123456789ab")
 
     model_config = ConfigDict(json_schema_extra={
         "example": {

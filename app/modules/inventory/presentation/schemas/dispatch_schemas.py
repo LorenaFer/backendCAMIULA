@@ -22,6 +22,10 @@ class DispatchItemResponse(BaseModel):
     fk_batch_id: str = Field(description="Source batch UUID (FEFO allocation)")
     fk_medication_id: str = Field(description="Medication UUID")
     quantity_dispatched: int = Field(description="Units dispensed from this batch", example=10)
+    medication_name: Optional[str] = Field(None, description="Medication generic name (joined)", example="Amoxicilina 500mg")
+    medication_form: Optional[str] = Field(None, description="Pharmaceutical form (joined)", example="Cápsula")
+    batch_number: Optional[str] = Field(None, description="Source batch lot number (joined)", example="LOT-2026-A1")
+    expiration_date: Optional[str] = Field(None, description="Batch expiration date ISO (joined)", example="2027-08-15")
 
 
 class DispatchResponse(BaseModel):

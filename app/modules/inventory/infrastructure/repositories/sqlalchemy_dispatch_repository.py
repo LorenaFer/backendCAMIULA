@@ -12,8 +12,10 @@ from app.modules.inventory.domain.repositories.dispatch_repository import (
     DispatchRepository,
 )
 from app.modules.inventory.infrastructure.models import (
+    BatchModel,
     DispatchItemModel,
     DispatchModel,
+    MedicationModel,
     PrescriptionModel,
 )
 from app.modules.auth.infrastructure.models import UserModel
@@ -31,19 +33,55 @@ class SQLAlchemyDispatchRepository(DispatchRepository):
     # ──────────────────────────────────────────────────────────
 
     @staticmethod
-    def _item_to_entity(m: DispatchItemModel) -> DispatchItem:
+    def _item_to_entity(
+        m: DispatchItemModel,
+        medication_name: Optional[str] = None,
+        medication_form: Optional[str] = None,
+        batch_number: Optional[str] = None,
+        expiration_date: Optional[str] = None,
+    ) -> DispatchItem:
         return DispatchItem(
             id=m.id,
             fk_dispatch_id=m.fk_dispatch_id,
             fk_batch_id=m.fk_batch_id,
             fk_medication_id=m.fk_medication_id,
             quantity_dispatched=m.quantity_dispatched,
+            medication_name=medication_name,
+            medication_form=medication_form,
+            batch_number=batch_number,
+            expiration_date=expiration_date,
+        )
+
+    @staticmethod
+    def _row_to_item(row) -> DispatchItem:
+        item_model = row[0]
+        return SQLAlchemyDispatchRepository._item_to_entity(
+            item_model,
+            medication_name=row[1],
+            medication_form=row[2],
+            batch_number=row[3],
+            expiration_date=row[4].isoformat() if row[4] else None,
+        )
+
+    def _items_select(self):
+        """Base select for dispatch items enriched with medication + batch JOINs."""
+        return (
+            select(
+                DispatchItemModel,
+                MedicationModel.generic_name,
+                MedicationModel.pharmaceutical_form,
+                BatchModel.lot_number,
+                BatchModel.expiration_date,
+            )
+            .outerjoin(MedicationModel, DispatchItemModel.fk_medication_id == MedicationModel.id)
+            .outerjoin(BatchModel, DispatchItemModel.fk_batch_id == BatchModel.id)
+            .where(DispatchItemModel.status == RecordStatus.ACTIVE)
         )
 
     @staticmethod
     def _to_entity(
         model: DispatchModel,
-        items: list[DispatchItemModel],
+        items: list[DispatchItem],
         prescription_number: Optional[str] = None,
         patient_full_name: Optional[str] = None,
         pharmacist_full_name: Optional[str] = None,
@@ -56,7 +94,7 @@ class SQLAlchemyDispatchRepository(DispatchRepository):
             dispatch_date=model.dispatch_date.isoformat(),
             dispatch_status=model.dispatch_status,
             notes=model.notes,
-            items=[SQLAlchemyDispatchRepository._item_to_entity(i) for i in items],
+            items=items,
             created_at=model.created_at.isoformat() if model.created_at else None,
             created_by=model.created_by,
             prescription_number=prescription_number,
@@ -64,63 +102,84 @@ class SQLAlchemyDispatchRepository(DispatchRepository):
             pharmacist_full_name=pharmacist_full_name,
         )
 
-    async def _load_items(self, dispatch_id: str) -> list[DispatchItemModel]:
+    async def _load_items(self, dispatch_id: str) -> list[DispatchItem]:
+        """Load enriched items (medication + batch) for a single dispatch."""
         result = await self._session.execute(
-            select(DispatchItemModel).where(
-                DispatchItemModel.fk_dispatch_id == dispatch_id,
-                DispatchItemModel.status == RecordStatus.ACTIVE,
-            )
+            self._items_select().where(DispatchItemModel.fk_dispatch_id == dispatch_id)
         )
-        return result.scalars().all()
+        return [self._row_to_item(row) for row in result.all()]
 
     async def _load_items_batch(
         self, dispatch_ids: list[str]
-    ) -> dict[str, list[DispatchItemModel]]:
-        """Load items for multiple dispatches in a single query, grouped by dispatch id."""
+    ) -> dict[str, list[DispatchItem]]:
+        """Load enriched items for multiple dispatches in a single query, grouped by dispatch id."""
         if not dispatch_ids:
             return {}
         result = await self._session.execute(
-            select(DispatchItemModel).where(
-                DispatchItemModel.fk_dispatch_id.in_(dispatch_ids),
-                DispatchItemModel.status == RecordStatus.ACTIVE,
+            self._items_select().where(
+                DispatchItemModel.fk_dispatch_id.in_(dispatch_ids)
             )
         )
-        items_by_dispatch: dict[str, list[DispatchItemModel]] = {
+        items_by_dispatch: dict[str, list[DispatchItem]] = {
             did: [] for did in dispatch_ids
         }
-        for item in result.scalars().all():
-            items_by_dispatch[item.fk_dispatch_id].append(item)
+        for row in result.all():
+            entity = self._row_to_item(row)
+            items_by_dispatch[entity.fk_dispatch_id].append(entity)
         return items_by_dispatch
 
     # ──────────────────────────────────────────────────────────
     # Consultas
     # ──────────────────────────────────────────────────────────
 
+    def _enriched_dispatch_select(self):
+        """Base select for a dispatch with prescription/patient/pharmacist display joins."""
+        return (
+            select(
+                DispatchModel,
+                PrescriptionModel.prescription_number,
+                func.concat(PatientModel.first_name, literal(" "), PatientModel.last_name).label("patient_full_name"),
+                UserModel.full_name.label("pharmacist_full_name"),
+            )
+            .outerjoin(PrescriptionModel, DispatchModel.fk_prescription_id == PrescriptionModel.id)
+            .outerjoin(PatientModel, DispatchModel.fk_patient_id == PatientModel.id)
+            .outerjoin(UserModel, DispatchModel.fk_pharmacist_id == UserModel.id)
+            .where(DispatchModel.status == RecordStatus.ACTIVE)
+        )
+
     async def find_by_id(self, id: str) -> Optional[Dispatch]:
         result = await self._session.execute(
-            select(DispatchModel).where(
-                DispatchModel.id == id,
-                DispatchModel.status == RecordStatus.ACTIVE,
-            )
+            self._enriched_dispatch_select().where(DispatchModel.id == id)
         )
-        m = result.scalar_one_or_none()
-        if not m:
+        row = result.first()
+        if not row:
             return None
         items = await self._load_items(id)
-        return self._to_entity(m, items)
+        return self._to_entity(
+            row[0],
+            items,
+            prescription_number=row[1],
+            patient_full_name=row[2],
+            pharmacist_full_name=row[3],
+        )
 
     async def find_by_prescription(self, fk_prescription_id: str) -> list[Dispatch]:
         result = await self._session.execute(
-            select(DispatchModel).where(
-                DispatchModel.fk_prescription_id == fk_prescription_id,
-                DispatchModel.status == RecordStatus.ACTIVE,
+            self._enriched_dispatch_select().where(
+                DispatchModel.fk_prescription_id == fk_prescription_id
             )
         )
-        models = result.scalars().all()
-        items_by_dispatch = await self._load_items_batch([m.id for m in models])
+        rows = result.all()
+        items_by_dispatch = await self._load_items_batch([row[0].id for row in rows])
         return [
-            self._to_entity(m, items_by_dispatch.get(m.id, []))
-            for m in models
+            self._to_entity(
+                row[0],
+                items_by_dispatch.get(row[0].id, []),
+                prescription_number=row[1],
+                patient_full_name=row[2],
+                pharmacist_full_name=row[3],
+            )
+            for row in rows
         ]
 
     async def find_all(
@@ -324,7 +383,8 @@ class SQLAlchemyDispatchRepository(DispatchRepository):
             item_models.append(im)
 
         await self._session.flush()
-        return self._to_entity(model, item_models)
+        # Re-load with all enrichments (medication name, batch lot, patient, pharmacist).
+        return await self.find_by_id(dispatch_id)
 
     async def update_status(self, id: str, new_status: str, updated_by: str) -> None:
         await self._session.execute(

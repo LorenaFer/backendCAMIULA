@@ -7,7 +7,7 @@ No ejecuta none escritura — es una operación de solo lectura.
 from datetime import date
 from typing import Optional
 
-from app.core.exceptions import NotFoundException
+from app.core.exceptions import ConflictException, NotFoundException
 from app.modules.inventory.application.dtos.dispatch_dto import (
     DispatchValidationDTO,
     DispatchValidationItemDTO,
@@ -35,7 +35,9 @@ async def validate_and_prepare_dispatch(
         raise NotFoundException("Prescription not found")
 
     if prescription.prescription_status in ("dispensed", "cancelled"):
-        raise NotFoundException(
+        # State conflict, not a missing resource — must return 409, not 404,
+        # so the frontend can render the actual reason instead of "not found".
+        raise ConflictException(
             f"La receta está en estado '{prescription.prescription_status}'"
             " y no puede ser despachada"
         )

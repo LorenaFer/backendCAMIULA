@@ -15,9 +15,13 @@ class UpsertRecord:
         self._repo = repo
 
     async def execute(self, dto: UpsertMedicalRecordDTO, user_id: str) -> tuple:
-        """Returns (entity, was_created: bool)."""
-        existing = await self._repo.find_by_appointment_id(dto.fk_appointment_id)
+        """Returns (entity, was_created: bool).
 
+        Delegates to a single atomic INSERT ... ON CONFLICT in the repository so
+        that concurrent autosave requests from the clinical wizard cannot race
+        and produce duplicate records. This is what makes the autosave loop
+        safe under flaky connectivity.
+        """
         data = {
             "fk_appointment_id": dto.fk_appointment_id,
             "fk_patient_id": dto.fk_patient_id,
@@ -26,12 +30,4 @@ class UpsertRecord:
             "schema_id": dto.schema_id,
             "schema_version": dto.schema_version,
         }
-
-        if existing:
-            # Update -- remove fk_appointment_id from update payload (it's the key)
-            update_data = {k: v for k, v in data.items() if k != "fk_appointment_id"}
-            record = await self._repo.update(existing.id, update_data, updated_by=user_id)
-            return record, False
-        else:
-            record = await self._repo.create(data, created_by=user_id)
-            return record, True
+        return await self._repo.upsert_by_appointment(data, user_id=user_id)

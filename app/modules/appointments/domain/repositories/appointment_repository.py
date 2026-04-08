@@ -17,6 +17,15 @@ class AppointmentRepository(ABC):
         ...
 
     @abstractmethod
+    async def find_by_client_token(self, client_token: str) -> Optional[Appointment]:
+        """Lookup an existing appointment by the client-generated idempotency token.
+
+        Returns the appointment if a previous request with the same token already
+        succeeded; None otherwise. Used to make POST /appointments idempotent.
+        """
+        ...
+
+    @abstractmethod
     async def find_all(
         self,
         page: int,

@@ -130,6 +130,17 @@ class SQLAlchemyAppointmentRepository(AppointmentRepository):
             return None
         return self._row_to_entity(row)
 
+    async def find_by_client_token(self, client_token: str) -> Optional[Appointment]:
+        # O(1) lookup via UNIQUE index on appointments.client_token
+        stmt = self._base_with_joins().where(
+            AppointmentModel.client_token == client_token
+        )
+        result = await self._session.execute(stmt)
+        row = result.first()
+        if not row:
+            return None
+        return self._row_to_entity(row)
+
     async def find_all(
         self,
         page: int,
