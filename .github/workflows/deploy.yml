@@ -18,9 +18,93 @@ concurrency:
   group: deploy-backend
   cancel-in-progress: true
 
+# ─────────────────────────────────────────────────────────────
+# JOB 1: Quality Gates
+# Bloquea el deploy si algo falla:
+#   · Estándares de migraciones DB  (validate_migrations.py)
+#   · Unit tests  (sin base de datos — rápidos, siempre corren)
+#   · Integration tests (con PostgreSQL de servicio)
+# ─────────────────────────────────────────────────────────────
 jobs:
+  quality-gates:
+    name: "🔍 Quality Gates"
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: camiula_ci
+          POSTGRES_PASSWORD: ci_password
+          POSTGRES_DB: camiula_ci
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt pytest-cov
+
+      # ── Gate 1: DB Standards ────────────────────────────────
+      - name: "🗄️  Validar estándares de migraciones DB"
+        run: python scripts/validate_migrations.py
+        # Verifica que cada migración tenga upgrade() + downgrade()
+        # no vacíos, sin DDL raw y con revision/down_revision declarados.
+
+      # ── Gate 2: Unit Tests (sin DB, rápidos) ────────────────
+      - name: "🧪 Unit tests"
+        env:
+          DATABASE_URL: "postgresql+asyncpg://camiula_ci:ci_password@localhost:5432/camiula_ci"
+          SECRET_KEY: "ci-secret-key-not-for-production"
+          DEBUG: "true"
+          AUTH_PROVIDER: local
+        run: |
+          pytest tests/unit/ \
+            -v \
+            --tb=short \
+            -q \
+            --no-header
+
+      # ── Gate 3: Integration Tests (con DB real) ─────────────
+      - name: "🔗 Aplicar migraciones en DB de CI"
+        env:
+          DATABASE_URL: "postgresql+asyncpg://camiula_ci:ci_password@localhost:5432/camiula_ci"
+        run: alembic upgrade head
+
+      - name: "🔗 Integration tests"
+        env:
+          DATABASE_URL: "postgresql+asyncpg://camiula_ci:ci_password@localhost:5432/camiula_ci"
+          SECRET_KEY: "ci-secret-key-not-for-production"
+          DEBUG: "true"
+          AUTH_PROVIDER: local
+        run: |
+          pytest tests/integration/ tests/test_health.py \
+            -v \
+            --tb=short \
+            -q \
+            --no-header \
+            --timeout=30
+
+# ─────────────────────────────────────────────────────────────
+# JOB 2: Deploy  (solo si quality-gates pasó)
+# ─────────────────────────────────────────────────────────────
   deploy:
-    name: Deploy API a camiula.net
+    name: "🚀 Deploy API a camiula.net"
+    needs: quality-gates
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
