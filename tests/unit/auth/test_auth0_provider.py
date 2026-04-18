@@ -98,7 +98,7 @@ class TestAuth0ProviderRejectsInvalidTokens:
         # Token HS256 firmado con secret local — Auth0 usa RS256
         from app.core.security import create_access_token
 
-        local_token = create_access_token({"sub": "fake"})
+        local_token, _, _ = create_access_token({"sub": "fake"})
         provider = Auth0Provider(
             domain=settings.AUTH0_DOMAIN,
             audience=settings.AUTH0_API_AUDIENCE,
@@ -113,7 +113,7 @@ class TestLocalProvider:
     async def test_accepts_valid_local_token(self):
         from app.core.security import create_access_token
 
-        token = create_access_token({"sub": "user-123", "email": "test@t.com"})
+        token, _, _ = create_access_token({"sub": "user-123", "email": "test@t.com"})
         provider = LocalAuthProvider()
         claims = await provider.verify_token(token)
         assert claims["sub"] == "user-123"
@@ -127,7 +127,7 @@ class TestLocalProvider:
     async def test_get_user_info(self):
         from app.core.security import create_access_token
 
-        token = create_access_token({"sub": "u1", "email": "e@t.com"})
+        token, _, _ = create_access_token({"sub": "u1", "email": "e@t.com"})
         provider = LocalAuthProvider()
         info = await provider.get_user_info(token)
         assert info["sub"] == "u1"
