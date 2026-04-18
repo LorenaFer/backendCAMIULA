@@ -7,6 +7,9 @@ Dependencies para FastAPI:
     - require_permission()   — verifica un permiso específico
     - require_any_permission() — verifica al menos uno de varios permisos
     - require_role()         — verifica un rol específico
+
+Todos chequean contra revoked_tokens y rechazan tokens tipo "refresh" —
+el refresh solo se presenta al endpoint /auth/refresh.
 """
 
 from __future__ import annotations
@@ -19,12 +22,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.exceptions import ForbiddenException, UnauthorizedException
-from app.core.security import decode_access_token
+from app.core.security import ACCESS_TOKEN_TYPE, decode_access_token
 from app.modules.auth.domain.entities.user import User
 from app.modules.auth.domain.repositories.auth_provider import AuthProvider
 from app.modules.auth.domain.services.permission_service import PermissionService
 from app.modules.auth.infrastructure.providers.auth0_provider import Auth0Provider
 from app.modules.auth.infrastructure.providers.local_provider import LocalAuthProvider
+from app.modules.auth.infrastructure.repositories.revoked_token_repository import (
+    RevokedTokenRepository,
+)
 from app.modules.auth.infrastructure.repositories.sqlalchemy_user_repository import (
     SQLAlchemyUserRepository,
 )
@@ -33,6 +39,7 @@ from app.shared.middleware.permission_cache import permission_cache
 
 settings = get_settings()
 security_scheme = HTTPBearer()
+_optional_scheme = HTTPBearer(auto_error=False)
 
 # -- Auth Provider singleton --
 
@@ -53,37 +60,53 @@ def get_auth_provider() -> AuthProvider:
     return _auth_provider
 
 
+async def _validate_access_payload(
+    token: str,
+    db: AsyncSession,
+) -> dict:
+    """Decode + enforce token_type=access + check revocation.
+
+    Raises UnauthorizedException on any failure. Returns the full payload.
+    """
+    payload = decode_access_token(token)
+    if payload is None:
+        raise UnauthorizedException("Token inválido o expirado")
+    if payload.get("type") and payload.get("type") != ACCESS_TOKEN_TYPE:
+        # Bloquear refresh tokens en endpoints protegidos
+        raise UnauthorizedException("Se requiere un access token")
+    jti = payload.get("jti")
+    if jti:
+        repo = RevokedTokenRepository(db)
+        if await repo.is_revoked(jti):
+            raise UnauthorizedException("Token revocado")
+    return payload
+
+
 # -- Dependencies --
 
 
 async def get_current_user_id(
     credentials: HTTPAuthorizationCredentials = Depends(security_scheme),
+    db: AsyncSession = Depends(get_db),
 ) -> str:
     """Retorna solo el user_id del token. Retrocompatible."""
-    payload = decode_access_token(credentials.credentials)
-    if payload is None:
-        raise UnauthorizedException("Token inválido o expirado")
+    payload = await _validate_access_payload(credentials.credentials, db)
     user_id = payload.get("sub")
     if user_id is None:
         raise UnauthorizedException("Token sin identificador de usuario")
     return user_id
 
 
-_optional_scheme = HTTPBearer(auto_error=False)
-
-
 async def get_optional_user_id(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(_optional_scheme),
+    db: AsyncSession = Depends(get_db),
 ) -> str:
-    """Returns user_id if token present, 'anonymous' otherwise.
-
-    Use for endpoints that work both authenticated and unauthenticated
-    (e.g. patient portal registration, public search).
-    """
+    """Returns user_id if token present+valid+non-revoked, 'anonymous' otherwise."""
     if credentials is None:
         return "anonymous"
-    payload = decode_access_token(credentials.credentials)
-    if payload is None:
+    try:
+        payload = await _validate_access_payload(credentials.credentials, db)
+    except UnauthorizedException:
         return "anonymous"
     return payload.get("sub", "anonymous")
 
@@ -92,12 +115,18 @@ async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security_scheme),
     db: AsyncSession = Depends(get_db),
 ) -> User:
-    """Valida token, carga usuario con roles y permisos.
+    """Valida token (firma + tipo + revocación), carga usuario con roles y permisos.
 
-    Complejidad: O(1) cache hit, O(log n) cache miss.
+    Complejidad: O(1) cache hit, O(log n) cache miss + O(log n) revocation lookup.
     """
-    provider = get_auth_provider()
-    claims = await provider.verify_token(credentials.credentials)
+    # Para Auth0 se usa el provider externo; para local usamos la validación
+    # unificada con revocación.
+    if settings.AUTH_PROVIDER == "local":
+        claims = await _validate_access_payload(credentials.credentials, db)
+    else:
+        provider = get_auth_provider()
+        claims = await provider.verify_token(credentials.credentials)
+
     sub = claims.get("sub", "")
 
     if not sub:

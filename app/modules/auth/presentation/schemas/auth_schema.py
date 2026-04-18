@@ -28,11 +28,21 @@ class RegisterRequest(BaseModel):
 
 
 class TokenResponse(BaseModel):
-    """JWT token returned after successful authentication."""
+    """JWT tokens returned after successful authentication.
 
-    access_token: str = Field(description="JWT access token for Authorization header", example="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
-    token_type: str = Field(default="bearer", description="Token type, always 'bearer'", example="bearer")
-    expires_in: int = Field(description="Token validity in seconds", example=1800)
+    `access_token` vive ~15 min y se usa en el header Authorization.
+    `refresh_token` vive ~7 días y solo se presenta a /auth/refresh para
+    obtener un nuevo par (el refresh se rota en cada uso).
+    """
+
+    access_token: str = Field(description="Short-lived JWT for API calls")
+    refresh_token: str = Field(default="", description="Long-lived JWT used only to obtain new access tokens")
+    token_type: str = Field(default="bearer", description="Token type, always 'bearer'")
+    expires_in: int = Field(description="Access token validity in seconds", example=900)
+
+
+class RefreshRequest(BaseModel):
+    refresh_token: str = Field(min_length=10, description="Refresh token obtained at login")
 
 
 class UserResponse(BaseModel):

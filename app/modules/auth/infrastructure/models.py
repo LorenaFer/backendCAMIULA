@@ -121,3 +121,26 @@ class UserRoleModel(Base, SoftDeleteMixin, AuditMixin):
     )
 
     # --- Grupos 5-8: SoftDeleteMixin + AuditMixin ---
+
+# ---------------------------------------------------------------------------
+# Revoked tokens (JWT blacklist para logout/refresh rotation)
+# ---------------------------------------------------------------------------
+import datetime as _dt
+from sqlalchemy import TIMESTAMP
+from sqlalchemy.sql import func as _func
+
+
+class RevokedTokenModel(Base):
+    __tablename__ = "revoked_tokens"
+
+    jti: Mapped[str] = mapped_column(String(36), primary_key=True)
+    fk_user_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    revoked_at: Mapped[_dt.datetime] = mapped_column(
+        TIMESTAMP(timezone=True),
+        nullable=False,
+        server_default=_func.now(),
+    )
+    expires_at: Mapped[_dt.datetime] = mapped_column(
+        TIMESTAMP(timezone=True), nullable=False, index=True
+    )
+    token_type: Mapped[str] = mapped_column(String(20), nullable=False)

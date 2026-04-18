@@ -21,5 +21,6 @@ class RegisterDTO:
 @dataclass(frozen=True)
 class TokenResponseDTO:
     access_token: str
+    refresh_token: str = ""
     token_type: str = "bearer"
-    expires_in: int = 1800
+    expires_in: int = 900  # 15 min en segundos (default)
