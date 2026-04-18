@@ -56,7 +56,7 @@ jobs:
             ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
             'cd /home/camiula/camiula && \
              docker compose -f docker-compose.prod.yml --env-file .env.prod \
-               up -d --build --no-deps backend 2>&1'
+               up -d --build --force-recreate --no-deps backend 2>&1'
 
       - name: Ejecutar migraciones Alembic
         if: ${{ github.event_name == 'push' || inputs.run_migrations == 'true' }}
