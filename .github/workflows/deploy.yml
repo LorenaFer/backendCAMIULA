@@ -22,6 +22,7 @@ concurrency:
 # JOB 1: Quality Gates
 # Bloquea el deploy si algo falla:
 #   · Estándares de migraciones DB  (validate_migrations.py)
+#   · Arquitectura Clean Architecture  (validate_architecture.py)
 #   · Unit tests  (sin base de datos — rápidos, siempre corren)
 #   · Integration tests (con PostgreSQL de servicio)
 # ─────────────────────────────────────────────────────────────
@@ -62,10 +63,21 @@ jobs:
       # ── Gate 1: DB Standards ────────────────────────────────
       - name: "🗄️  Validar estándares de migraciones DB"
         run: python scripts/validate_migrations.py
-        # Verifica que cada migración tenga upgrade() + downgrade()
-        # no vacíos, sin DDL raw y con revision/down_revision declarados.
+        # Verifica upgrade/downgrade no vacíos, orden de columnas,
+        # NOT NULL sin server_default, y no drop/alter sobre audit cols.
 
-      # ── Gate 2: Unit Tests (sin DB, rápidos) ────────────────
+      # ── Gate 2: Architecture Standards ──────────────────────
+      - name: "🏛️  Validar arquitectura Clean Architecture"
+        run: python scripts/validate_architecture.py
+        # Verifica:
+        #   · Reglas de dependencias entre capas (domain→app→infra→presentation)
+        #   · Convenciones de nomenclatura de archivos y clases
+        #   · Patrón Repository (interfaz + implementación SQLAlchemy)
+        #   · Patrón Use Case (execute/__call__ + __init__)
+        #   · Importaciones cross-module solo desde presentation
+        # Las exempciones documentadas (deuda técnica + cross-cutting) no bloquean.
+
+      # ── Gate 3: Unit Tests (sin DB, rápidos) ────────────────
       - name: "🧪 Unit tests"
         env:
           DATABASE_URL: "postgresql+asyncpg://camiula_ci:ci_password@localhost:5432/camiula_ci"
@@ -79,7 +91,7 @@ jobs:
             -q \
             --no-header
 
-      # ── Gate 3: Integration Tests (con DB real) ─────────────
+      # ── Gate 4: Integration Tests (con DB real) ─────────────
       - name: "🔗 Aplicar migraciones en DB de CI"
         env:
           DATABASE_URL: "postgresql+asyncpg://camiula_ci:ci_password@localhost:5432/camiula_ci"
