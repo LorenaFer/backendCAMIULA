@@ -1,0 +1,79 @@
+name: 🚀 Deploy Backend
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Motivo del deploy manual"
+        required: false
+        default: "Deploy manual"
+      run_migrations:
+        description: "Correr migraciones Alembic"
+        type: boolean
+        default: true
+
+concurrency:
+  group: deploy-backend
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy API a camiula.net
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Configurar clave SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p ${{ secrets.VPS_PORT }} ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Sincronizar archivos al VPS (rsync)
+        run: |
+          rsync -az --delete \
+            -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.VPS_PORT }} -o StrictHostKeyChecking=no" \
+            --exclude='.git' \
+            --exclude='__pycache__' \
+            --exclude='*.pyc' \
+            --exclude='.env*' \
+            --exclude='venv' \
+            --exclude='.venv' \
+            --exclude='*.egg-info' \
+            ./ \
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/home/camiula/camiula/backendCAMIULA/
+
+      - name: Reconstruir y reiniciar contenedor backend
+        run: |
+          ssh -i ~/.ssh/deploy_key -p ${{ secrets.VPS_PORT }} \
+            -o StrictHostKeyChecking=no \
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
+            'cd /home/camiula/camiula && \
+             docker compose -f docker-compose.prod.yml --env-file .env.prod \
+               up -d --build --no-deps backend 2>&1'
+
+      - name: Ejecutar migraciones Alembic
+        if: ${{ github.event_name == 'push' || inputs.run_migrations == 'true' }}
+        run: |
+          sleep 8
+          ssh -i ~/.ssh/deploy_key -p ${{ secrets.VPS_PORT }} \
+            -o StrictHostKeyChecking=no \
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
+            'docker exec camiula-api alembic upgrade head 2>&1'
+
+      - name: Verificar que el backend responde
+        run: |
+          sleep 5
+          STATUS=$(ssh -i ~/.ssh/deploy_key -p ${{ secrets.VPS_PORT }} \
+            -o StrictHostKeyChecking=no \
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
+            "docker inspect camiula-api --format '{{.State.Status}}'")
+          echo "Container status: $STATUS"
+          [ "$STATUS" = "running" ] || (echo "❌ Contenedor no está running" && exit 1)
+          echo "✅ Backend desplegado correctamente"
