@@ -3,6 +3,9 @@ name: 🚀 Deploy Backend
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
+    # Quality gates corren en cada PR — nunca llega código roto a main
   workflow_dispatch:
     inputs:
       reason:
@@ -15,16 +18,17 @@ on:
         default: true
 
 concurrency:
-  group: deploy-backend
+  group: deploy-backend-${{ github.ref }}
   cancel-in-progress: true
 
 # ─────────────────────────────────────────────────────────────
 # JOB 1: Quality Gates
+# Corre en push a main Y en pull_request → main.
 # Bloquea el deploy si algo falla:
 #   · Estándares de migraciones DB  (validate_migrations.py)
 #   · Arquitectura Clean Architecture  (validate_architecture.py)
 #   · Unit tests  (sin base de datos — rápidos, siempre corren)
-#   · Integration tests (con PostgreSQL de servicio)
+#   · Integration tests (con PostgreSQL de servicio + seed de CI)
 # ─────────────────────────────────────────────────────────────
 jobs:
   quality-gates:
@@ -97,6 +101,14 @@ jobs:
           DATABASE_URL: "postgresql+asyncpg://camiula_ci:ci_password@localhost:5432/camiula_ci"
         run: alembic upgrade head
 
+      - name: "🔗 Sembrar datos mínimos de CI"
+        env:
+          DATABASE_URL: "postgresql+asyncpg://camiula_ci:ci_password@localhost:5432/camiula_ci"
+        run: python scripts/seed_ci.py
+        # Crea roles (admin, analista, doctor, paciente) y usuarios de test
+        # con emails @camiula.com que necesitan los integration tests.
+        # Idempotente — seguro de correr varias veces.
+
       - name: "🔗 Integration tests"
         env:
           DATABASE_URL: "postgresql+asyncpg://camiula_ci:ci_password@localhost:5432/camiula_ci"
@@ -112,11 +124,13 @@ jobs:
             --timeout=30
 
 # ─────────────────────────────────────────────────────────────
-# JOB 2: Deploy  (solo si quality-gates pasó)
+# JOB 2: Deploy  (solo en push a main o workflow_dispatch)
+# Los PRs solo corren quality-gates, nunca despliegan.
 # ─────────────────────────────────────────────────────────────
   deploy:
     name: "🚀 Deploy API a camiula.net"
     needs: quality-gates
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
