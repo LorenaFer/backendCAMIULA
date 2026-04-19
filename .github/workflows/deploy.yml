@@ -21,6 +21,11 @@ concurrency:
   group: deploy-backend-${{ github.ref }}
   cancel-in-progress: true
 
+# Opt-in a Node.js 24 para actions (checkout, setup-python, etc.)
+# Evita el warning de deprecación de Node 20 — obligatorio desde junio 2026.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 # ─────────────────────────────────────────────────────────────
 # JOB 1: Quality Gates
 # Corre en push a main Y en pull_request → main.
